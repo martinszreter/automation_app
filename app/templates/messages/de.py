@@ -17,3 +17,28 @@ BOOKING_CANCELLED = (
     "Ihre Reservierung bei {restaurant} am {date} um {time} Uhr "
     "wurde storniert. Vielen Dank für Ihre Nachricht."
 )
+
+PARTY_SIZE_CHANGED = (
+    "Die Personenanzahl für Ihre Reservierung bei {restaurant} "
+    "am {date} um {time} Uhr wurde auf {party_size} geändert."
+)
+
+ALREADY_CONFIRMED = (
+    "Ihre Reservierung bei {restaurant} am {date} um {time} Uhr "
+    "ist bereits bestätigt."
+)
+
+ALREADY_CANCELLED = (
+    "Ihre Reservierung bei {restaurant} am {date} um {time} Uhr "
+    "wurde bereits storniert."
+)
+
+UNKNOWN_MESSAGE = (
+    "Entschuldigung, ich habe Ihre Nachricht nicht verstanden. "
+    "Bitte antworten Sie mit JA zum Bestätigen, NEIN zum Stornieren, "
+    "oder einer Zahl um die Personenanzahl zu ändern."
+)
+
+NO_ACTIVE_BOOKING = (
+    "Es wurde keine aktive Reservierung für Ihre Nummer gefunden."
+)
