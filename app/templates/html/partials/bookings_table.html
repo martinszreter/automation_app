@@ -1,0 +1,28 @@
+{% if bookings %}
+<table>
+    <thead>
+        <tr>
+            <th>Datum</th>
+            <th>Uhrzeit</th>
+            <th>Gast</th>
+            <th>Personen</th>
+            <th>Status</th>
+            <th>Restaurant</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in bookings %}
+        <tr>
+            <td>{{ b.booked_at.strftime('%d.%m.%Y') }}</td>
+            <td>{{ b.booked_at.strftime('%H:%M') }}</td>
+            <td>{{ b.guest.name or 'Unbekannt' }}</td>
+            <td>{{ b.party_size }}</td>
+            <td><span class="status status-{{ b.status.value }}">{{ b.status.value | replace('_', ' ') | title }}</span></td>
+            <td>{{ b.tenant.name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty">Keine kommenden Reservierungen.</div>
+{% endif %}
