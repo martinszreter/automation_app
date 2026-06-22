@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     meta_whatsapp_token: str = ""
     meta_phone_number_id: str = ""
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()
