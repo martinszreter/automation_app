@@ -1,10 +1,7 @@
-import logging
 import re
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
-
-logger = logging.getLogger(__name__)
 
 
 def normalize_db_url(url: str) -> str:
@@ -27,4 +24,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-logger.info("database_url scheme: %s", settings.database_url.split("://")[0])
+print(f"[STARTEND] database_url scheme: {settings.database_url.split('://')[0]}")
