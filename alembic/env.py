@@ -1,10 +1,11 @@
 import asyncio
 from logging.config import fileConfig
+from urllib.parse import urlparse, urlunparse
 
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.core.config import normalize_db_url, settings
+from app.core.config import settings
 from app.db.models import Base
 
 config = context.config
@@ -14,8 +15,18 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def _force_asyncpg_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme in ("postgres", "postgresql", "postgresql+psycopg2"):
+        parsed = parsed._replace(scheme="postgresql+asyncpg")
+    return urlunparse(parsed)
+
+
+_db_url = _force_asyncpg_url(settings.database_url)
+
+
 def run_migrations_offline() -> None:
-    context.configure(url=normalize_db_url(settings.database_url), target_metadata=target_metadata, literal_binds=True)
+    context.configure(url=_db_url, target_metadata=target_metadata, literal_binds=True)
     with context.begin_transaction():
         context.run_migrations()
 
@@ -27,7 +38,7 @@ def do_run_migrations(connection):
 
 
 async def run_migrations_online() -> None:
-    engine = create_async_engine(normalize_db_url(settings.database_url))
+    engine = create_async_engine(_db_url)
     async with engine.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await engine.dispose()
