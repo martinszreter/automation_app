@@ -8,7 +8,9 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     env_file: .env
     ports:
       - "8000:8000"

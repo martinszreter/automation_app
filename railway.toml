@@ -1,6 +1,7 @@
 [build]
-dockerfilePath = "Dockerfile.prod"
+dockerfilePath = "Dockerfile"
 
 [deploy]
+startCommand = "./start.sh"
 healthcheckPath = "/health"
 restartPolicyType = "on_failure"

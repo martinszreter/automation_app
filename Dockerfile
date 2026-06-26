@@ -5,8 +5,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends libpq5 && rm -r
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && python -c "import asyncpg; print('asyncpg OK')" \
+    && python -c "import psycopg2; print('psycopg2 OK')"
 
 COPY . .
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY start.sh .
+RUN chmod +x start.sh
+
+CMD ["./start.sh"]
