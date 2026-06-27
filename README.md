@@ -35,4 +35,3 @@ docker compose exec app alembic revision --autogenerate -m "describe change"
 - **WhatsApp integration** via swappable adapter (mock adapter for development, Meta Cloud API for production)
 - **Server-rendered dashboard** with Jinja2 + HTMX (coming soon)
 - All guest-facing messages are **German-first** via a template layer
-
