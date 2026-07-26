@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ContactRequest
 from app.db.session import get_db
+from app.services.contact_email import send_contact_notification
 
 router = APIRouter(tags=["public"])
 
@@ -30,15 +31,15 @@ async def contact(
 ) -> FileResponse:
     # Honeypot: real users never fill the hidden "website" field — drop silently.
     if not website.strip():
-        db.add(
-            ContactRequest(
-                name=name,
-                company=company or None,
-                email=email,
-                interest=interest or None,
-                message=message,
-                call_requested=bool(call_requested),
-            )
+        contact_request = ContactRequest(
+            name=name,
+            company=company or None,
+            email=email,
+            interest=interest or None,
+            message=message,
+            call_requested=bool(call_requested),
         )
+        db.add(contact_request)
         await db.commit()
+        await send_contact_notification(contact_request)
     return FileResponse(_STATIC_DIR / "thanks.html", media_type="text/html")

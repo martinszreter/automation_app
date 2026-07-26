@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     meta_whatsapp_token: str = ""
     meta_phone_number_id: str = ""
 
+    smtp_host: str = ""
+    smtp_port: int = 465
+    smtp_user: str = ""
+    smtp_pass: str = ""
+    contact_to: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

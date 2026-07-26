@@ -34,7 +34,7 @@
   ::selection{background:var(--swiss);color:#fff}
 
   /* ---- hero ---- */
-  header{padding:84px 0 84px;border-bottom:1px solid var(--hair)}
+  header{padding:52px 0 46px;border-bottom:1px solid var(--hair)}
   .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px}
   .brandline{display:flex;align-items:center;gap:12px}
   .cross{width:13px;height:13px;flex:none}
@@ -47,9 +47,9 @@
   .langswitch button[aria-pressed="true"]{color:var(--platinum);border-bottom-color:var(--swiss)}
   .langswitch button:focus-visible{outline:2px solid var(--swiss);outline-offset:3px}
   h1{
-    font-size:clamp(46px,9vw,104px);
+    font-size:clamp(40px,7.5vw,82px);
     line-height:.98;letter-spacing:.01em;
-    margin:44px 0 30px;text-transform:uppercase;
+    margin:26px 0 20px;text-transform:uppercase;
     opacity:0;transform:translateY(14px);animation:up .7s .1s ease forwards;
   }
   h1 .row{display:block}
@@ -58,7 +58,7 @@
   .lede em{font-style:normal;border-bottom:1px solid var(--grey)}
   @keyframes up{to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){h1,.lede{animation:none;opacity:1;transform:none}}
-  .hero-cta{margin-top:44px;display:flex;gap:14px;flex-wrap:wrap}
+  .hero-cta{margin-top:26px;display:flex;gap:14px;flex-wrap:wrap}
   .btn{
     display:inline-block;padding:15px 30px;font-size:12px;font-weight:600;
     letter-spacing:.22em;text-transform:uppercase;text-decoration:none;
@@ -71,21 +71,21 @@
   .btn.solid:hover{background:transparent;color:var(--platinum)}
 
   /* ---- sections ---- */
-  section{padding:76px 0;border-bottom:1px solid var(--hair)}
-  h2{font-size:clamp(26px,4vw,40px);margin:18px 0 8px;letter-spacing:.01em}
+  section{padding:42px 0;border-bottom:1px solid var(--hair)}
+  h2{font-size:clamp(24px,3.4vw,34px);margin:12px 0 4px;letter-spacing:.01em}
 
-  .principle p.big{font-size:clamp(22px,3.4vw,32px);line-height:1.4;max-width:34ch;margin-top:18px}
+  .principle p.big{font-size:clamp(20px,3vw,28px);line-height:1.35;max-width:40ch;margin-top:12px}
   .principle p.big span{color:var(--grey)}
-  .principle .body{max-width:62ch;margin-top:26px;color:var(--grey)}
+  .principle .body{max-width:62ch;margin-top:14px;color:var(--grey)}
   .principle .body strong{color:var(--platinum);font-weight:500}
 
   .work{list-style:none;margin-top:14px}
   .work li{
     display:grid;grid-template-columns:1fr auto;gap:8px 24px;align-items:baseline;
-    padding:30px 0;border-top:1px solid var(--hair);
+    padding:15px 0;border-top:1px solid var(--hair);
   }
   .work li:first-child{border-top:0}
-  .work .name{font-size:clamp(24px,3.6vw,36px)}
+  .work .name{font-size:clamp(21px,3vw,29px)}
   .work .desc{grid-column:1;max-width:60ch;color:var(--grey);font-size:15.5px}
   .work .status{grid-column:2;grid-row:1;white-space:nowrap}
   @media (max-width:620px){
@@ -93,7 +93,7 @@
     .work .status{grid-column:1;grid-row:auto}
   }
 
-  form{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:22px;max-width:720px}
+  form{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:720px}
   .field{display:flex;flex-direction:column;gap:8px}
   .field.full{grid-column:1/-1}
   input,select,textarea{
@@ -102,20 +102,20 @@
   }
   select{appearance:none}
   select option{background:var(--black)}
-  textarea{min-height:120px;resize:vertical}
+  textarea{min-height:76px;resize:vertical}
   input:focus,select:focus,textarea:focus{outline:none;border-bottom-color:var(--platinum)}
   .check{grid-column:1/-1;display:flex;align-items:center;gap:12px;color:var(--grey);font-size:15px}
   .check input{width:16px;height:16px;accent-color:var(--swiss)}
   .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
   .form-note{grid-column:1/-1;color:var(--grey);font-size:13.5px}
 
-  footer{padding:70px 0 84px}
+  footer{padding:42px 0 52px}
   .facts{list-style:none;max-width:720px}
-  .facts li{display:flex;justify-content:space-between;gap:24px;padding:12px 0;border-bottom:1px solid var(--hair);font-size:15px}
+  .facts li{display:flex;justify-content:space-between;gap:24px;padding:7px 0;border-bottom:1px solid var(--hair);font-size:15px}
   .facts .v{text-align:right}
-  .fineprint{margin-top:34px;color:var(--grey);font-size:13px;max-width:70ch;line-height:1.8}
+  .fineprint{margin-top:20px;color:var(--grey);font-size:13px;max-width:70ch;line-height:1.8}
   .fineprint p+p{margin-top:8px}
-  .made{display:flex;align-items:center;gap:10px;margin-top:34px}
+  .made{display:flex;align-items:center;gap:10px;margin-top:20px}
 </style>
 </head>
 <body>
@@ -152,8 +152,8 @@
     <span class="de">Die Software hat heute einen Kunden gewonnen. Ihn onboardet. Ihn den ganzen Tag bedient. <span>Kein Mensch hat eingegriffen.</span></span>
   </p>
   <p class="body">
-    <span class="en">That is the standard every STARTEND product is built to. <strong>One engine, many industries:</strong> each application acquires its customers through an automated funnel, configures itself from public data in minutes, and operates around the clock through channels people already use. Humans set direction. Machines do the work.</span>
-    <span class="de">Das ist der Standard, nach dem jedes STARTEND-Produkt gebaut wird. <strong>Ein Motor, viele Branchen:</strong> Jede Applikation gewinnt ihre Kunden über einen automatisierten Funnel, konfiguriert sich in Minuten aus öffentlichen Daten und arbeitet rund um die Uhr — über Kanäle, die Menschen ohnehin nutzen. Menschen geben die Richtung vor. Maschinen machen die Arbeit.</span>
+    <span class="en"><strong>One engine, many industries.</strong> Humans set direction; machines do the work.</span>
+    <span class="de"><strong>Ein Motor, viele Branchen.</strong> Menschen geben die Richtung vor; Maschinen machen die Arbeit.</span>
   </p>
 </section>
 
@@ -180,8 +180,8 @@
       <span class="name display">№ 03 → ∞</span>
       <span class="label status"><span class="en">In design</span><span class="de">In Planung</span></span>
       <p class="desc">
-        <span class="en">A growing slate of applications across industries — including some the market has not named yet. One engine, retrained each time.</span>
-        <span class="de">Eine wachsende Reihe von Applikationen über Branchen hinweg — darunter solche, die der Markt noch nicht benannt hat. Ein Motor, jedes Mal neu trainiert.</span>
+        <span class="en">A growing slate of applications — including some the market has not named yet.</span>
+        <span class="de">Eine wachsende Reihe von Applikationen — darunter solche, die der Markt noch nicht benannt hat.</span>
       </p>
     </li>
   </ul>
