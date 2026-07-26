@@ -9,10 +9,13 @@
 <style>
   :root{
     --black:#0B0B0C;
+    --panel:#131317;
+    --field:#0E0E11;
     --platinum:#ECE8DF;
-    --grey:#8E8B84;
-    --hair:#232326;
-    --swiss:#DA291C;   /* the only colour on the page */
+    --grey:#9A968D;
+    --line:#2E2E36;        /* visible module lines */
+    --line-strong:#3A3A44;
+    --swiss:#DA291C;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -20,47 +23,54 @@
     background:var(--black);
     color:var(--platinum);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    font-weight:300;font-size:16.5px;line-height:1.7;
+    font-weight:300;font-size:16.5px;line-height:1.65;
     -webkit-font-smoothing:antialiased;
   }
-  /* language switch: hide the inactive language, natural display for the active one */
   html[data-lang="en"] .de{display:none}
   html[data-lang="de"] .en{display:none}
 
-  .wrap{max-width:960px;margin:0 auto;padding:0 28px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 32px}
   .display{font-family:'Didot','Bodoni MT','Didot LT STD',Georgia,'Times New Roman',serif;font-weight:400}
-  .label{font-size:11px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--grey)}
+  .label{font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--grey)}
   a{color:var(--platinum)}
   ::selection{background:var(--swiss);color:#fff}
 
-  /* ---- hero ---- */
-  header{padding:52px 0 46px;border-bottom:1px solid var(--hair)}
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  /* ---- top bar ---- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:24px 0;border-bottom:2px solid var(--line-strong);
+  }
   .brandline{display:flex;align-items:center;gap:12px}
   .cross{width:13px;height:13px;flex:none}
-  .langswitch{display:flex;gap:14px}
+  .nav{display:flex;align-items:center;gap:26px}
+  .nav a{font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--grey);text-decoration:none}
+  .nav a:hover{color:var(--platinum)}
+  .langswitch{display:flex;gap:12px;padding-left:26px;border-left:1px solid var(--line)}
   .langswitch button{
     background:none;border:0;cursor:pointer;padding:2px 0;
-    font-size:11px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--grey);
-    border-bottom:1px solid transparent;
+    font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--grey);
+    border-bottom:2px solid transparent;
   }
   .langswitch button[aria-pressed="true"]{color:var(--platinum);border-bottom-color:var(--swiss)}
   .langswitch button:focus-visible{outline:2px solid var(--swiss);outline-offset:3px}
+
+  /* ---- hero ---- */
+  header{padding:68px 0 62px}
   h1{
-    font-size:clamp(40px,7.5vw,82px);
+    font-size:clamp(42px,7.6vw,88px);
     line-height:.98;letter-spacing:.01em;
-    margin:26px 0 20px;text-transform:uppercase;
+    margin:0 0 24px;text-transform:uppercase;
     opacity:0;transform:translateY(14px);animation:up .7s .1s ease forwards;
   }
   h1 .row{display:block}
-  .lede{max-width:56ch;font-size:19px;
-    opacity:0;transform:translateY(14px);animation:up .7s .35s ease forwards}
+  .lede{max-width:56ch;font-size:18.5px;color:var(--platinum);
+    opacity:0;transform:translateY(14px);animation:up .7s .3s ease forwards}
   .lede em{font-style:normal;border-bottom:1px solid var(--grey)}
   @keyframes up{to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){h1,.lede{animation:none;opacity:1;transform:none}}
-  .hero-cta{margin-top:26px;display:flex;gap:14px;flex-wrap:wrap}
+  .hero-cta{margin-top:32px;display:flex;gap:14px;flex-wrap:wrap}
   .btn{
-    display:inline-block;padding:15px 30px;font-size:12px;font-weight:600;
+    display:inline-block;padding:14px 28px;font-size:12px;font-weight:600;
     letter-spacing:.22em;text-transform:uppercase;text-decoration:none;
     border:1px solid var(--platinum);color:var(--platinum);background:transparent;
     transition:background .2s,color .2s;cursor:pointer;
@@ -70,179 +80,235 @@
   .btn.solid{background:var(--platinum);color:var(--black)}
   .btn.solid:hover{background:transparent;color:var(--platinum)}
 
-  /* ---- sections ---- */
-  section{padding:42px 0;border-bottom:1px solid var(--hair)}
-  h2{font-size:clamp(24px,3.4vw,34px);margin:12px 0 4px;letter-spacing:.01em}
+  /* ---- editorial sections: label rail + content ---- */
+  .sec{
+    display:grid;grid-template-columns:190px 1fr;gap:24px 48px;
+    border-top:2px solid var(--line-strong);
+    padding:48px 0 56px;
+  }
+  .sec > .rail{display:flex;align-items:flex-start;gap:10px}
+  .rail .tick{width:9px;height:9px;background:var(--swiss);flex:none;margin-top:3px}
+  @media (max-width:760px){
+    .sec{grid-template-columns:1fr;gap:18px;padding:38px 0 44px}
+  }
+  h2{font-size:clamp(24px,3.4vw,34px);letter-spacing:.01em;margin-bottom:16px}
 
-  .principle p.big{font-size:clamp(20px,3vw,28px);line-height:1.35;max-width:40ch;margin-top:12px}
-  .principle p.big span{color:var(--grey)}
-  .principle .body{max-width:62ch;margin-top:14px;color:var(--grey)}
+  /* principle */
+  .principle .big{font-size:clamp(20px,3vw,29px);line-height:1.4;max-width:44ch}
+  .principle .big span{color:var(--grey)}
+  .principle .body{max-width:60ch;margin-top:14px;color:var(--grey)}
   .principle .body strong{color:var(--platinum);font-weight:500}
 
-  .work{list-style:none;margin-top:14px}
+  /* portfolio */
+  .work{list-style:none}
   .work li{
-    display:grid;grid-template-columns:1fr auto;gap:8px 24px;align-items:baseline;
-    padding:15px 0;border-top:1px solid var(--hair);
+    display:grid;grid-template-columns:1fr auto;gap:6px 24px;align-items:baseline;
+    padding:20px 0;border-top:1px solid var(--line);
   }
-  .work li:first-child{border-top:0}
+  .work li:first-child{border-top:0;padding-top:0}
   .work .name{font-size:clamp(21px,3vw,29px)}
-  .work .desc{grid-column:1;max-width:60ch;color:var(--grey);font-size:15.5px}
+  .work .desc{grid-column:1;max-width:58ch;color:var(--grey);font-size:15px}
   .work .status{grid-column:2;grid-row:1;white-space:nowrap}
-  @media (max-width:620px){
+  @media (max-width:640px){
     .work li{grid-template-columns:1fr}
     .work .status{grid-column:1;grid-row:auto}
   }
 
-  form{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:720px}
-  .field{display:flex;flex-direction:column;gap:8px}
+  /* contact */
+  .contact-grid{display:grid;grid-template-columns:2fr 3fr;gap:40px}
+  @media (max-width:900px){.contact-grid{grid-template-columns:1fr;gap:28px}}
+  .direct{display:flex;flex-direction:column;gap:18px}
+  .direct .item .label{display:block;margin-bottom:6px}
+  .direct .item a{font-size:18px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+  .direct .item a:hover{border-bottom-color:var(--platinum)}
+  .direct .note{color:var(--grey);font-size:14px;max-width:34ch}
+
+  .form-panel{
+    background:var(--panel);border:1px solid var(--line-strong);
+    padding:28px;
+  }
+  form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field{display:flex;flex-direction:column;gap:7px}
   .field.full{grid-column:1/-1}
   input,select,textarea{
-    background:transparent;border:0;border-bottom:1px solid var(--hair);
-    color:var(--platinum);font:inherit;padding:10px 2px;border-radius:0;
+    background:var(--field);border:1px solid var(--line);
+    color:var(--platinum);font:inherit;font-size:15px;
+    padding:12px 14px;border-radius:2px;width:100%;
   }
-  select{appearance:none}
-  select option{background:var(--black)}
-  textarea{min-height:76px;resize:vertical}
-  input:focus,select:focus,textarea:focus{outline:none;border-bottom-color:var(--platinum)}
-  .check{grid-column:1/-1;display:flex;align-items:center;gap:12px;color:var(--grey);font-size:15px}
+  select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--grey) 50%),linear-gradient(135deg,var(--grey) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat}
+  select option{background:var(--panel)}
+  textarea{min-height:92px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--platinum)}
+  .check{grid-column:1/-1;display:flex;align-items:center;gap:12px;color:var(--grey);font-size:14px}
   .check input{width:16px;height:16px;accent-color:var(--swiss)}
   .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
-  .form-note{grid-column:1/-1;color:var(--grey);font-size:13.5px}
+  .form-actions{grid-column:1/-1;display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:2px}
+  .form-note{color:var(--grey);font-size:13px}
 
-  footer{padding:42px 0 52px}
-  .facts{list-style:none;max-width:720px}
-  .facts li{display:flex;justify-content:space-between;gap:24px;padding:7px 0;border-bottom:1px solid var(--hair);font-size:15px}
-  .facts .v{text-align:right}
-  .fineprint{margin-top:20px;color:var(--grey);font-size:13px;max-width:70ch;line-height:1.8}
+  /* footer / company */
+  footer .facts{list-style:none;max-width:760px}
+  footer .facts li{display:flex;justify-content:space-between;gap:24px;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
+  footer .facts .v{text-align:right}
+  .fineprint{margin-top:22px;color:var(--grey);font-size:13px;max-width:70ch;line-height:1.7}
   .fineprint p+p{margin-top:8px}
-  .made{display:flex;align-items:center;gap:10px;margin-top:20px}
+  .made{display:flex;align-items:center;gap:10px;margin-top:22px}
 </style>
 </head>
 <body>
 
-<header class="wrap">
+<div class="wrap">
   <div class="topbar">
     <div class="brandline">
       <svg class="cross" viewBox="0 0 32 32" aria-label="Swiss cross" role="img"><rect width="32" height="32" fill="#DA291C"/><rect x="13" y="6" width="6" height="20" fill="#fff"/><rect x="6" y="13" width="20" height="6" fill="#fff"/></svg>
       <span class="label"><span class="en">Startend GmbH — Switzerland</span><span class="de">Startend GmbH — Schweiz</span></span>
     </div>
-    <nav class="langswitch" aria-label="Language">
-      <button type="button" data-setlang="en" aria-pressed="true">EN</button>
-      <button type="button" data-setlang="de" aria-pressed="false">DE</button>
+    <nav class="nav" aria-label="Main">
+      <a href="#work"><span class="en">Work</span><span class="de">Projekte</span></a>
+      <a href="#contact"><span class="en">Contact</span><span class="de">Kontakt</span></a>
+      <div class="langswitch" aria-label="Language">
+        <button type="button" data-setlang="en" aria-pressed="true">EN</button>
+        <button type="button" data-setlang="de" aria-pressed="false">DE</button>
+      </div>
     </nav>
   </div>
 
-  <h1 class="display"><span class="row">No Human</span><span class="row">Touch Apps.</span></h1>
+  <header>
+    <h1 class="display"><span class="row">No Human</span><span class="row">Touch Apps.</span></h1>
+    <p class="lede">
+      <span class="en">STARTEND is an AI application studio. We build vertical software that <em>sells itself, configures itself, and runs itself</em> — engineered in Switzerland, deployed worldwide.</span>
+      <span class="de">STARTEND ist ein KI-Applikationsstudio. Wir bauen vertikale Software, die <em>sich selbst verkauft, selbst konfiguriert und selbst betreibt</em> — entwickelt in der Schweiz, im Einsatz weltweit.</span>
+    </p>
+    <div class="hero-cta">
+      <a class="btn solid" href="#contact"><span class="en">Book a business call</span><span class="de">Business-Call buchen</span></a>
+      <a class="btn" href="#work"><span class="en">View the work</span><span class="de">Projekte ansehen</span></a>
+    </div>
+  </header>
 
-  <p class="lede">
-    <span class="en">STARTEND is an AI application studio. We build vertical software that <em>sells itself, configures itself, and runs itself</em> — engineered in Switzerland, deployed worldwide.</span>
-    <span class="de">STARTEND ist ein KI-Applikationsstudio. Wir bauen vertikale Software, die <em>sich selbst verkauft, selbst konfiguriert und selbst betreibt</em> — entwickelt in der Schweiz, im Einsatz weltweit.</span>
-  </p>
-
-  <div class="hero-cta">
-    <a class="btn solid" href="#contact"><span class="en">Book a business call</span><span class="de">Business-Call buchen</span></a>
-    <a class="btn" href="#work"><span class="en">View the work</span><span class="de">Projekte ansehen</span></a>
-  </div>
-</header>
-
-<section class="principle wrap">
-  <p class="label"><span class="en">Principle</span><span class="de">Prinzip</span></p>
-  <p class="big display">
-    <span class="en">Software acquired a customer today. Onboarded them. Served them all day. <span>No human touched any of it.</span></span>
-    <span class="de">Die Software hat heute einen Kunden gewonnen. Ihn onboardet. Ihn den ganzen Tag bedient. <span>Kein Mensch hat eingegriffen.</span></span>
-  </p>
-  <p class="body">
-    <span class="en"><strong>One engine, many industries.</strong> Humans set direction; machines do the work.</span>
-    <span class="de"><strong>Ein Motor, viele Branchen.</strong> Menschen geben die Richtung vor; Maschinen machen die Arbeit.</span>
-  </p>
-</section>
-
-<section id="work" class="wrap">
-  <p class="label">Portfolio</p>
-  <ul class="work">
-    <li>
-      <span class="name display"><span class="en">№ 01 — Unannounced</span><span class="de">№ 01 — Unangekündigt</span></span>
-      <span class="label status"><span class="en">In pilot · Switzerland · launching 2026</span><span class="de">Im Pilot · Schweiz · Lancierung 2026</span></span>
-      <p class="desc">
-        <span class="en">Autonomous customer communication for a service industry. Details at launch.</span>
-        <span class="de">Autonome Kundenkommunikation für eine Dienstleistungsbranche. Details zur Lancierung.</span>
+  <section class="sec principle">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">Principle</span><span class="de">Prinzip</span></span></div>
+    <div>
+      <p class="big display">
+        <span class="en">Software acquired a customer today. Onboarded them. Served them all day. <span>No human touched any of it.</span></span>
+        <span class="de">Die Software hat heute einen Kunden gewonnen. Ihn onboardet. Ihn den ganzen Tag bedient. <span>Kein Mensch hat eingegriffen.</span></span>
       </p>
-    </li>
-    <li>
-      <span class="name display">№ 02 — Grokywood</span>
-      <span class="label status"><span class="en">In development</span><span class="de">In Entwicklung</span></span>
-      <p class="desc">
-        <span class="en">In development. Details at launch.</span>
-        <span class="de">In Entwicklung. Details zur Lancierung.</span>
+      <p class="body">
+        <span class="en"><strong>One engine, many industries.</strong> Humans set direction; machines do the work.</span>
+        <span class="de"><strong>Ein Motor, viele Branchen.</strong> Menschen geben die Richtung vor; Maschinen machen die Arbeit.</span>
       </p>
-    </li>
-    <li>
-      <span class="name display">№ 03 → ∞</span>
-      <span class="label status"><span class="en">In design</span><span class="de">In Planung</span></span>
-      <p class="desc">
-        <span class="en">A growing slate of applications — including some the market has not named yet.</span>
-        <span class="de">Eine wachsende Reihe von Applikationen — darunter solche, die der Markt noch nicht benannt hat.</span>
-      </p>
-    </li>
-  </ul>
-</section>
+    </div>
+  </section>
 
-<section id="contact" class="wrap">
-  <p class="label"><span class="en">Contact</span><span class="de">Kontakt</span></p>
-  <h2 class="display"><span class="en">Specify a deal.</span><span class="de">Definieren wir den Deal.</span></h2>
-  <form method="post" action="/contact">
-    <div class="field">
-      <label class="label" for="name">Name</label>
-      <input id="name" name="name" required autocomplete="name">
-    </div>
-    <div class="field">
-      <label class="label" for="company"><span class="en">Company</span><span class="de">Firma</span></label>
-      <input id="company" name="company" autocomplete="organization">
-    </div>
-    <div class="field full">
-      <label class="label" for="email"><span class="en">Email</span><span class="de">E-Mail</span></label>
-      <input id="email" name="email" type="email" required autocomplete="email">
-    </div>
-    <div class="field full">
-      <label class="label" for="interest"><span class="en">Interest</span><span class="de">Interesse</span></label>
-      <select id="interest" name="interest">
-        <option value="enterprise" data-en="Enterprise deal" data-de="Enterprise-Deal">Enterprise deal</option>
-        <option value="partnership" data-en="Partnership" data-de="Partnerschaft">Partnership</option>
-        <option value="pilot" data-en="Pilot programme" data-de="Pilotprogramm">Pilot programme</option>
-        <option value="other" data-en="Other" data-de="Anderes">Other</option>
-      </select>
-    </div>
-    <div class="field full">
-      <label class="label" for="message"><span class="en">Message</span><span class="de">Nachricht</span></label>
-      <textarea id="message" name="message" required></textarea>
-    </div>
-    <label class="check">
-      <input type="checkbox" name="call_requested" value="yes">
-      <span><span class="en">Request a 20-minute business call — we will propose times by email.</span><span class="de">20-minütigen Business-Call anfragen — wir schlagen Termine per E-Mail vor.</span></span>
-    </label>
-    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <button class="btn solid" type="submit"><span class="en">Send</span><span class="de">Senden</span></button>
-    <p class="form-note"><span class="en">We reply within one business day from info@startend.ch.</span><span class="de">Wir antworten innerhalb eines Werktags von info@startend.ch.</span></p>
-  </form>
-</section>
+  <section id="work" class="sec">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label">Portfolio</span></div>
+    <ul class="work">
+      <li>
+        <span class="name display"><span class="en">№ 01 — Unannounced</span><span class="de">№ 01 — Unangekündigt</span></span>
+        <span class="label status"><span class="en">In pilot · Switzerland · 2026</span><span class="de">Im Pilot · Schweiz · 2026</span></span>
+        <p class="desc">
+          <span class="en">Autonomous customer communication for a service industry. Details at launch.</span>
+          <span class="de">Autonome Kundenkommunikation für eine Dienstleistungsbranche. Details zur Lancierung.</span>
+        </p>
+      </li>
+      <li>
+        <span class="name display">№ 02 — Grokywood</span>
+        <span class="label status"><span class="en">In development</span><span class="de">In Entwicklung</span></span>
+        <p class="desc">
+          <span class="en">In development. Details at launch.</span>
+          <span class="de">In Entwicklung. Details zur Lancierung.</span>
+        </p>
+      </li>
+      <li>
+        <span class="name display">№ 03 → ∞</span>
+        <span class="label status"><span class="en">In design</span><span class="de">In Planung</span></span>
+        <p class="desc">
+          <span class="en">A growing slate of applications — including some the market has not named yet.</span>
+          <span class="de">Eine wachsende Reihe von Applikationen — darunter solche, die der Markt noch nicht benannt hat.</span>
+        </p>
+      </li>
+    </ul>
+  </section>
 
-<footer class="wrap">
-  <p class="label"><span class="en">Company</span><span class="de">Unternehmen</span></p>
-  <ul class="facts">
-    <li><span class="label"><span class="en">Legal entity</span><span class="de">Firma</span></span><span class="v">STARTEND GmbH</span></li>
-    <li><span class="label"><span class="en">Registered office</span><span class="de">Sitz</span></span><span class="v">Bahnhofstrasse 7, 6330 Cham</span></li>
-    <li><span class="label">UID</span><span class="v">CHE-223.488.613</span></li>
-    <li><span class="label"><span class="en">Email</span><span class="de">E-Mail</span></span><span class="v"><a href="mailto:info@startend.ch">info@startend.ch</a></span></li>
-  </ul>
-  <div class="fineprint">
-    <p><span class="en">© 2026 STARTEND GmbH, Switzerland. Registered in the Handelsregister. All rights reserved.</span><span class="de">© 2026 STARTEND GmbH, Schweiz. Eingetragen im Handelsregister. Alle Rechte vorbehalten.</span></p>
-    <p><span class="en">Privacy: this website sets no cookies and runs no trackers. Details submitted through the contact form are used solely to answer your enquiry and are stored on our own systems.</span><span class="de">Datenschutz: Diese Website setzt keine Cookies und verwendet keine Tracker. Angaben aus dem Kontaktformular werden ausschliesslich zur Beantwortung Ihrer Anfrage verwendet und auf eigenen Systemen gespeichert.</span></p>
-  </div>
-  <div class="made">
-    <svg class="cross" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="#DA291C"/><rect x="13" y="6" width="6" height="20" fill="#fff"/><rect x="6" y="13" width="20" height="6" fill="#fff"/></svg>
-    <span class="label"><span class="en">Engineered in Switzerland · Built and operated by AI systems</span><span class="de">Engineered in Switzerland · Gebaut und betrieben von KI-Systemen</span></span>
-  </div>
-</footer>
+  <section id="contact" class="sec">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">Contact</span><span class="de">Kontakt</span></span></div>
+    <div class="contact-grid">
+      <div class="direct">
+        <h2 class="display"><span class="en">Specify a deal.</span><span class="de">Definieren wir den Deal.</span></h2>
+        <div class="item">
+          <span class="label"><span class="en">Email</span><span class="de">E-Mail</span></span>
+          <a href="mailto:info@startend.ch">info@startend.ch</a>
+        </div>
+        <div class="item">
+          <span class="label"><span class="en">Phone</span><span class="de">Telefon</span></span>
+          <a href="tel:+41799380372">+41 79 938 03 72</a>
+        </div>
+        <p class="note">
+          <span class="en">We reply within one business day. Prefer a call? Tick the box in the form and we will propose times.</span>
+          <span class="de">Wir antworten innerhalb eines Werktags. Lieber ein Gespräch? Haken im Formular setzen — wir schlagen Termine vor.</span>
+        </p>
+      </div>
+      <div class="form-panel">
+        <form method="post" action="/contact">
+          <div class="field">
+            <label class="label" for="name">Name</label>
+            <input id="name" name="name" required autocomplete="name">
+          </div>
+          <div class="field">
+            <label class="label" for="company"><span class="en">Company</span><span class="de">Firma</span></label>
+            <input id="company" name="company" autocomplete="organization">
+          </div>
+          <div class="field full">
+            <label class="label" for="email"><span class="en">Email</span><span class="de">E-Mail</span></label>
+            <input id="email" name="email" type="email" required autocomplete="email">
+          </div>
+          <div class="field full">
+            <label class="label" for="interest"><span class="en">Interest</span><span class="de">Interesse</span></label>
+            <select id="interest" name="interest">
+              <option value="enterprise" data-en="Enterprise deal" data-de="Enterprise-Deal">Enterprise deal</option>
+              <option value="partnership" data-en="Partnership" data-de="Partnerschaft">Partnership</option>
+              <option value="pilot" data-en="Pilot programme" data-de="Pilotprogramm">Pilot programme</option>
+              <option value="other" data-en="Other" data-de="Anderes">Other</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label class="label" for="message"><span class="en">Message</span><span class="de">Nachricht</span></label>
+            <textarea id="message" name="message" required></textarea>
+          </div>
+          <label class="check">
+            <input type="checkbox" name="call_requested" value="yes">
+            <span><span class="en">Request a 20-minute business call</span><span class="de">20-minütigen Business-Call anfragen</span></span>
+          </label>
+          <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div class="form-actions">
+            <button class="btn solid" type="submit"><span class="en">Send</span><span class="de">Senden</span></button>
+            <span class="form-note"><span class="en">No cookies. No trackers. Just a reply.</span><span class="de">Keine Cookies. Keine Tracker. Nur eine Antwort.</span></span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <footer class="sec">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">Company</span><span class="de">Unternehmen</span></span></div>
+    <div>
+      <ul class="facts">
+        <li><span class="label"><span class="en">Legal entity</span><span class="de">Firma</span></span><span class="v">STARTEND GmbH</span></li>
+        <li><span class="label"><span class="en">Registered office</span><span class="de">Sitz</span></span><span class="v">Bahnhofstrasse 7, 6330 Cham</span></li>
+        <li><span class="label">UID</span><span class="v">CHE-223.488.613</span></li>
+        <li><span class="label"><span class="en">Phone</span><span class="de">Telefon</span></span><span class="v"><a href="tel:+41799380372">+41 79 938 03 72</a></span></li>
+        <li><span class="label"><span class="en">Email</span><span class="de">E-Mail</span></span><span class="v"><a href="mailto:info@startend.ch">info@startend.ch</a></span></li>
+        <li><span class="label">Web</span><span class="v">www.startend.ch</span></li>
+      </ul>
+      <div class="fineprint">
+        <p><span class="en">© 2026 STARTEND GmbH, Switzerland. Registered in the Handelsregister. All rights reserved.</span><span class="de">© 2026 STARTEND GmbH, Schweiz. Eingetragen im Handelsregister. Alle Rechte vorbehalten.</span></p>
+        <p><span class="en">Privacy: this website sets no cookies and runs no trackers. Details submitted through the contact form are used solely to answer your enquiry and are stored on our own systems.</span><span class="de">Datenschutz: Diese Website setzt keine Cookies und verwendet keine Tracker. Angaben aus dem Kontaktformular werden ausschliesslich zur Beantwortung Ihrer Anfrage verwendet und auf eigenen Systemen gespeichert.</span></p>
+      </div>
+      <div class="made">
+        <svg class="cross" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="#DA291C"/><rect x="13" y="6" width="6" height="20" fill="#fff"/><rect x="6" y="13" width="20" height="6" fill="#fff"/></svg>
+        <span class="label"><span class="en">Engineered in Switzerland · Built and operated by AI systems</span><span class="de">Engineered in Switzerland · Gebaut und betrieben von KI-Systemen</span></span>
+      </div>
+    </div>
+  </footer>
+</div>
 
 <script>
 (function(){
