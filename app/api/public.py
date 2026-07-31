@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ContactRequest
@@ -16,6 +16,21 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 @router.get("/", response_class=FileResponse, include_in_schema=False)
 async def homepage() -> FileResponse:
     return FileResponse(_STATIC_DIR / "index.html", media_type="text/html")
+
+
+@router.get("/x-autopilot", include_in_schema=False)
+async def x_autopilot_no_slash() -> RedirectResponse:
+    return RedirectResponse(url="/x-autopilot/", status_code=301)
+
+
+@router.get("/x-autopilot/", response_class=FileResponse, include_in_schema=False)
+async def x_autopilot_landing() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "x-autopilot" / "index.html", media_type="text/html")
+
+
+@router.get("/x-autopilot/onboarding.html", response_class=FileResponse, include_in_schema=False)
+async def x_autopilot_onboarding() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "x-autopilot" / "onboarding.html", media_type="text/html")
 
 
 @router.post("/contact", response_class=FileResponse)

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X Autopilot — your X account runs itself · startend.ch</title>
+<meta name="description" content="AI writes posts in your voice. You approve from a spreadsheet in 5 minutes a day. The system publishes on schedule and emails you the stats. CHF 330 to start (CHF 990 total setup) + CHF 149/month. Built and run by startend.ch, Switzerland.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF0EC;
+    --card:#F7F8F5;
+    --ink:#14181A;
+    --ink-soft:#4A5250;
+    --rule:#C9CDC6;
+    --red:#E03123;
+    --green:#1E7A46;
+    --amber:#8A6100;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Archivo',system-ui,sans-serif;
+    font-size:17px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px}
+
+  /* header */
+  header{border-bottom:1px solid var(--rule)}
+  .head-in{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+  .wordmark{font-weight:800;letter-spacing:-0.02em;font-size:18px;text-decoration:none;color:var(--ink)}
+  .wordmark span{color:var(--red)}
+  .head-links{display:flex;gap:20px;align-items:center}
+  .head-links a{color:var(--ink-soft);text-decoration:none;font-size:14px;font-weight:500}
+  .head-links a:hover{color:var(--ink)}
+
+  /* hero */
+  .hero{padding:72px 0 40px}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:18px}
+  .eyebrow b{color:var(--red);font-weight:600}
+  h1{
+    font-size:clamp(38px,7vw,64px);
+    font-weight:800;
+    letter-spacing:-0.03em;
+    line-height:1.02;
+    max-width:14ch;
+  }
+  .sub{margin-top:22px;font-size:19px;color:var(--ink-soft);max-width:52ch}
+  .sub b{color:var(--ink);font-weight:700}
+  .cta-row{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+  .btn{
+    display:inline-block;padding:14px 24px;border-radius:2px;
+    font-weight:700;font-size:16px;text-decoration:none;letter-spacing:-0.01em;
+    border:1.5px solid var(--ink);transition:transform .12s ease, background .12s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--red);border-color:var(--red);color:#fff}
+  .btn-primary:hover{background:#C42417;border-color:#C42417}
+  .btn-ghost{background:transparent;color:var(--ink)}
+  .btn-ghost:hover{background:var(--ink);color:var(--paper)}
+  .cta-note{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:12px}
+
+  /* signature: the approval queue */
+  .queue-frame{margin:56px 0 0;border:1.5px solid var(--ink);border-radius:2px;background:var(--card);overflow:hidden}
+  .queue-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1.5px solid var(--ink);background:var(--paper)}
+  .queue-title{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+  .queue-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft)}
+  table.queue{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:13px}
+  .queue th{
+    text-align:left;padding:8px 16px;border-bottom:1px solid var(--rule);
+    font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600
+  }
+  .queue td{padding:11px 16px;border-bottom:1px solid var(--rule);vertical-align:top}
+  .queue tr:last-child td{border-bottom:none}
+  .q-slot{white-space:nowrap;color:var(--ink-soft)}
+  .q-post{color:var(--ink);max-width:46ch}
+  .q-state{white-space:nowrap;font-weight:600}
+  .st-pending{color:var(--amber)}
+  .st-true{color:var(--red)}
+  .st-pub{color:var(--green)}
+  .queue-foot{padding:10px 16px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);border-top:1.5px solid var(--ink);background:var(--paper)}
+  .queue-foot b{color:var(--ink)}
+  @media (max-width:560px){ .q-post{max-width:100%} .queue td,.queue th{padding-left:10px;padding-right:10px} }
+
+  /* receipts strip */
+  .receipts{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid var(--ink);border-top:none;border-radius:0 0 2px 2px;background:var(--card)}
+  .receipt{padding:18px 16px;border-right:1px solid var(--rule)}
+  .receipt:last-child{border-right:none}
+  .receipt .num{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;letter-spacing:-0.02em}
+  .receipt .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  @media (max-width:680px){ .receipts{grid-template-columns:repeat(2,1fr)} .receipt:nth-child(2){border-right:none} }
+
+  /* sections */
+  section{padding:64px 0;border-top:1px solid var(--rule)}
+  h2{font-size:clamp(26px,4vw,36px);font-weight:800;letter-spacing:-0.02em;margin-bottom:8px}
+  .lede{color:var(--ink-soft);max-width:56ch;margin-bottom:36px}
+
+  /* how it works: week timeline */
+  .steps{display:grid;gap:0;border:1.5px solid var(--ink);border-radius:2px;background:var(--card)}
+  .step{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid var(--rule)}
+  .step:last-child{border-bottom:none}
+  .step-when{padding:20px;border-right:1px solid var(--rule);font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em}
+  .step-body{padding:20px}
+  .step-body h3{font-size:17px;font-weight:700;margin-bottom:4px}
+  .step-body p{font-size:15px;color:var(--ink-soft)}
+  @media (max-width:560px){ .step{grid-template-columns:1fr} .step-when{border-right:none;border-bottom:1px dashed var(--rule);padding-bottom:8px} }
+
+  /* included / never */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  @media (max-width:680px){ .two-col{grid-template-columns:1fr} }
+  .list-card{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:24px}
+  .list-card h3{font-size:15px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px}
+  .list-card h3.yes{color:var(--green)}
+  .list-card h3.no{color:var(--red)}
+  .list-card ul{list-style:none}
+  .list-card li{padding:8px 0;border-bottom:1px solid var(--rule);font-size:15px}
+  .list-card li:last-child{border-bottom:none}
+  .list-card li b{font-weight:700}
+
+  /* pricing */
+  .price-card{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);overflow:hidden}
+  .price-grid{display:grid;grid-template-columns:1fr 1fr}
+  @media (max-width:680px){ .price-grid{grid-template-columns:1fr} }
+  .price-cell{padding:28px;border-right:1px solid var(--rule)}
+  .price-cell:last-child{border-right:none;border-top:none}
+  @media (max-width:680px){ .price-cell{border-right:none;border-bottom:1px solid var(--rule)} .price-cell:last-child{border-bottom:none} }
+  .price-tag{font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-0.02em}
+  .price-tag small{font-size:15px;color:var(--ink-soft);font-weight:400}
+  .price-cell h3{font-size:13px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:10px}
+  .price-cell ul{list-style:none;margin-top:14px}
+  .price-cell li{font-size:14px;color:var(--ink-soft);padding:5px 0}
+  .price-cell li::before{content:"— ";color:var(--ink)}
+  .price-cta{padding:24px 28px;border-top:1.5px solid var(--ink);background:var(--paper);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .capacity{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft)}
+  .capacity b{color:var(--red)}
+
+  /* form */
+  form{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:28px;max-width:560px}
+  .field{margin-bottom:18px}
+  label{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:6px}
+  input[type=text],input[type=email],textarea{
+    width:100%;padding:12px;border:1px solid var(--rule);border-radius:2px;background:#fff;
+    font-family:'Archivo',sans-serif;font-size:16px;color:var(--ink)
+  }
+  input:focus,textarea:focus{outline:2px solid var(--red);outline-offset:1px;border-color:var(--red)}
+  textarea{min-height:96px;resize:vertical}
+  .hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
+  .form-note{font-size:13px;color:var(--ink-soft);margin-top:14px}
+
+  /* faq */
+  details{border-bottom:1px solid var(--rule);padding:16px 0}
+  details:first-of-type{border-top:1.5px solid var(--ink)}
+  summary{cursor:pointer;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-family:'IBM Plex Mono',monospace;color:var(--red);font-weight:600}
+  details[open] summary::after{content:"–"}
+  details p{margin-top:10px;color:var(--ink-soft);font-size:15px;max-width:60ch}
+
+  /* footer */
+  footer{border-top:1.5px solid var(--ink);padding:32px 0 48px}
+  .foot-in{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--ink-soft)}
+  .foot-in a{color:var(--ink);text-decoration:none;font-weight:500}
+  .foot-in a:hover{color:var(--red)}
+
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head-in">
+    <a class="wordmark" href="https://startend.ch">start<span>end</span>.ch</a>
+    <nav class="head-links">
+      <a href="#pricing">Pricing</a>
+      <a href="https://x.com/MartinSzreter" target="_blank" rel="noopener">Live demo: @MartinSzreter</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="hero">
+      <p class="eyebrow">X AUTOPILOT — DONE-FOR-YOU · <b>RUNS ON THE OFFICIAL X API</b></p>
+      <h1>Your X account, on autopilot.</h1>
+      <p class="sub">AI writes posts in your voice. You approve them from a spreadsheet — <b>5 minutes a day</b>. The system publishes on schedule and emails you the stats. You never open a content calendar again.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" id="payBtn" href="#" style="display:none">Start now — CHF 330</a>
+        <a class="btn btn-primary" id="contactBtn" href="#contact">Request your setup</a>
+        <a class="btn btn-ghost" href="#how">See how it works</a>
+      </div>
+      <p class="cta-note">CHF 330 to start · the rest only after your first 3 posts are live · cancel monthly ops anytime</p>
+    </div>
+
+    <!-- SIGNATURE: the approval queue -->
+    <div class="queue-frame" aria-label="Example of the daily approval queue">
+      <div class="queue-head">
+        <span class="queue-title">Tomorrow's queue — your 5-minute approval pass</span>
+        <span class="queue-time">18:42 · Zurich</span>
+      </div>
+      <table class="queue">
+        <thead><tr><th>Slot</th><th>Post (drafted by AI, in your voice)</th><th>Approve</th></tr></thead>
+        <tbody id="qBody">
+          <tr><td class="q-slot">07:45</td><td class="q-post">How to run your entire posting pipeline from one spreadsheet. Setup below.</td><td class="q-state st-pending" data-final="TRUE">PENDING</td></tr>
+          <tr><td class="q-slot">12:15</td><td class="q-post">Most automation fails at the hand-off, not the build. Three checks that catch it.</td><td class="q-state st-pending" data-final="TRUE">PENDING</td></tr>
+          <tr><td class="q-slot">18:15</td><td class="q-post">Shipped this week: the cost tracker. Every post now shows its exact API cost.</td><td class="q-state st-pending" data-final="TRUE">PENDING</td></tr>
+          <tr><td class="q-slot">21:00</td><td class="q-post">Stop paying for scheduling tools. The math, with receipts.</td><td class="q-state st-pending" data-final="FALSE">PENDING</td></tr>
+        </tbody>
+      </table>
+      <div class="queue-foot">You flip <b>TRUE</b> or <b>FALSE</b>. That's the whole job. Everything else is automatic.</div>
+    </div>
+
+    <div class="receipts" aria-label="Real numbers from the founder's own account">
+      <div class="receipt"><div class="num">122</div><div class="lbl">posts in 27 days on the founder's own account</div></div>
+      <div class="receipt"><div class="num">~15 min</div><div class="lbl">of human time per day</div></div>
+      <div class="receipt"><div class="num">$0.015</div><div class="lbl">AI cost per post</div></div>
+      <div class="receipt"><div class="num">26 / 48h</div><div class="lbl">posts by account #2 in its first two days</div></div>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="lede">The same system that runs <a href="https://x.com/MartinSzreter" target="_blank" rel="noopener" style="color:var(--ink)">@MartinSzreter</a>, cloned for your account. One week from payment to first automated post.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-when">Day 1–2</div>
+          <div class="step-body"><h3>Voice capture</h3><p>Payment drops you straight into the onboarding form: your topics, your tone, your hard rules, three links that sound like you. We turn that into a voice document. The AI writes inside those walls, nowhere else.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-when">Day 3–5</div>
+          <div class="step-body"><h3>System build</h3><p>Your content engine is assembled: AI drafting, topic mining, a quality gate that rejects weak drafts before you ever see them, and publishing connected through the official X API. You get one authorization link — a single click on X’s own consent screen connects your account. No passwords, no keys.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-when">Day 6–7</div>
+          <div class="step-body"><h3>Test week starts</h3><p>Drafts land in your approval sheet every morning. You flip TRUE or FALSE — 5 minutes, from your phone. Approved posts publish on your schedule. We tune the voice on your feedback.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-when">Every day after</div>
+          <div class="step-body"><h3>It just runs</h3><p>Fresh drafts every morning. Publishing on schedule. A daily stats email: what went out, what's queued, and a warning the moment anything stalls. Monthly tuning included.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>What you get — and what this never does</h2>
+      <p class="lede">This is a writing and publishing system with you as editor-in-chief. It is not an engagement bot.</p>
+      <div class="two-col">
+        <div class="list-card">
+          <h3 class="yes">Included</h3>
+          <ul>
+            <li><b>AI drafting in your voice</b> — daily, on your topics</li>
+            <li><b>Topic mining</b> — drafts react to what's live in your niche</li>
+            <li><b>Quality gate</b> — weak drafts rejected before you see them</li>
+            <li><b>Approval sheet</b> — full veto on every single post</li>
+            <li><b>Scheduled publishing</b> — official X API, your time slots</li>
+            <li><b>Daily stats email</b> — output, queue, and stall warnings</li>
+            <li><b>Monthly tuning</b> — voice and strategy adjusted on results</li>
+          </ul>
+        </div>
+        <div class="list-card">
+          <h3 class="no">Never</h3>
+          <ul>
+            <li>No post goes out without your approval</li>
+            <li>No fake engagement, no bought followers</li>
+            <li>No automated DMs, replies, or follow/unfollow games</li>
+            <li>No access beyond posting — scoped API permissions only</li>
+            <li>No passwords or API keys typed into forms — you authorize on X’s official screen</li>
+            <li>No lock-in — the sheet and the system are documented and yours</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <h2>Pricing</h2>
+      <p class="lede">CHF 990 setup, split so you see it working before most of the money moves. Swiss VAT included where applicable.</p>
+      <div class="price-card">
+        <div class="price-grid">
+          <div class="price-cell">
+            <h3>Setup — split in two</h3>
+            <div class="price-tag mono">CHF 330<small> today</small></div>
+            <p style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-soft);margin-top:8px">+ CHF 660 charged automatically once your first 3 posts are live. Total CHF 990.</p>
+            <ul>
+              <li>CHF 330 — voice capture, system build, X connection</li>
+              <li>CHF 660 — only after posts 1–3 publish on your account</li>
+              <li>Card saved at checkout, second charge is automatic</li>
+              <li>One test week with daily tuning included</li>
+            </ul>
+          </div>
+          <div class="price-cell">
+            <h3>Operations — monthly</h3>
+            <div class="price-tag mono">CHF 149<small> /month</small></div>
+            <ul>
+              <li>All AI and API costs included</li>
+              <li>Monitoring and stall alerts</li>
+              <li>Daily stats email</li>
+              <li>Monthly voice and strategy tuning</li>
+              <li>Cancel anytime, monthly</li>
+            </ul>
+          </div>
+        </div>
+        <div class="price-cta">
+          <a class="btn btn-primary" id="payBtn2" href="#" style="display:none">Start now — CHF 330</a>
+          <a class="btn btn-ghost" href="#contact">Ask a question first</a>
+          <span class="capacity">Capacity: <b>2 new accounts per month</b> — setup is hands-on.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="wrap">
+      <h2>Request your setup</h2>
+      <p class="lede">Have questions first? Ask here — I reply personally within 24 hours. Ready to go? The Start button takes payment and drops you straight into the onboarding form.</p>
+      <form action="https://startend.app.n8n.cloud/webhook/x-autopilot-lead" method="POST">
+        <div class="field">
+          <label for="f-name">Name</label>
+          <input type="text" id="f-name" name="name" required maxlength="120" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="f-email">Email</label>
+          <input type="email" id="f-email" name="email" required maxlength="160" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="f-handle">Your X handle</label>
+          <input type="text" id="f-handle" name="x_handle" placeholder="@yourhandle" maxlength="60">
+        </div>
+        <div class="field">
+          <label for="f-msg">Anything I should know? (optional)</label>
+          <textarea id="f-msg" name="message" maxlength="2000"></textarea>
+        </div>
+        <div class="hp" aria-hidden="true">
+          <label for="f-web">Company website</label>
+          <input type="text" id="f-web" name="company_website" tabindex="-1" autocomplete="off">
+        </div>
+        <button class="btn btn-primary" type="submit">Send request</button>
+        <p class="form-note">Prefer X? DM <span class="mono">AUTOPILOT</span> to <a href="https://x.com/MartinSzreter" target="_blank" rel="noopener" style="color:var(--ink)">@MartinSzreter</a>. Or email <a href="mailto:info@startend.ch" style="color:var(--ink)">info@startend.ch</a>.</p>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Questions people ask before paying</h2>
+      <div style="margin-top:28px">
+        <details>
+          <summary>Is this allowed on X?</summary>
+          <p>Yes. Publishing runs through X's official API with scoped permissions, every post is approved by a human (you), and there is no automated engagement of any kind. That combination is exactly what the platform rules permit. Reference case: my own account has run this way in public since day one.</p>
+        </details>
+        <details>
+          <summary>Why is the setup split into CHF 330 + 660?</summary>
+          <p>So you see it working before most of the money moves. CHF 330 starts the build. The remaining CHF 660 is charged automatically — to the card you saved at checkout — only once your first three posts are live on your account. If we never get you to three live posts, the 660 never charges.</p>
+        </details>
+        <details>
+          <summary>Will it sound like me or like AI?</summary>
+          <p>The system writes inside your voice document — your topics, your sentence rhythm, your banned words. A quality gate rejects generic drafts before you see them. And you are the final filter: anything that doesn't sound like you gets a FALSE and never publishes.</p>
+        </details>
+        <details>
+          <summary>How much of my time does it really take?</summary>
+          <p>One approval pass per day, typically 5 minutes from your phone: read the drafts, flip TRUE or FALSE. Skip a day and the queue simply waits — approved posts keep publishing from your buffer.</p>
+        </details>
+        <details>
+          <summary>What happens if I cancel?</summary>
+          <p>Monthly ops cancel anytime. The system, the sheet, and the documentation are set up on assets you can keep — you're paying me to build and run it, not to rent your own account back.</p>
+        </details>
+        <details>
+          <summary>Who is behind this?</summary>
+          <p>Martin Szreter — startend.ch, Switzerland. I run two full-time consulting roles and my entire X presence on this exact system, in public. The numbers on this page are my own account's numbers.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span>© 2026 startend.ch · Switzerland</span>
+    <span>
+      <a href="mailto:info@startend.ch">info@startend.ch</a> ·
+      <a href="https://x.com/MartinSzreter" target="_blank" rel="noopener">@MartinSzreter</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // === CONFIG ===================================================
+  // Paste your Stripe Payment Link (CHF 330 setup start) between the quotes
+  // and both "Pay setup" buttons appear automatically.
+  var STRIPE_PAYMENT_LINK = "https://buy.stripe.com/7sY5kE9VH4Hvery8dR0x200";
+  // ==============================================================
+  (function(){
+    if (STRIPE_PAYMENT_LINK && STRIPE_PAYMENT_LINK.indexOf('https://') === 0) {
+      ['payBtn','payBtn2'].forEach(function(id){
+        var b = document.getElementById(id);
+        if (b) { b.href = STRIPE_PAYMENT_LINK; b.style.display = 'inline-block'; }
+      });
+      var c = document.getElementById('contactBtn');
+      if (c) { c.className = 'btn btn-ghost'; c.textContent = 'Ask a question first'; }
+    }
+  })();
+
+  // Signature moment: the approval pass runs itself on load.
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var cells = document.querySelectorAll('#qBody .q-state');
+    function setFinal(cell){
+      var f = cell.getAttribute('data-final');
+      cell.textContent = f;
+      cell.className = 'q-state ' + (f === 'TRUE' ? 'st-true' : 'st-pending');
+      if (f === 'FALSE') { cell.style.color = 'var(--ink-soft)'; }
+    }
+    if (reduce) { cells.forEach(setFinal); return; }
+    cells.forEach(function(cell, i){
+      setTimeout(function(){ setFinal(cell); }, 900 + i * 650);
+    });
+    // First approved row publishes at the end.
+    setTimeout(function(){
+      var first = cells[0];
+      if (first && first.getAttribute('data-final') === 'TRUE') {
+        first.textContent = 'PUBLISHED ✓';
+        first.className = 'q-state st-pub';
+      }
+    }, 900 + cells.length * 650 + 900);
+  })();
+</script>
+</body>
+</html>

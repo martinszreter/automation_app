@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding — X Autopilot · startend.ch</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF0EC; --card:#F7F8F5; --ink:#14181A; --ink-soft:#4A5250;
+    --rule:#C9CDC6; --red:#E03123; --green:#1E7A46;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:'Archivo',system-ui,sans-serif;font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .wrap{max-width:680px;margin:0 auto;padding:0 24px}
+  header{border-bottom:1px solid var(--rule)}
+  .head-in{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+  .wordmark{font-weight:800;letter-spacing:-0.02em;font-size:18px;text-decoration:none;color:var(--ink)}
+  .wordmark span{color:var(--red)}
+  .paid{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:var(--green);font-weight:600}
+  .hero{padding:56px 0 8px}
+  h1{font-size:clamp(30px,6vw,44px);font-weight:800;letter-spacing:-0.03em;line-height:1.05}
+  .sub{margin-top:16px;font-size:17px;color:var(--ink-soft);max-width:56ch}
+  .sub b{color:var(--ink)}
+  .stepbar{display:grid;grid-template-columns:1fr 1fr 1fr;border:1.5px solid var(--ink);border-radius:2px;background:var(--card);margin:28px 0 40px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+  .stepbar div{padding:12px;border-right:1px solid var(--rule)}
+  .stepbar div:last-child{border-right:none}
+  .stepbar b{display:block;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:2px}
+  .s-done b{color:var(--green)} .s-now b{color:var(--red)} .s-next{color:var(--ink-soft)}
+  form{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:28px;margin-bottom:24px}
+  .field{margin-bottom:20px}
+  label{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:6px}
+  .hint{font-size:13px;color:var(--ink-soft);margin-top:5px}
+  input[type=text],input[type=email],textarea,select{
+    width:100%;padding:12px;border:1px solid var(--rule);border-radius:2px;background:#fff;
+    font-family:'Archivo',sans-serif;font-size:16px;color:var(--ink)
+  }
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--red);outline-offset:1px;border-color:var(--red)}
+  textarea{min-height:88px;resize:vertical}
+  .hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
+  .btn{display:inline-block;padding:14px 24px;border-radius:2px;font-weight:700;font-size:16px;border:1.5px solid var(--red);background:var(--red);color:#fff;cursor:pointer;font-family:'Archivo',sans-serif}
+  .btn:hover{background:#C42417;border-color:#C42417}
+  .secure{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:20px 24px;margin-bottom:56px}
+  .secure h3{font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--green);margin-bottom:8px}
+  .secure p{font-size:14px;color:var(--ink-soft)}
+  .secure b{color:var(--ink)}
+  footer{border-top:1.5px solid var(--ink);padding:28px 0 44px;font-size:14px;color:var(--ink-soft)}
+  footer a{color:var(--ink);text-decoration:none;font-weight:500}
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head-in">
+    <a class="wordmark" href="https://startend.ch">start<span>end</span>.ch</a>
+    <span class="paid">Payment received ✓</span>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Now let's capture your voice.</h1>
+      <p class="sub">Ten minutes here saves the whole project. The more specific you are, the more the drafts sound like <b>you</b> from day one. Your build starts within 24 hours of this form.</p>
+    </div>
+
+    <div class="stepbar">
+      <div class="s-done"><b>1 · Done</b>Payment — CHF 330</div>
+      <div class="s-now"><b>2 · Now</b>This form — your voice</div>
+      <div class="s-next"><b>3 · By email</b>One-click X authorization</div>
+    </div>
+
+    <form action="https://startend.app.n8n.cloud/webhook/x-autopilot-onboarding" method="POST">
+      <div class="field">
+        <label for="o-name">Name</label>
+        <input type="text" id="o-name" name="name" required maxlength="120" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="o-email">Email — same one you paid with</label>
+        <input type="email" id="o-email" name="email" required maxlength="160" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="o-handle">Your X handle</label>
+        <input type="text" id="o-handle" name="x_handle" required placeholder="@yourhandle" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="o-topics">What do you post about? 3–5 topics</label>
+        <textarea id="o-topics" name="topics" required maxlength="1500" placeholder="e.g. B2B sales for Swiss SMEs, hiring, pricing, founder lessons"></textarea>
+        <p class="hint">Specific beats broad. "Pricing for agencies" works harder than "business".</p>
+      </div>
+      <div class="field">
+        <label for="o-voice">3 links that sound like you</label>
+        <textarea id="o-voice" name="voice_links" required maxlength="1500" placeholder="Your best posts, threads, articles, LinkedIn posts — anywhere your real voice lives"></textarea>
+        <p class="hint">This is what the AI learns your rhythm from. Pick the ones you're proud of.</p>
+      </div>
+      <div class="field">
+        <label for="o-banned">Never write about / never say</label>
+        <textarea id="o-banned" name="banned_list" maxlength="1500" placeholder="Topics, opinions, competitors, buzzwords — anything that must never appear"></textarea>
+      </div>
+      <div class="field">
+        <label for="o-freq">Posting rhythm</label>
+        <select id="o-freq" name="frequency">
+          <option value="3/day">3 posts per day</option>
+          <option value="5/day" selected>5 posts per day (recommended)</option>
+          <option value="custom">Custom — details in notes below</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="o-tz">Your timezone</label>
+        <input type="text" id="o-tz" name="timezone" maxlength="60" placeholder="Europe/Zurich" value="Europe/Zurich">
+      </div>
+      <div class="field">
+        <label for="o-notes">Anything else? (optional)</label>
+        <textarea id="o-notes" name="notes" maxlength="2000" placeholder="Launches coming up, pet peeves, formats you love or hate…"></textarea>
+      </div>
+      <div class="hp" aria-hidden="true">
+        <label for="o-web">Company website</label>
+        <input type="text" id="o-web" name="company_website" tabindex="-1" autocomplete="off">
+      </div>
+      <button class="btn" type="submit">Send — start my build</button>
+    </form>
+
+    <div class="secure">
+      <h3>About your account access</h3>
+      <p><b>We never ask for passwords or API keys in a form.</b> Step 3 is an email with one authorization link: you click it, X's own consent screen asks you to allow posting, done. Access is scoped to publishing only, stored in an encrypted credential vault, and revocable by you in your X settings at any time.</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">© 2026 startend.ch · Questions right now? <a href="mailto:info@startend.ch">info@startend.ch</a></div>
+</footer>
+
+</body>
+</html>

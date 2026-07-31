@@ -28,6 +28,36 @@ async def test_homepage_serves_index_html():
 
 
 @pytest.mark.asyncio
+async def test_x_autopilot_landing_serves_index_html():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/x-autopilot/")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "X Autopilot" in response.text
+    assert "Your X account, on autopilot." in response.text
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_onboarding_serves_onboarding_html():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/x-autopilot/onboarding.html")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Now let's capture your voice." in response.text
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_without_slash_redirects():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/x-autopilot")
+
+    assert response.status_code == 301
+    assert response.headers["location"] == "/x-autopilot/"
+
+
+@pytest.mark.asyncio
 async def test_contact_stores_request_and_sends_email():
     mock_session = AsyncMock()
     mock_session.add = MagicMock()
