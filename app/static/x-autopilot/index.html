@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23DA291C'/%3E%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E">
 <title>X Autopilot — your X account runs itself · startend.ch</title>
 <meta name="description" content="AI writes posts in your voice. You approve from a spreadsheet in 5 minutes a day. The system publishes on schedule and emails you the stats. CHF 330 to start (CHF 990 total setup) + CHF 149/month. Built and run by startend.ch, Switzerland.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -193,7 +194,7 @@
       <p class="sub">AI writes posts in your voice. You approve them from a spreadsheet — <b>5 minutes a day</b>. The system publishes on schedule and emails you the stats. You never open a content calendar again.</p>
       <div class="cta-row">
         <a class="btn btn-primary" id="payBtn" href="#" style="display:none">Start now — CHF 330</a>
-        <a class="btn btn-primary" id="contactBtn" href="#contact">Request your setup</a>
+        <a class="btn btn-primary" id="contactBtn" href="#contact">Ask a question first</a>
         <a class="btn btn-ghost" href="#how">See how it works</a>
       </div>
       <p class="cta-note">CHF 330 to start · the rest only after your first 3 posts are live · cancel monthly ops anytime</p>
@@ -272,8 +273,8 @@
           <ul>
             <li>No post goes out without your approval</li>
             <li>No fake engagement, no bought followers</li>
-            <li>No automated DMs, replies, or follow/unfollow games</li>
-            <li>No access beyond posting — scoped API permissions only</li>
+            <li>No spam — nothing unsolicited ever leaves your account, no follow/unfollow games</li>
+            <li>Posting access only — no access to your DMs, followers, or settings, revocable in X anytime</li>
             <li>No passwords or API keys typed into forms — you authorize on X’s official screen</li>
             <li>No lock-in — the sheet and the system are documented and yours</li>
           </ul>
@@ -322,8 +323,8 @@
 
   <section id="contact">
     <div class="wrap">
-      <h2>Request your setup</h2>
-      <p class="lede">Have questions first? Ask here — I reply personally within 24 hours. Ready to go? The Start button takes payment and drops you straight into the onboarding form.</p>
+      <h2>Questions first?</h2>
+      <p class="lede">Anything unclear — your niche, the fit, how the approval works? Ask here; I reply personally within 24 hours. Buying happens in one place only: the red Start button, which takes payment and drops you straight into onboarding.</p>
       <form action="https://startend.app.n8n.cloud/webhook/x-autopilot-lead" method="POST">
         <div class="field">
           <label for="f-name">Name</label>
@@ -338,14 +339,14 @@
           <input type="text" id="f-handle" name="x_handle" placeholder="@yourhandle" maxlength="60">
         </div>
         <div class="field">
-          <label for="f-msg">Anything I should know? (optional)</label>
-          <textarea id="f-msg" name="message" maxlength="2000"></textarea>
+          <label for="f-msg">Your question</label>
+          <textarea id="f-msg" name="message" maxlength="2000" required></textarea>
         </div>
         <div class="hp" aria-hidden="true">
           <label for="f-web">Company website</label>
           <input type="text" id="f-web" name="company_website" tabindex="-1" autocomplete="off">
         </div>
-        <button class="btn btn-primary" type="submit">Send request</button>
+        <button class="btn btn-primary" type="submit">Send question</button>
         <p class="form-note">Prefer X? DM <span class="mono">AUTOPILOT</span> to <a href="https://x.com/MartinSzreter" target="_blank" rel="noopener" style="color:var(--ink)">@MartinSzreter</a>. Or email <a href="mailto:info@startend.ch" style="color:var(--ink)">info@startend.ch</a>.</p>
       </form>
     </div>
@@ -357,7 +358,7 @@
       <div style="margin-top:28px">
         <details>
           <summary>Is this allowed on X?</summary>
-          <p>Yes. Publishing runs through X's official API with scoped permissions, every post is approved by a human (you), and there is no automated engagement of any kind. That combination is exactly what the platform rules permit. Reference case: my own account has run this way in public since day one.</p>
+          <p>Yes. Publishing runs through X's official API with scoped permissions, every post is approved by a human (you), and nothing unsolicited ever goes out. That combination is exactly what the platform rules permit. Reference case: my own account has run this way in public since day one.</p>
         </details>
         <details>
           <summary>Why is the setup split into CHF 330 + 660?</summary>

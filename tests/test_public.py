@@ -58,6 +58,17 @@ async def test_x_autopilot_without_slash_redirects():
 
 
 @pytest.mark.asyncio
+async def test_favicon_serves_svg_with_long_cache():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/favicon.ico")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/svg+xml"
+    assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
+    assert "#DA291C" in response.text
+
+
+@pytest.mark.asyncio
 async def test_contact_stores_request_and_sends_email():
     mock_session = AsyncMock()
     mock_session.add = MagicMock()
