@@ -58,6 +58,15 @@ async def test_x_autopilot_without_slash_redirects():
 
 
 @pytest.mark.asyncio
+async def test_x_autopilot_without_slash_redirects_on_head():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.head("/x-autopilot")
+
+    assert response.status_code == 301
+    assert response.headers["location"] == "/x-autopilot/"
+
+
+@pytest.mark.asyncio
 async def test_favicon_serves_svg_with_long_cache():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/favicon.ico")

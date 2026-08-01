@@ -38,7 +38,7 @@ async def favicon() -> Response:
     )
 
 
-@router.get("/x-autopilot", include_in_schema=False)
+@router.api_route("/x-autopilot", methods=["GET", "HEAD"], include_in_schema=False)
 async def x_autopilot_no_slash() -> RedirectResponse:
     return RedirectResponse(url="/x-autopilot/", status_code=301)
 
