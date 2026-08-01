@@ -18,11 +18,11 @@ async def homepage() -> FileResponse:
     return FileResponse(_STATIC_DIR / "index.html", media_type="text/html")
 
 
-# Same Swiss-cross mark the pages embed inline; served here so every page on
+# Same offset-cross mark the pages embed inline; served here so every page on
 # the domain gets an icon via the browser's /favicon.ico fallback.
 _FAVICON_SVG = (
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>"
-    "<rect width='64' height='64' fill='#DA291C'/>"
+    "<path d='M16 0H64V48H48V64H0V16H16Z' fill='#DA291C'/>"
     "<rect x='26' y='12' width='12' height='40' fill='#fff'/>"
     "<rect x='12' y='26' width='40' height='12' fill='#fff'/>"
     "</svg>"

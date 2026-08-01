@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>STARTEND — No Human Touch Apps. AI application studio, Switzerland.</title>
 <meta name="description" content="STARTEND GmbH is a Swiss AI application studio. We build vertical software that acquires, onboards, and serves its customers autonomously — no human touch.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23DA291C'/%3E%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M16 0H64V48H48V64H0V16H16Z' fill='%23DA291C'/%3E%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E">
 <style>
   :root{
     --black:#0B0B0C;
@@ -40,8 +40,9 @@
     display:flex;align-items:center;justify-content:space-between;gap:16px;
     padding:24px 0;border-bottom:2px solid var(--line-strong);
   }
-  .brandline{display:flex;align-items:center;gap:12px}
-  .cross{width:13px;height:13px;flex:none}
+  .brandline{display:flex;align-items:center}
+  .wordmark{font-weight:600;font-size:16px;letter-spacing:.02em;color:var(--platinum)}
+  .wordmark span{color:#E03123}
   .nav{display:flex;align-items:center;gap:26px}
   .nav a{font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--grey);text-decoration:none}
   .nav a:hover{color:var(--platinum)}
@@ -159,8 +160,7 @@
 <div class="wrap">
   <div class="topbar">
     <div class="brandline">
-      <svg class="cross" viewBox="0 0 32 32" aria-label="Swiss cross" role="img"><rect width="32" height="32" fill="#DA291C"/><rect x="13" y="6" width="6" height="20" fill="#fff"/><rect x="6" y="13" width="20" height="6" fill="#fff"/></svg>
-      <span class="label"><span class="en">Startend GmbH — Switzerland</span><span class="de">Startend GmbH — Schweiz</span></span>
+      <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" style="margin-right:8px"><path d="M16 0H64V48H48V64H0V16H16Z" fill="#DA291C"/><rect x="26" y="12" width="12" height="40" fill="#fff"/><rect x="12" y="26" width="40" height="12" fill="#fff"/></svg><span class="wordmark">startend<span>.ch</span></span>
     </div>
     <nav class="nav" aria-label="Main">
       <a href="#work"><span class="en">Work</span><span class="de">Projekte</span></a>
@@ -303,7 +303,7 @@
         <p><span class="en">Privacy: this website sets no cookies and runs no trackers. Details submitted through the contact form are used solely to answer your enquiry and are stored on our own systems.</span><span class="de">Datenschutz: Diese Website setzt keine Cookies und verwendet keine Tracker. Angaben aus dem Kontaktformular werden ausschliesslich zur Beantwortung Ihrer Anfrage verwendet und auf eigenen Systemen gespeichert.</span></p>
       </div>
       <div class="made">
-        <svg class="cross" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="#DA291C"/><rect x="13" y="6" width="6" height="20" fill="#fff"/><rect x="6" y="13" width="20" height="6" fill="#fff"/></svg>
+        <svg width="13" height="13" viewBox="0 0 64 64" aria-hidden="true" style="flex:none"><path d="M16 0H64V48H48V64H0V16H16Z" fill="#DA291C"/><rect x="26" y="12" width="12" height="40" fill="#fff"/><rect x="12" y="26" width="40" height="12" fill="#fff"/></svg>
         <span class="label"><span class="en">Engineered in Switzerland · Built and operated by AI systems</span><span class="de">Engineered in Switzerland · Gebaut und betrieben von KI-Systemen</span></span>
       </div>
     </div>
