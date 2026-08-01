@@ -69,7 +69,6 @@
   .lede em{font-style:normal;border-bottom:1px solid var(--grey)}
   @keyframes up{to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){h1,.lede{animation:none;opacity:1;transform:none}}
-  .hero-cta{margin-top:32px;display:flex;gap:14px;flex-wrap:wrap}
   .btn{
     display:inline-block;padding:14px 28px;font-size:12px;font-weight:600;
     letter-spacing:.22em;text-transform:uppercase;text-decoration:none;
@@ -94,25 +93,32 @@
   }
   h2{font-size:clamp(24px,3.4vw,34px);letter-spacing:.01em;margin-bottom:16px}
 
-  /* principle */
-  .principle .big{font-size:clamp(20px,3vw,29px);line-height:1.4;max-width:44ch}
-  .principle .big span{color:var(--grey)}
-  .principle .body{max-width:60ch;margin-top:14px;color:var(--grey)}
-  .principle .body strong{color:var(--platinum);font-weight:500}
+  /* hero principle line */
+  .hero-principle{
+    margin-top:34px;max-width:44ch;
+    font-size:clamp(20px,3vw,29px);line-height:1.4;color:var(--grey);
+    opacity:0;transform:translateY(14px);animation:up .7s .5s ease forwards;
+  }
+  .hero-principle .hl{color:var(--platinum)}
+  @media (prefers-reduced-motion:reduce){.hero-principle{animation:none;opacity:1;transform:none}}
 
   /* portfolio */
   .work{list-style:none}
   .work li{
     display:grid;grid-template-columns:1fr auto;gap:6px 24px;align-items:baseline;
-    padding:20px 0;border-top:1px solid var(--line);
+    padding:24px 0;border-top:1px solid var(--line);
   }
   .work li:first-child{border-top:0;padding-top:0}
   .work .name{font-size:clamp(21px,3vw,29px)}
-  .work .desc{grid-column:1;max-width:58ch;color:var(--grey);font-size:15px}
+  .work .desc{grid-column:1;grid-row:2;max-width:58ch;color:var(--grey);font-size:15px}
   .work .status{grid-column:2;grid-row:1;white-space:nowrap}
+  .work .go{grid-column:2;grid-row:2;justify-self:end;align-self:end;margin-top:10px}
+  .btn.small{padding:10px 20px;font-size:11px;letter-spacing:.2em}
   @media (max-width:640px){
     .work li{grid-template-columns:1fr}
     .work .status{grid-column:1;grid-row:auto}
+    .work .desc{grid-column:1;grid-row:auto}
+    .work .go{grid-column:1;grid-row:auto;justify-self:start;margin-top:14px}
   }
 
   /* contact */
@@ -178,47 +184,35 @@
       <span class="en">STARTEND is an AI application studio. We build vertical software that <em>sells itself, configures itself, and runs itself</em> — engineered in Switzerland, deployed worldwide.</span>
       <span class="de">STARTEND ist ein KI-Applikationsstudio. Wir bauen vertikale Software, die <em>sich selbst verkauft, selbst konfiguriert und selbst betreibt</em> — entwickelt in der Schweiz, im Einsatz weltweit.</span>
     </p>
-    <div class="hero-cta">
-      <a class="btn solid" href="#contact"><span class="en">Book a business call</span><span class="de">Business-Call buchen</span></a>
-      <a class="btn" href="#work"><span class="en">View the work</span><span class="de">Projekte ansehen</span></a>
-    </div>
+    <p class="hero-principle display">
+      <span class="en">Software acquired a customer today. Onboarded them. Served them all day. <span class="hl">No human touched any of it.</span></span>
+      <span class="de">Die Software hat heute einen Kunden gewonnen. Ihn onboardet. Ihn den ganzen Tag bedient. <span class="hl">Kein Mensch hat eingegriffen.</span></span>
+    </p>
   </header>
-
-  <section class="sec principle">
-    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">Principle</span><span class="de">Prinzip</span></span></div>
-    <div>
-      <p class="big display">
-        <span class="en">Software acquired a customer today. Onboarded them. Served them all day. <span>No human touched any of it.</span></span>
-        <span class="de">Die Software hat heute einen Kunden gewonnen. Ihn onboardet. Ihn den ganzen Tag bedient. <span>Kein Mensch hat eingegriffen.</span></span>
-      </p>
-      <p class="body">
-        <span class="en"><strong>One engine, many industries.</strong> Humans set direction; machines do the work.</span>
-        <span class="de"><strong>Ein Motor, viele Branchen.</strong> Menschen geben die Richtung vor; Maschinen machen die Arbeit.</span>
-      </p>
-    </div>
-  </section>
 
   <section id="work" class="sec">
     <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label">Portfolio</span></div>
     <ul class="work">
       <li>
-        <span class="name display"><span class="en">№ 01 — Unannounced</span><span class="de">№ 01 — Unangekündigt</span></span>
-        <span class="label status"><span class="en">In pilot · Switzerland · 2026</span><span class="de">Im Pilot · Schweiz · 2026</span></span>
+        <span class="name display">№ 01 — X Autopilot</span>
+        <span class="label status"><span class="en">Live · Switzerland · 2026</span><span class="de">Live · Schweiz · 2026</span></span>
         <p class="desc">
-          <span class="en">Autonomous customer communication for a service industry. Details at launch.</span>
-          <span class="de">Autonome Kundenkommunikation für eine Dienstleistungsbranche. Details zur Lancierung.</span>
+          <span class="en">Your X account, written, checked and published on schedule. Five minutes of approval a day. No human touches the rest.</span>
+          <span class="de">Ihr X-Konto — geschrieben, geprüft und planmässig veröffentlicht. Fünf Minuten Freigabe pro Tag. Den Rest berührt kein Mensch.</span>
         </p>
+        <a class="btn small go" href="/x-autopilot/"><span class="en">See the product</span><span class="de">Produkt ansehen</span></a>
       </li>
       <li>
         <span class="name display">№ 02 — Grokywood</span>
         <span class="label status"><span class="en">In development</span><span class="de">In Entwicklung</span></span>
         <p class="desc">
-          <span class="en">In development. Details at launch.</span>
-          <span class="de">In Entwicklung. Details zur Lancierung.</span>
+          <span class="en">The same engine, pointed at video. Channels that write, produce and publish themselves.</span>
+          <span class="de">Derselbe Motor, auf Video gerichtet. Kanäle, die sich selbst schreiben, produzieren und veröffentlichen.</span>
         </p>
+        <a class="btn small go" href="/grokywood/"><span class="en">Join the waiting list</span><span class="de">Auf die Warteliste</span></a>
       </li>
       <li>
-        <span class="name display">№ 03 → ∞</span>
+        <span class="name display">№ ∞ — <span class="en">Next</span><span class="de">Nächstes</span></span>
         <span class="label status"><span class="en">In design</span><span class="de">In Planung</span></span>
         <p class="desc">
           <span class="en">A growing slate of applications — including some the market has not named yet.</span>

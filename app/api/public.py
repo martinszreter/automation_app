@@ -53,6 +53,16 @@ async def x_autopilot_onboarding() -> FileResponse:
     return FileResponse(_STATIC_DIR / "x-autopilot" / "onboarding.html", media_type="text/html")
 
 
+@router.api_route("/grokywood", methods=["GET", "HEAD"], include_in_schema=False)
+async def grokywood_no_slash() -> RedirectResponse:
+    return RedirectResponse(url="/grokywood/", status_code=301)
+
+
+@router.get("/grokywood/", response_class=FileResponse, include_in_schema=False)
+async def grokywood_landing() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "grokywood" / "index.html", media_type="text/html")
+
+
 @router.post("/contact", response_class=FileResponse)
 async def contact(
     name: str = Form(...),

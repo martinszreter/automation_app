@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M16 0H64V48H48V64H0V16H16Z' fill='%23DA291C'/%3E%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E">
+<title>Grokywood — video channels that run themselves · startend.ch</title>
+<meta name="description" content="The engine behind X Autopilot, pointed at video. Scripts, produces and publishes a whole channel on a schedule. In development at startend.ch, Switzerland. Join the waiting list for first access and the founding price.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EEF0EC;
+    --card:#F7F8F5;
+    --ink:#14181A;
+    --ink-soft:#4A5250;
+    --rule:#C9CDC6;
+    --red:#E03123;
+    --green:#1E7A46;
+    --amber:#8A6100;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Archivo',system-ui,sans-serif;
+    font-size:17px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px}
+
+  /* header */
+  header{border-bottom:1px solid var(--rule)}
+  .head-in{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+  .wordmark{font-weight:800;letter-spacing:-0.02em;font-size:18px;text-decoration:none;color:var(--ink);display:flex;align-items:center}
+  .wordmark span{color:var(--red)}
+  .head-links{display:flex;gap:20px;align-items:center}
+  .head-links a{color:var(--ink-soft);text-decoration:none;font-size:14px;font-weight:500}
+  .head-links a:hover{color:var(--ink)}
+
+  /* hero */
+  .hero{padding:72px 0 40px}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:18px}
+  .eyebrow b{color:var(--red);font-weight:600}
+  h1{
+    font-size:clamp(38px,7vw,64px);
+    font-weight:800;
+    letter-spacing:-0.03em;
+    line-height:1.02;
+    max-width:14ch;
+  }
+  .sub{margin-top:22px;font-size:19px;color:var(--ink-soft);max-width:52ch}
+  .sub b{color:var(--ink);font-weight:700}
+  .cta-row{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+  .btn{
+    display:inline-block;padding:14px 24px;border-radius:2px;
+    font-weight:700;font-size:16px;text-decoration:none;letter-spacing:-0.01em;
+    border:1.5px solid var(--ink);transition:transform .12s ease, background .12s ease;
+    cursor:pointer;font-family:inherit;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--red);border-color:var(--red);color:#fff}
+  .btn-primary:hover{background:#C42417;border-color:#C42417}
+  .btn-ghost{background:transparent;color:var(--ink)}
+  .btn-ghost:hover{background:var(--ink);color:var(--paper)}
+  .cta-note{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:12px}
+
+  /* signature: the production line */
+  .line-frame{margin:56px 0 0;border:1.5px solid var(--ink);border-radius:2px;background:var(--card);overflow:hidden}
+  .line-head{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1.5px solid var(--ink);background:var(--paper)}
+  .line-title{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+  .line-time{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft)}
+  .stages{list-style:none}
+  .stage{display:grid;grid-template-columns:44px 1fr auto;gap:16px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--rule)}
+  .stage:last-child{border-bottom:none}
+  .stage-no{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft)}
+  .stage-what{font-size:15px}
+  .stage-what small{display:block;color:var(--ink-soft);font-size:13px}
+  .stage-state{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;white-space:nowrap;color:var(--amber)}
+  .stage-state.done{color:var(--green)}
+  .stage-state.hold{color:var(--red)}
+  .line-foot{padding:10px 16px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);border-top:1.5px solid var(--ink);background:var(--paper)}
+  .line-foot b{color:var(--ink)}
+  @media (max-width:560px){ .stage{grid-template-columns:30px 1fr;gap:10px} .stage-state{grid-column:2} }
+
+  /* status strip */
+  .receipts{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--ink);border-top:none;border-radius:0 0 2px 2px;background:var(--card)}
+  .receipt{padding:18px 16px;border-right:1px solid var(--rule)}
+  .receipt:last-child{border-right:none}
+  .receipt .num{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;letter-spacing:-0.02em}
+  .receipt .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px}
+  @media (max-width:680px){ .receipts{grid-template-columns:1fr} .receipt{border-right:none;border-bottom:1px solid var(--rule)} .receipt:last-child{border-bottom:none} }
+
+  /* sections */
+  section{padding:64px 0;border-top:1px solid var(--rule)}
+  h2{font-size:clamp(26px,4vw,36px);font-weight:800;letter-spacing:-0.02em;margin-bottom:8px}
+  .lede{color:var(--ink-soft);max-width:56ch;margin-bottom:36px}
+
+  /* steps */
+  .steps{display:grid;gap:0;border:1.5px solid var(--ink);border-radius:2px;background:var(--card)}
+  .step{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid var(--rule)}
+  .step:last-child{border-bottom:none}
+  .step-when{padding:20px;border-right:1px solid var(--rule);font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.06em}
+  .step-body{padding:20px}
+  .step-body h3{font-size:17px;font-weight:700;margin-bottom:4px}
+  .step-body p{font-size:15px;color:var(--ink-soft)}
+  @media (max-width:560px){ .step{grid-template-columns:1fr} .step-when{border-right:none;border-bottom:1px dashed var(--rule);padding-bottom:8px} }
+
+  /* two column lists */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  @media (max-width:680px){ .two-col{grid-template-columns:1fr} }
+  .list-card{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:24px}
+  .list-card h3{font-size:15px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px}
+  .list-card h3.yes{color:var(--green)}
+  .list-card h3.no{color:var(--red)}
+  .list-card ul{list-style:none}
+  .list-card li{padding:8px 0;border-bottom:1px solid var(--rule);font-size:15px}
+  .list-card li:last-child{border-bottom:none}
+  .list-card li b{font-weight:700}
+
+  /* form */
+  form{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:28px;max-width:560px}
+  .field{margin-bottom:18px}
+  label{display:block;font-family:'IBM Plex Mono',monospace;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:6px}
+  input[type=text],input[type=email],textarea,select{
+    width:100%;padding:12px;border:1px solid var(--rule);border-radius:2px;background:#fff;
+    font-family:'Archivo',sans-serif;font-size:16px;color:var(--ink)
+  }
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--red);outline-offset:1px;border-color:var(--red)}
+  textarea{min-height:96px;resize:vertical}
+  .hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
+  .form-note{font-size:13px;color:var(--ink-soft);margin-top:14px}
+
+  /* faq */
+  details{border-bottom:1px solid var(--rule);padding:16px 0}
+  details:first-of-type{border-top:1.5px solid var(--ink)}
+  summary{cursor:pointer;font-weight:700;font-size:16px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-family:'IBM Plex Mono',monospace;color:var(--red);font-weight:600}
+  details[open] summary::after{content:"–"}
+  details p{margin-top:10px;color:var(--ink-soft);font-size:15px;max-width:60ch}
+
+  /* footer */
+  footer{border-top:1.5px solid var(--ink);padding:32px 0 48px}
+  .foot-in{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--ink-soft)}
+  .foot-in a{color:var(--ink);text-decoration:none;font-weight:500}
+  .foot-in a:hover{color:var(--red)}
+
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head-in">
+    <a class="wordmark" href="https://www.startend.ch"><svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" style="margin-right:8px"><path d="M16 0H64V48H48V64H0V16H16Z" fill="#DA291C"/><rect x="26" y="12" width="12" height="40" fill="#fff"/><rect x="12" y="26" width="40" height="12" fill="#fff"/></svg>startend<span>.ch</span></a>
+    <nav class="head-links">
+      <a href="#how">How it works</a>
+      <a href="/x-autopilot/">X Autopilot — live now</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="hero">
+      <p class="eyebrow">GROKYWOOD — <b>IN DEVELOPMENT</b> · SWITZERLAND</p>
+      <h1>Video channels that run themselves.</h1>
+      <p class="sub">The engine already publishing text on autopilot, pointed at video. It picks the topic, writes the script, produces the episode and publishes it on schedule. <b>You approve. Nothing else needs you.</b></p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#waitlist">Join the waiting list</a>
+        <a class="btn btn-ghost" href="#how">See how it will work</a>
+      </div>
+      <p class="cta-note">Not for sale yet · the waiting list gets first access and the founding price</p>
+    </div>
+
+    <!-- SIGNATURE: the production line -->
+    <div class="line-frame" aria-label="The Grokywood production line, stage by stage">
+      <div class="line-head">
+        <span class="line-title">Production line — one episode, start to finish</span>
+        <span class="line-time mono">Zurich</span>
+      </div>
+      <ul class="stages" id="stages">
+        <li class="stage">
+          <span class="stage-no mono">01</span>
+          <span class="stage-what">Topic<small>Live signal mining picks what the channel should cover today.</small></span>
+          <span class="stage-state" data-final="AUTOMATIC">QUEUED</span>
+        </li>
+        <li class="stage">
+          <span class="stage-no mono">02</span>
+          <span class="stage-what">Script<small>Written inside your channel's voice document. Weak drafts are rejected before you see them.</small></span>
+          <span class="stage-state" data-final="AUTOMATIC">QUEUED</span>
+        </li>
+        <li class="stage">
+          <span class="stage-no mono">03</span>
+          <span class="stage-what">Production<small>Voice, visuals and cut assembled into a finished episode.</small></span>
+          <span class="stage-state" data-final="AUTOMATIC">QUEUED</span>
+        </li>
+        <li class="stage">
+          <span class="stage-no mono">04</span>
+          <span class="stage-what">Approval<small>You watch it and flip TRUE or FALSE. The only step with a human in it.</small></span>
+          <span class="stage-state" data-final="YOU">QUEUED</span>
+        </li>
+        <li class="stage">
+          <span class="stage-no mono">05</span>
+          <span class="stage-what">Publish<small>Out on schedule, to the channel, with the stats mailed back to you.</small></span>
+          <span class="stage-state" data-final="AUTOMATIC">QUEUED</span>
+        </li>
+      </ul>
+      <div class="line-foot">Four stages run themselves. <b>One belongs to you.</b></div>
+    </div>
+
+    <div class="receipts" aria-label="Where the build currently stands">
+      <div class="receipt"><div class="num">Live</div><div class="lbl">the text version, sold today as X Autopilot</div></div>
+      <div class="receipt"><div class="num">In build</div><div class="lbl">the video production stage</div></div>
+      <div class="receipt"><div class="num">Waiting list</div><div class="lbl">how the first accounts get in</div></div>
+    </div>
+  </div>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How it will work</h2>
+      <p class="lede">Same shape as <a href="/x-autopilot/" style="color:var(--ink)">X Autopilot</a>, which already runs this way in public. Video adds one stage — production — and changes nothing else.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-when">Step 1</div>
+          <div class="step-body"><h3>Channel voice</h3><p>Your subject, your format, your hard rules, references that sound and look like you. That becomes the document the system writes inside. It does not write outside it.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-when">Step 2</div>
+          <div class="step-body"><h3>System build</h3><p>Topic mining, scripting, a quality gate, production and scheduled publishing, wired together and connected to your channel through official platform APIs.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-when">Step 3</div>
+          <div class="step-body"><h3>Your approval pass</h3><p>Finished episodes queue up for you. Watch, flip TRUE or FALSE. Approved ones publish on your schedule. Skip a day and the queue simply waits.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-when">Every day after</div>
+          <div class="step-body"><h3>It just runs</h3><p>New episodes on the schedule you set, a stats email on what went out, and an alert the moment anything stalls.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>What this is — and what it is not</h2>
+      <p class="lede">A production system with you as editor-in-chief. Being honest about the stage it is at matters more than a launch date.</p>
+      <div class="two-col">
+        <div class="list-card">
+          <h3 class="yes">What it is</h3>
+          <ul>
+            <li>A <b>done-for-you channel engine</b>, built and run for you</li>
+            <li>Every episode <b>approved by you</b> before it publishes</li>
+            <li>Publishing through <b>official platform APIs</b></li>
+            <li>Built on an engine that is <b>already live and selling</b></li>
+          </ul>
+        </div>
+        <div class="list-card">
+          <h3 class="no">What it is not</h3>
+          <ul>
+            <li>Not <b>on sale yet</b> — no price, no checkout on this page</li>
+            <li>Not a <b>view-farming or engagement bot</b></li>
+            <li>Not a <b>tool you have to learn</b> and operate yourself</li>
+            <li>Not a <b>promise of a date</b> — the waiting list hears first, when it is real</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="waitlist">
+    <div class="wrap">
+      <h2>Join the waiting list</h2>
+      <p class="lede">First access and the founding price go to this list, in order. Tell me what channel you have in mind and I will come back to you personally.</p>
+      <form action="https://startend.app.n8n.cloud/webhook/grokywood-lead" method="POST">
+        <div class="field">
+          <label for="f-name">Name</label>
+          <input type="text" id="f-name" name="name" required maxlength="120" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="f-email">Email</label>
+          <input type="email" id="f-email" name="email" required maxlength="160" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="f-platform">Platform you care about most</label>
+          <select id="f-platform" name="platform">
+            <option value="youtube">YouTube</option>
+            <option value="shorts">YouTube Shorts</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram Reels</option>
+            <option value="x">X</option>
+            <option value="undecided">Not decided yet</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-msg">What would the channel be about?</label>
+          <textarea id="f-msg" name="message" maxlength="2000" required></textarea>
+        </div>
+        <div class="hp" aria-hidden="true">
+          <label for="f-web">Company website</label>
+          <input type="text" id="f-web" name="company_website" tabindex="-1" autocomplete="off">
+        </div>
+        <button class="btn btn-primary" type="submit">Join the waiting list</button>
+        <p class="form-note">Prefer X? DM <span class="mono">GROKYWOOD</span> to <a href="https://x.com/MartinSzreter" target="_blank" rel="noopener" style="color:var(--ink)">@MartinSzreter</a>. Or email <a href="mailto:info@startend.ch" style="color:var(--ink)">info@startend.ch</a>.</p>
+      </form>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Questions</h2>
+      <div style="margin-top:28px">
+        <details>
+          <summary>When does it launch?</summary>
+          <p>No date is promised. The text engine is live and selling now; the video production stage is in build. The waiting list is told before anything is announced publicly, and gets in first.</p>
+        </details>
+        <details>
+          <summary>What will it cost?</summary>
+          <p>Pricing is set at launch, not before. The waiting list gets the founding price, which will not be offered again once the first accounts are running.</p>
+        </details>
+        <details>
+          <summary>Can I see the engine working today?</summary>
+          <p>Yes — <a href="/x-autopilot/" style="color:var(--ink)">X Autopilot</a> is the same system publishing text, live and for sale. My own account has run on it in public since day one.</p>
+        </details>
+        <details>
+          <summary>Which platforms will it publish to?</summary>
+          <p>Publishing goes through official platform APIs, so the list depends on what each platform permits for automated posting. Tell me your platform on the form — it is how the build order gets decided.</p>
+        </details>
+        <details>
+          <summary>Who is behind this?</summary>
+          <p>Martin Szreter — STARTEND GmbH, Switzerland. Registered company, UID CHE-223.488.613. I run my own presence on this system, in public, and build the same thing for clients.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span>© 2026 startend.ch · Switzerland</span>
+    <span>
+      <a href="mailto:info@startend.ch">info@startend.ch</a> ·
+      <a href="https://x.com/MartinSzreter" target="_blank" rel="noopener">@MartinSzreter</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // The production line runs itself on load: stages flip from QUEUED to their final state.
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var cells = document.querySelectorAll('#stages .stage-state');
+    function setFinal(cell){
+      var f = cell.getAttribute('data-final');
+      cell.textContent = f;
+      cell.className = 'stage-state ' + (f === 'YOU' ? 'hold' : 'done');
+    }
+    if (reduce) { cells.forEach(setFinal); return; }
+    cells.forEach(function(cell, i){
+      setTimeout(function(){ setFinal(cell); }, 800 + i * 600);
+    });
+  })();
+</script>
+</body>
+</html>

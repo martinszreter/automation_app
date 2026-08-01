@@ -67,6 +67,25 @@ async def test_x_autopilot_without_slash_redirects_on_head():
 
 
 @pytest.mark.asyncio
+async def test_grokywood_landing_serves_index_html():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/grokywood/")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "Grokywood" in response.text
+
+
+@pytest.mark.asyncio
+async def test_grokywood_without_slash_redirects():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/grokywood")
+
+    assert response.status_code == 301
+    assert response.headers["location"] == "/grokywood/"
+
+
+@pytest.mark.asyncio
 async def test_favicon_serves_svg_with_long_cache():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/favicon.ico")
