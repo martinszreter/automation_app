@@ -1,0 +1,12 @@
+{
+  "name": "nieczytaj",
+  "version": "1.6.0",
+  "private": true,
+  "description": "nieczytaj.pl — Polish news aggregator, single-file, dependency-free",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
