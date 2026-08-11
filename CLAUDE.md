@@ -50,3 +50,9 @@ docker compose exec app alembic upgrade head
 
 ## Environment Variables
 See `.env.example` for required variables. Copy to `.env` before running.
+
+## Governance
+Portfolio governance (canon, numery ventures, bramki, decyzje) żyje
+wyłącznie w projektach claude.ai — nigdy w Claude Code. Google Drive .md
+jest wycofane: nie czytaj, nie pisz, nie proponuj wpisów 00_/03_.
+Claude Code buduje kod; raport z buildu nie zawiera sekcji portfolio.
