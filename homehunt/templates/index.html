@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>homehount — Hunt property deals. Anywhere.</title>
+  <meta name="description" content="Pick a city, set your budget, get alerted when a listing drops below the local average.">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <span class="brand">homehount</span>
+    </header>
+
+    <main>
+      <h1>Hunt property deals. Anywhere.</h1>
+      <p class="sub">Pick a city, set your budget, get alerted when a listing drops below the local average.</p>
+
+      <form id="signup-form" action="/signup" method="post" novalidate>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+
+        <label for="city">City</label>
+        <input type="text" id="city" name="city" placeholder="Zurich, Warsaw, Tokyo, Manhattan...">
+
+        <div class="budget-row">
+          <div>
+            <label for="budget_min">Budget min</label>
+            <input type="number" id="budget_min" name="budget_min" min="0" placeholder="0">
+          </div>
+          <div>
+            <label for="budget_max">Budget max</label>
+            <input type="number" id="budget_max" name="budget_max" min="0" placeholder="No limit">
+          </div>
+        </div>
+
+        <button type="submit">Get deal alerts</button>
+        <p id="form-status" class="form-status" role="status" aria-live="polite"></p>
+        <p class="fine-print">Free while in beta. No spam, unsubscribe anytime.</p>
+      </form>
+    </main>
+
+    <footer class="site-footer">
+      <span class="brand">homehount</span>
+    </footer>
+  </div>
+
+  <script>
+    const form = document.getElementById('signup-form');
+    const status = document.getElementById('form-status');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.textContent = '';
+      status.className = 'form-status';
+      const button = form.querySelector('button');
+      button.disabled = true;
+      try {
+        const response = await fetch('/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: form.email.value,
+            city: form.city.value,
+            budget_min: form.budget_min.value || null,
+            budget_max: form.budget_max.value || null,
+          }),
+        });
+        const data = await response.json();
+        if (response.ok && data.ok) {
+          form.querySelectorAll('input, button').forEach((el) => { el.disabled = true; });
+          status.textContent = data.message;
+          status.classList.add('success');
+        } else {
+          status.textContent = data.error || 'Something went wrong. Please try again.';
+          status.classList.add('error');
+          button.disabled = false;
+        }
+      } catch (err) {
+        status.textContent = 'Network error. Please try again.';
+        status.classList.add('error');
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
