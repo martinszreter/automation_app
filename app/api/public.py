@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -88,3 +88,23 @@ async def contact(
         await db.commit()
         await send_contact_notification(contact_request)
     return FileResponse(_STATIC_DIR / "thanks.html", media_type="text/html")
+
+
+# CANON_GENERIC_LANDING — the Railway start command (HOME_PY env var) injects a
+# route under this marker at boot unless the marker already exists in this file.
+# Keeping the route here pins it after every specific route above, so it can only
+# match pages that nothing else claims. {page} cannot contain "/", so only
+# first-level directories under static/ are reachable.
+@router.api_route("/{page}", methods=["GET", "HEAD"], include_in_schema=False)
+async def generic_landing_no_slash(page: str) -> RedirectResponse:
+    if (_STATIC_DIR / page / "index.html").is_file():
+        return RedirectResponse(url=f"/{page}/", status_code=301)
+    raise HTTPException(status_code=404)
+
+
+@router.get("/{page}/", response_class=FileResponse, include_in_schema=False)
+async def generic_landing(page: str) -> FileResponse:
+    index = _STATIC_DIR / page / "index.html"
+    if index.is_file():
+        return FileResponse(index, media_type="text/html")
+    raise HTTPException(status_code=404)

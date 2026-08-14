@@ -86,6 +86,43 @@ async def test_grokywood_without_slash_redirects():
 
 
 @pytest.mark.asyncio
+async def test_offer_pages_not_shadowed_by_generic_landing():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        bodies = [(await client.get(path)).text for path in ("/", "/x-autopilot/", "/grokywood/")]
+
+    assert len(set(bodies)) == 3
+    assert "990" in bodies[1]
+    assert "Grokywood" in bodies[2]
+
+
+@pytest.mark.asyncio
+async def test_unknown_path_returns_404_without_redirect():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        without_slash = await client.get("/nonsense-404-test")
+        with_slash = await client.get("/nonsense-404-test/")
+
+    assert without_slash.status_code == 404
+    assert with_slash.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_generic_landing_serves_canon_page_dirs(tmp_path, monkeypatch):
+    """Pages the deploy drops under static/ (apps, agents, …) are served generically."""
+    (tmp_path / "apps").mkdir()
+    (tmp_path / "apps" / "index.html").write_text("<html>Business Apps</html>")
+    monkeypatch.setattr("app.api.public._STATIC_DIR", tmp_path)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        page = await client.get("/apps/")
+        redirect = await client.get("/apps")
+
+    assert page.status_code == 200
+    assert "Business Apps" in page.text
+    assert redirect.status_code == 301
+    assert redirect.headers["location"] == "/apps/"
+
+
+@pytest.mark.asyncio
 async def test_favicon_serves_svg_with_long_cache():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/favicon.ico")
