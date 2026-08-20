@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STARTEND — Custom Agents</title>
+<meta name="description" content="STARTEND GmbH is a Swiss AI application studio. We build vertical software that acquires, onboards, and serves its customers autonomously — no human touch.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M16 0H64V48H48V64H0V16H16Z' fill='%23DA291C'/%3E%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --black:#0B0B0C;
+    --panel:#131317;
+    --field:#0E0E11;
+    --platinum:#ECE8DF;
+    --grey:#9A968D;
+    --line:#2E2E36;        /* visible module lines */
+    --line-strong:#3A3A44;
+    --swiss:#DA291C;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--black);
+    color:var(--platinum);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    font-weight:300;font-size:16.5px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  html[data-lang="en"] .de{display:none}
+  html[data-lang="de"] .en{display:none}
+
+  .wrap{max-width:1060px;margin:0 auto;padding:0 32px}
+  .display{font-family:'Didot','Bodoni MT','Didot LT STD',Georgia,'Times New Roman',serif;font-weight:400}
+  .label{font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--grey)}
+  a{color:var(--platinum)}
+  ::selection{background:var(--swiss);color:#fff}
+
+  /* ---- top bar ---- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:24px 0;border-bottom:2px solid var(--line-strong);
+  }
+  .brandline{display:flex;align-items:center}
+  .wordmark{font-weight:600;font-size:16px;letter-spacing:.02em;color:var(--platinum)}
+  .wordmark span{color:#E03123}
+  .nav{display:flex;align-items:center;gap:26px}
+  .nav a{font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--grey);text-decoration:none}
+  .nav a:hover{color:var(--platinum)}
+  .langswitch{display:flex;gap:12px;padding-left:26px;border-left:1px solid var(--line)}
+  .langswitch button{
+    background:none;border:0;cursor:pointer;padding:2px 0;
+    font-size:11px;font-weight:600;letter-spacing:.26em;text-transform:uppercase;color:var(--grey);
+    border-bottom:2px solid transparent;
+  }
+  .langswitch button[aria-pressed="true"]{color:var(--platinum);border-bottom-color:var(--swiss)}
+  .langswitch button:focus-visible{outline:2px solid var(--swiss);outline-offset:3px}
+
+  /* ---- hero ---- */
+  header{padding:68px 0 62px}
+  h1{
+    font-size:clamp(42px,7.6vw,88px);
+    line-height:.98;letter-spacing:.01em;
+    margin:0 0 24px;text-transform:uppercase;
+    opacity:0;transform:translateY(14px);animation:up .7s .1s ease forwards;
+  }
+  h1 .row{display:block}
+  .lede{max-width:56ch;font-size:18.5px;color:var(--platinum);
+    opacity:0;transform:translateY(14px);animation:up .7s .3s ease forwards}
+  .lede em{font-style:normal;border-bottom:1px solid var(--grey)}
+  @keyframes up{to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){h1,.lede{animation:none;opacity:1;transform:none}}
+  .btn{
+    display:inline-block;padding:14px 28px;font-size:12px;font-weight:600;
+    letter-spacing:.22em;text-transform:uppercase;text-decoration:none;
+    border:1px solid var(--platinum);color:var(--platinum);background:transparent;
+    transition:background .2s,color .2s;cursor:pointer;
+  }
+  .btn:hover{background:var(--platinum);color:var(--black)}
+  .btn:focus-visible{outline:2px solid var(--swiss);outline-offset:3px}
+  .btn.solid{background:var(--platinum);color:var(--black)}
+  .btn.solid:hover{background:transparent;color:var(--platinum)}
+
+  /* ---- editorial sections: label rail + content ---- */
+  .sec{
+    display:grid;grid-template-columns:190px 1fr;gap:24px 48px;
+    border-top:2px solid var(--line-strong);
+    padding:48px 0 56px;
+  }
+  .sec > .rail{display:flex;align-items:flex-start;gap:10px}
+  .rail .tick{width:9px;height:9px;background:var(--swiss);flex:none;margin-top:3px}
+  @media (max-width:760px){
+    .sec{grid-template-columns:1fr;gap:18px;padding:38px 0 44px}
+  }
+  h2{font-size:clamp(24px,3.4vw,34px);letter-spacing:.01em;margin-bottom:16px}
+
+  /* hero principle line */
+  .hero-principle{
+    margin-top:34px;max-width:44ch;
+    font-size:clamp(20px,3vw,29px);line-height:1.4;color:var(--grey);
+    opacity:0;transform:translateY(14px);animation:up .7s .5s ease forwards;
+  }
+  .hero-principle .hl{color:var(--platinum)}
+  @media (prefers-reduced-motion:reduce){.hero-principle{animation:none;opacity:1;transform:none}}
+
+  /* portfolio */
+  .work{list-style:none}
+  .work li{
+    display:grid;grid-template-columns:1fr auto;gap:6px 24px;align-items:baseline;
+    padding:24px 0;border-top:1px solid var(--line);
+  }
+  .work li:first-child{border-top:0;padding-top:0}
+  .work .name{font-size:clamp(21px,3vw,29px)}
+  .work .desc{grid-column:1;max-width:58ch;color:var(--grey);font-size:15px}
+  .work .desc + .desc{margin-top:10px}
+  .work .status{grid-column:2;grid-row:1;white-space:nowrap}
+  .work .go{grid-column:2;grid-row:2;justify-self:end;align-self:end;margin-top:10px}
+  .btn.small{padding:10px 20px;font-size:11px;letter-spacing:.2em}
+  @media (max-width:640px){
+    .work li{grid-template-columns:1fr}
+    .work .status{grid-column:1;grid-row:auto}
+    .work .desc{grid-column:1;grid-row:auto}
+    .work .go{grid-column:1;grid-row:auto;justify-self:start;margin-top:14px}
+  }
+
+  /* contact */
+  .contact-grid{display:grid;grid-template-columns:2fr 3fr;gap:40px}
+  @media (max-width:900px){.contact-grid{grid-template-columns:1fr;gap:28px}}
+  .direct{display:flex;flex-direction:column;gap:18px}
+  .direct .item .label{display:block;margin-bottom:6px}
+  .direct .item a{font-size:18px;text-decoration:none;border-bottom:1px solid var(--line-strong)}
+  .direct .item a:hover{border-bottom-color:var(--platinum)}
+  .direct .note{color:var(--grey);font-size:14px;max-width:34ch}
+
+  .form-panel{
+    background:var(--panel);border:1px solid var(--line-strong);
+    padding:28px;
+  }
+  form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field{display:flex;flex-direction:column;gap:7px}
+  .field.full{grid-column:1/-1}
+  input,select,textarea{
+    background:var(--field);border:1px solid var(--line);
+    color:var(--platinum);font:inherit;font-size:15px;
+    padding:12px 14px;border-radius:2px;width:100%;
+  }
+  select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--grey) 50%),linear-gradient(135deg,var(--grey) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat}
+  select option{background:var(--panel)}
+  textarea{min-height:92px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--platinum)}
+  .check{grid-column:1/-1;display:flex;align-items:center;gap:12px;color:var(--grey);font-size:14px}
+  .check input{width:16px;height:16px;accent-color:var(--swiss)}
+  .hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+  .form-actions{grid-column:1/-1;display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:2px}
+  .form-note{color:var(--grey);font-size:13px}
+
+  /* footer / company */
+  footer .facts{list-style:none;max-width:760px}
+  footer .facts li{display:flex;justify-content:space-between;gap:24px;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
+  footer .facts .v{text-align:right}
+  .fineprint{margin-top:22px;color:var(--grey);font-size:13px;max-width:70ch;line-height:1.7}
+  .fineprint p+p{margin-top:8px}
+  .made{display:flex;align-items:center;gap:10px;margin-top:22px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brandline">
+      <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true" style="margin-right:8px"><path d="M16 0H64V48H48V64H0V16H16Z" fill="#DA291C"/><rect x="26" y="12" width="12" height="40" fill="#fff"/><rect x="12" y="26" width="40" height="12" fill="#fff"/></svg><span class="wordmark">startend<span>.ch</span></span>
+    </div>
+    <nav class="nav" aria-label="Main">
+      <a href="/#work"><span class="en">Products</span><span class="de">Produkte</span></a>
+      <a href="https://work-production-fc46.up.railway.app/"><span class="en">Portfolio</span><span class="de">Referenzen</span></a>
+      <a href="#contact"><span class="en">Contact</span><span class="de">Kontakt</span></a>
+      <div class="langswitch" aria-label="Language">
+        <button type="button" data-setlang="en" aria-pressed="true">EN</button>
+        <button type="button" data-setlang="de" aria-pressed="false">DE</button>
+      </div>
+    </nav>
+  </div>
+
+  <header>
+    <h1 class="display"><span class="row"><span class="en">Custom</span><span class="de">Agents.</span></span></h1>
+    <p class="lede"><span class="en">When none of the standard apps fits, we build the agent your workflow needs — on the same engines that already run our own operations.</span><span class="de">Wenn keine der Standard-Apps passt, bauen wir den Agenten, den Ihr Ablauf braucht — auf denselben Engines, die bereits unseren eigenen Betrieb führen.</span></p>
+    <p class="hero-principle display"><span class="en">Scoped on one call. <span class="hl">Installed in days, not quarters.</span></span><span class="de">In einem Gespräch definiert. <span class="hl">In Tagen installiert, nicht in Quartalen.</span></span></p>
+  </header>
+
+  <section id="work" class="sec">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">How it works</span><span class="de">So funktioniert es</span></span></div>
+    <ul class="work">
+      <li>
+        <span class="name display"><span class="en">What an agent does</span><span class="de">Was ein Agent tut</span></span>
+        <span class="label status"><span class="en">One function, end to end</span><span class="de">Eine Funktion, von A bis Z</span></span>
+        <p class="desc"><span class="en">One business function, handled start to finish: intake, follow-ups, publishing, reporting, lead lists, document handling. It runs on a schedule, monitors itself and alerts us — not you — when something breaks.</span><span class="de">Eine Geschäftsfunktion, komplett übernommen: Eingang, Follow-ups, Publishing, Reporting, Lead-Listen, Dokumente. Läuft nach Zeitplan, überwacht sich selbst und alarmiert uns — nicht Sie — wenn etwas bricht.</span></p>
+        <a class="btn small go" href="#contact"><span class="en">Scope your agent</span><span class="de">Agent definieren</span></a>
+      </li>
+      <li>
+        <span class="name display"><span class="en">Built from stock</span><span class="de">Aus laufendem Bestand</span></span>
+        <span class="label status"><span class="en">Nothing built from zero</span><span class="de">Nichts von null gebaut</span></span>
+        <p class="desc"><span class="en">We start from the agents already running our own company — a posting agent, a video agent, a reservation and intake agent, a lead-generation agent — and shape one to your workflow. That is why it takes days.</span><span class="de">Wir starten von den Agenten, die bereits unsere eigene Firma betreiben — Posting-Agent, Video-Agent, Reservations- und Eingangs-Agent, Lead-Agent — und passen einen an Ihren Ablauf an. Darum dauert es Tage.</span></p>
+        <a class="btn small go" href="#contact"><span class="en">Scope your agent</span><span class="de">Agent definieren</span></a>
+      </li>
+      <li>
+        <span class="name display"><span class="en">How we start</span><span class="de">Wie wir starten</span></span>
+        <span class="label status"><span class="en">One call</span><span class="de">Ein Gespräch</span></span>
+        <p class="desc"><span class="en">One call to scope the function and the data it touches. You get a fixed quote for setup plus a monthly operating fee, and a working agent inside days.</span><span class="de">Ein Gespräch, um die Funktion und die betroffenen Daten zu klären. Sie erhalten ein Fixangebot für die Einrichtung plus eine monatliche Betriebspauschale — und einen laufenden Agenten in Tagen.</span></p>
+        <a class="btn small go" href="#contact"><span class="en">Scope your agent</span><span class="de">Agent definieren</span></a>
+      </li>
+      <li>
+        <span class="name display"><span class="en">Live proof</span><span class="de">Live-Beweis</span></span>
+        <span class="label status"><span class="en">Running right now</span><span class="de">Läuft gerade</span></span>
+        <p class="desc"><span class="en">nieczytaj.pl is a fully autonomous AI newspaper — sources read, stories clustered, editions published, zero editors. Agents run it end to end. So do they run this website. More on the <a href="https://work-production-fc46.up.railway.app/">portfolio page</a>.</span><span class="de">nieczytaj.pl ist eine vollautonome KI-Zeitung — Quellen gelesen, Themen geclustert, Ausgaben veröffentlicht, null Redakteure. Agenten betreiben sie von A bis Z. Ebenso diese Website. Mehr auf der <a href="https://work-production-fc46.up.railway.app/">Portfolio-Seite</a>.</span></p>
+        <a class="btn small go" href="#contact"><span class="en">Scope your agent</span><span class="de">Agent definieren</span></a>
+      </li>
+    </ul>
+  </section>
+
+    <section id="pricing" class="sec">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">Pricing</span><span class="de">Preise</span></span></div>
+    <ul class="facts">
+      <li><span class="label"><span class="en">Agent install</span><span class="de">Agent-Installation</span></span><span class="v"><span class="en">from</span><span class="de">ab</span> CHF 1&rsquo;990 — <span class="en">scope priced on one call</span><span class="de">Umfang in einem Gespr&auml;ch fixiert</span></span></li>
+      <li><span class="label"><span class="en">Run &amp; monitoring</span><span class="de">Betrieb &amp; Monitoring</span></span><span class="v"><span class="en">from</span><span class="de">ab</span> CHF 249 / <span class="en">month, cancel monthly</span><span class="de">Monat, monatlich k&uuml;ndbar</span></span></li>
+      <li><span class="label"><span class="en">Ready to install</span><span class="de">Sofort installierbar</span></span><span class="v"><span class="en">Posting (X), video channel, reservation/intake, lead-gen — all four run in our own production today</span><span class="de">Posting (X), Videokanal, Reservation/Intake, Lead-Gen — alle vier laufen heute in unserer eigenen Produktion</span></span></li>
+      <li><span class="label"><span class="en">Lead-Gen pilot</span><span class="de">Lead-Gen-Pilot</span></span><span class="v"><span class="en">CHF 490 — 100 verified leads for your target market (one-time pilot)</span><span class="de">CHF 490 — 100 verifizierte Leads f&uuml;r Ihren Zielmarkt (einmaliger Pilot)</span></span>
+        <a class="btn small" href="https://buy.stripe.com/14AaEYfg1c9X5V28dR0x207"><span class="en">Buy pilot — CHF 490</span><span class="de">Pilot kaufen — CHF 490</span></a>
+        <p class="form-note"><span class="en">Weekly refills: CHF 990/mo — available after your pilot.</span><span class="de">W&ouml;chentliche Refills: CHF 990/Monat — verf&uuml;gbar nach Ihrem Pilot.</span></p>
+      </li>
+    </ul>
+    <a class="btn small go" href="#contact"><span class="en">Book a scoping call</span><span class="de">Scoping-Gespr&auml;ch buchen</span></a>
+  </section>
+
+  <section id="contact" class="sec">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">Contact</span><span class="de">Kontakt</span></span></div>
+    <div class="contact-grid">
+      <div class="direct">
+        <h2 class="display"><span class="en">Specify a deal.</span><span class="de">Definieren wir den Deal.</span></h2>
+        <div class="item">
+          <span class="label"><span class="en">Email</span><span class="de">E-Mail</span></span>
+          <a href="mailto:info@startend.ch">info@startend.ch</a>
+        </div>
+        <div class="item">
+          <span class="label"><span class="en">Phone</span><span class="de">Telefon</span></span>
+          <a href="tel:+41799380372">+41 79 938 03 72</a>
+        </div>
+        <p class="note">
+          <span class="en">We reply within one business day. Prefer a call? Tick the box in the form and we will propose times.</span>
+          <span class="de">Wir antworten innerhalb eines Werktags. Lieber ein Gespräch? Haken im Formular setzen — wir schlagen Termine vor.</span>
+        </p>
+      </div>
+      <div class="form-panel">
+        <form method="post" action="/contact">
+          <div class="field">
+            <label class="label" for="name">Name</label>
+            <input id="name" name="name" required autocomplete="name">
+          </div>
+          <div class="field">
+            <label class="label" for="company"><span class="en">Company</span><span class="de">Firma</span></label>
+            <input id="company" name="company" autocomplete="organization">
+          </div>
+          <div class="field full">
+            <label class="label" for="email"><span class="en">Email</span><span class="de">E-Mail</span></label>
+            <input id="email" name="email" type="email" required autocomplete="email">
+          </div>
+          <div class="field full">
+            <label class="label" for="interest"><span class="en">Interest</span><span class="de">Interesse</span></label>
+            <select id="interest" name="interest">
+              <option value="enterprise" data-en="Enterprise deal" data-de="Enterprise-Deal">Enterprise deal</option>
+              <option value="partnership" data-en="Partnership" data-de="Partnerschaft">Partnership</option>
+              <option value="pilot" data-en="Pilot programme" data-de="Pilotprogramm">Pilot programme</option>
+              <option value="agent" data-en="Custom AI agent" data-de="Individueller KI-Agent">Custom AI agent</option>
+              <option value="other" data-en="Other" data-de="Anderes">Other</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label class="label" for="message"><span class="en">Message</span><span class="de">Nachricht</span></label>
+            <textarea id="message" name="message" required></textarea>
+          </div>
+          <label class="check">
+            <input type="checkbox" name="call_requested" value="yes">
+            <span><span class="en">Request a 20-minute business call</span><span class="de">20-minütigen Business-Call anfragen</span></span>
+          </label>
+          <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div class="form-actions">
+            <button class="btn solid" type="submit"><span class="en">Send</span><span class="de">Senden</span></button>
+            <span class="form-note"><span class="en">No cookies. No trackers. Just a reply.</span><span class="de">Keine Cookies. Keine Tracker. Nur eine Antwort.</span></span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <footer class="sec">
+    <div class="rail"><span class="tick" aria-hidden="true"></span><span class="label"><span class="en">Company</span><span class="de">Unternehmen</span></span></div>
+    <div>
+      <ul class="facts">
+        <li><span class="label"><span class="en">Legal entity</span><span class="de">Firma</span></span><span class="v">STARTEND GmbH</span></li>
+        <li><span class="label"><span class="en">Registered office</span><span class="de">Sitz</span></span><span class="v">Bahnhofstrasse 7, 6330 Cham</span></li>
+        <li><span class="label">UID</span><span class="v">CHE-223.488.613</span></li>
+        <li><span class="label"><span class="en">Phone</span><span class="de">Telefon</span></span><span class="v"><a href="tel:+41799380372">+41 79 938 03 72</a></span></li>
+        <li><span class="label"><span class="en">Email</span><span class="de">E-Mail</span></span><span class="v"><a href="mailto:info@startend.ch">info@startend.ch</a></span></li>
+        <li><span class="label">Web</span><span class="v">www.startend.ch</span></li>
+          <li><span class="label"><span class="en">Legal</span><span class="de">Rechtliches</span></span><span class="v"><a href="/terms/"><span class="en">Terms</span><span class="de">AGB</span></a> · <a href="/privacy/"><span class="en">Privacy</span><span class="de">Datenschutz</span></a> · <a href="/impressum/">Impressum</a></span></li>
+      </ul>
+      <div class="fineprint">
+        <p><span class="en">© 2026 STARTEND GmbH, Switzerland. Registered in the Handelsregister. All rights reserved.</span><span class="de">© 2026 STARTEND GmbH, Schweiz. Eingetragen im Handelsregister. Alle Rechte vorbehalten.</span></p>
+        <p><span class="en">Privacy: this website sets no cookies and runs no trackers. Details submitted through the contact form are used solely to answer your enquiry and are stored on our own systems.</span><span class="de">Datenschutz: Diese Website setzt keine Cookies und verwendet keine Tracker. Angaben aus dem Kontaktformular werden ausschliesslich zur Beantwortung Ihrer Anfrage verwendet und auf eigenen Systemen gespeichert.</span></p>
+      </div>
+      <div class="made">
+        <svg width="13" height="13" viewBox="0 0 64 64" aria-hidden="true" style="flex:none"><path d="M16 0H64V48H48V64H0V16H16Z" fill="#DA291C"/><rect x="26" y="12" width="12" height="40" fill="#fff"/><rect x="12" y="26" width="40" height="12" fill="#fff"/></svg>
+        <span class="label"><span class="en">Engineered in Switzerland · Built and operated by AI systems</span><span class="de">Engineered in Switzerland · Gebaut und betrieben von KI-Systemen</span></span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var titles={en:"STARTEND — No Human Touch Apps. AI application studio, Switzerland.",
+              de:"STARTEND — No Human Touch Apps. KI-Applikationsstudio, Schweiz."};
+  function setLang(l){
+    document.documentElement.dataset.lang=l;
+    document.documentElement.lang=(l==="de")?"de-CH":"en";
+    document.title=titles[l];
+    document.querySelectorAll(".langswitch button").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.setlang===l ? "true":"false");
+    });
+    document.querySelectorAll("#interest option").forEach(function(o){
+      o.textContent=o.getAttribute("data-"+l);
+    });
+    try{localStorage.setItem("startend-lang",l);}catch(e){}
+  }
+  document.querySelectorAll(".langswitch button").forEach(function(b){
+    b.addEventListener("click",function(){setLang(b.dataset.setlang);});
+  });
+  var saved=null;
+  try{saved=localStorage.getItem("startend-lang");}catch(e){}
+  if(saved==="de"||(!saved&&(navigator.language||"").toLowerCase().indexOf("de")===0)){setLang("de");}
+})();
+</script>
+
+<script>try{fetch("https://startend.app.n8n.cloud/webhook/pv-7q2m9x",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},body:JSON.stringify({p:location.pathname,r:document.referrer||"",l:(document.documentElement.lang||"")})}).catch(function(){})}catch(e){}</script></body>
+</html>
