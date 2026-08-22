@@ -1,5 +1,5 @@
 # Zorbeck — landing page collecting signups for property deal alerts.
-# Separate Railway service (Root Directory = homehunt), independent of app/.
+# Separate Railway service (Root Directory = zorbeck), independent of app/.
 import logging
 import os
 import re
@@ -19,7 +19,7 @@ app = FastAPI(title="Zorbeck")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
-logger = logging.getLogger("homehunt")
+logger = logging.getLogger("zorbeck")
 logging.basicConfig(level=logging.INFO)
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -76,6 +76,7 @@ async def signup(request: Request) -> JSONResponse:
         "source": SIGNUP_SOURCE,
     }
 
+    # Production target: https://startend.app.n8n.cloud/webhook/zorbeck-lead
     webhook_url = os.environ.get("SIGNUP_WEBHOOK_URL")
     if webhook_url:
         try:
