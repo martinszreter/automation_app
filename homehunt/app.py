@@ -1,4 +1,4 @@
-# homehount.com — landing page collecting signups for property deal alerts.
+# Zorbeck — landing page collecting signups for property deal alerts.
 # Separate Railway service (Root Directory = homehunt), independent of app/.
 import logging
 import os
@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 BASE_DIR = Path(__file__).resolve().parent
 
-app = FastAPI(title="homehount")
+app = FastAPI(title="Zorbeck")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
@@ -23,7 +23,7 @@ logger = logging.getLogger("homehunt")
 logging.basicConfig(level=logging.INFO)
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-SIGNUP_SOURCE = "homehount-landing"
+SIGNUP_SOURCE = "zorbeck-landing"
 
 
 # Explicit HEAD alongside GET so HEAD / returns 200 directly —
@@ -94,6 +94,6 @@ async def signup(request: Request) -> JSONResponse:
     return JSONResponse(
         content={
             "ok": True,
-            "message": f"You're in. We'll email you when we cover {city or 'your city'}.",
+            "message": f"You're in. Zorbeck will email you when we cover {city or 'your city'}.",
         }
     )
