@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -36,6 +38,25 @@ async def test_x_autopilot_landing_serves_index_html():
     assert "text/html" in response.headers["content-type"]
     assert "X Autopilot" in response.text
     assert "Your X account, on autopilot." in response.text
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_landing_exposes_stripe_checkout_link():
+    """The only repo-served offer page must ship a payable Stripe link.
+
+    /apps/, /agents/ and /grokywood/ are overwritten at boot from canon
+    (APPS_HTML, AGENTS_HTML, GROKYWOOD_HTML), so their buttons cannot be
+    guarded from here — this page can.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/x-autopilot/")
+
+    links = re.findall(r"https://buy\.stripe\.com/[A-Za-z0-9]+", response.text)
+
+    assert links, "no Stripe payment link on /x-autopilot/"
+    # Both hero and pricing CTAs are wired from the same configured link.
+    assert 'id="payBtn"' in response.text
+    assert 'id="payBtn2"' in response.text
 
 
 @pytest.mark.asyncio
