@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -35,7 +37,7 @@ async def test_x_autopilot_landing_serves_index_html():
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "X Autopilot" in response.text
-    assert "Your X account, on autopilot." in response.text
+    assert "322 posts in 30 days. Zero human touch." in response.text
 
 
 @pytest.mark.asyncio
@@ -91,7 +93,7 @@ async def test_offer_pages_not_shadowed_by_generic_landing():
         bodies = [(await client.get(path)).text for path in ("/", "/x-autopilot/", "/grokywood/")]
 
     assert len(set(bodies)) == 3
-    assert "990" in bodies[1]
+    assert "CHF 149" in bodies[1]
     assert "Grokywood" in bodies[2]
 
 
@@ -254,3 +256,125 @@ async def test_contact_email_message_content():
     body = msg.get_content()
     for expected in ["Anna", "ACME AG", "anna@example.com", "enterprise", "yes", "Hello there"]:
         assert expected in body
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_landing_carries_exactly_one_price_and_one_stripe_link():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        body = (await client.get("/x-autopilot/")).text
+
+    # Exactly one amount anywhere on the page — no tiers, no setup variants.
+    assert set(re.findall(r"CHF\s?[\d'.,]+", body)) == {"CHF 149"}
+    for removed in ("330", "660", "990"):
+        assert removed not in body
+    # One Stripe target, and it is the placeholder Marcin fills in.
+    assert "buy.stripe.com" not in body
+    assert len(re.findall(r"https://buy\.", body)) == 0
+    assert "STRIPE_XAUTOPILOT_149" in body
+    # One offer button, one lead form.
+    assert body.count('id="startBtn"') == 1
+    assert body.count('action="/contact"') == 1
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_view_counter_records_utm():
+    from app.api import public
+
+    before = public._XA_STATS["views"]["total"]
+    before_src = public._XA_STATS["views"]["utm_source"].get("x-ads", 0)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/x-autopilot/?utm_source=x-ads&utm_campaign=launch")
+        stats = await client.get("/x-autopilot/stats.json")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert stats.status_code == 200
+    payload = stats.json()
+    assert payload["views"]["total"] == before + 1
+    assert payload["views"]["utm_source"]["x-ads"] == before_src + 1
+    assert payload["views"]["utm_campaign"]["launch"] >= 1
+    assert sum(payload["views"]["days"].values()) == payload["views"]["total"]
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_stats_json_is_not_indexable():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/x-autopilot/stats.json")
+
+    assert response.status_code == 200
+    assert "noindex" in response.headers["x-robots-tag"]
+    for bucket in ("views", "stripe_clicks", "emails"):
+        assert bucket in response.json()
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_stripe_click_is_counted_separately():
+    from app.api import public
+
+    before = public._XA_STATS["stripe_clicks"]["total"]
+    before_views = public._XA_STATS["views"]["total"]
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            "/x-autopilot/event",
+            data={"event": "stripe", "utm_source": "x-ads", "utm_campaign": "launch"},
+        )
+        unknown = await client.post("/x-autopilot/event", data={"event": "nonsense"})
+
+    assert response.status_code == 204
+    assert unknown.status_code == 404
+    assert public._XA_STATS["stripe_clicks"]["total"] == before + 1
+    assert public._XA_STATS["stripe_clicks"]["utm_source"]["x-ads"] >= 1
+    assert public._XA_STATS["views"]["total"] == before_views
+
+
+@pytest.mark.asyncio
+async def test_teardown_lead_counts_as_email_on_shared_contact_endpoint():
+    from app.api import public
+
+    before = public._XA_STATS["emails"]["total"]
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+
+    with patch("app.api.public.send_contact_notification", new_callable=AsyncMock):
+        async with _client_with_mock_db(mock_session) as client:
+            response = await client.post(
+                "/contact",
+                data={
+                    "name": "X Autopilot teardown",
+                    "email": "lead@example.com",
+                    "interest": "x-autopilot-teardown",
+                    "message": "Teardown request from /x-autopilot/",
+                    "website": "",
+                },
+            )
+
+    assert response.status_code == 200
+    assert public._XA_STATS["emails"]["total"] == before + 1
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_ordinary_contact_lead_does_not_count_as_x_autopilot_email():
+    from app.api import public
+
+    before = public._XA_STATS["emails"]["total"]
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+
+    with patch("app.api.public.send_contact_notification", new_callable=AsyncMock):
+        async with _client_with_mock_db(mock_session) as client:
+            await client.post(
+                "/contact",
+                data={
+                    "name": "Anna",
+                    "email": "anna@example.com",
+                    "interest": "enterprise",
+                    "message": "Hello",
+                    "website": "",
+                },
+            )
+
+    assert public._XA_STATS["emails"]["total"] == before
+    app.dependency_overrides.clear()
