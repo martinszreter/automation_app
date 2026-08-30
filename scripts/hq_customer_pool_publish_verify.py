@@ -31,7 +31,7 @@ def main():
       'customers_pool':'CUSTOMERS<br>POOL' in board,
       'one_percent_pool':'1% SALES<br>POOL' in board,
       'leadmine_pool':'150,000' in board and '1,500' in board,
-      'chamdigital_pool':'28,000' in board and '>280<' in board,
+      'chamdigital_pool':'28,000' in board and '>280</b>' in board,
       'bear_2026':'CHF 10k' in board and '/day' in board and '31 DEC 2026' in board,
       'target_2027':'CHF 1M' in board and '/mo' in board and '31 DEC 2027' in board,
       'reconciliation':'POOL RECONCILIATION HQ_GPT 2026-08-30' in board,
@@ -40,7 +40,6 @@ def main():
     if not all(checks.values()):
         raise RuntimeError('live board verification failed: '+repr(checks))
 
-    # Fresh bus cursor; if this exact completion is already there, this is the webhook-triggered redeploy and we stop.
     gs,g=get(BUS); data=json.loads(g)
     recent=data.get('recent',[])
     if any(MARK in (r.get('what') or '') for r in recent):
