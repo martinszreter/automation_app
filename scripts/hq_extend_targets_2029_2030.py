@@ -36,14 +36,13 @@ def prune(k):
     print('PRUNE',k,[(int(r['version']),r['id']) for r in rows(k)])
 
 def write(k,fn,note):
-    base=latest(k)  # mandatory immediate re-read before write
+    base=latest(k)
     new=fn(base['content'])
     if new==base['content']:
         print('NOOP',k,'v',base['version']); return int(base['version'])
     v=int(base['version'])+1
     res=insert(k,v,new,note)
-    rr=rows(k)  # mandatory immediate re-read after write
-    same=[r for r in rr if int(r['version'])==v]
+    rr=rows(k); same=[r for r in rr if int(r['version'])==v]
     if len(same)>1:
         own_id=res.get('id') if isinstance(res,dict) else None
         other=next((r for r in same if str(r.get('id'))!=str(own_id)),None)
@@ -63,7 +62,6 @@ def write(k,fn,note):
 ANNUAL='''## HARD TARGET EXTENSION — 2029/2030 ARE ANNUAL TARGETS\n\nThese are portfolio forcing targets, not forecasts, and supersede conflicting later-year targets:\n- **31 Dec 2029 — CHF 1,000,000,000/year**. Equivalent operating pace: ~CHF 2.74M/day, ~CHF 82.2M per trailing 30 days.\n- **31 Dec 2030 — CHF 2,000,000,000/year**. Equivalent operating pace: ~CHF 5.48M/day, ~CHF 164.4M per trailing 30 days.\n\nThe anti-gaming convention remains collected revenue. The ladder is therefore: CHF 10k/day by Dec-2026 → CHF 100k/day by Dec-2027 → CHF 1M/day by Dec-2028 → CHF 1B/year by Dec-2029 → CHF 2B/year by Dec-2030. 2028→2029 is ~2.74× on annualised run-rate; 2029→2030 is 2×. These are targets, not forecasts.\n'''
 
 def strategy(c):
-    # Remove the never-ratified wrong daily interpretation if it somehow appears in a parallel row.
     c=c.replace('CHF 1,000,000,000/day','CHF 1,000,000,000/year').replace('CHF 2,000,000,000/day','CHF 2,000,000,000/year')
     c=c.replace('CHF 1B/day by 31 Dec 2029','CHF 1B/year by 31 Dec 2029').replace('CHF 2B/day by 31 Dec 2030','CHF 2B/year by 31 Dec 2030')
     if MARK in c: return c
@@ -76,13 +74,11 @@ def decisions(c):
     return b+'\n\n'+c
 
 def board(c):
-    # Correct any wrong daily interpretation before adding the rows.
     c=c.replace('CHF 1B/day','CHF 1B/year').replace('CHF 2B/day','CHF 2B/year')
     c=c.replace('CHF 30B</td><td>CHF 365B','CHF 82.2M</td><td>CHF 1B').replace('CHF 60B</td><td>CHF 730B','CHF 164.4M</td><td>CHF 2B')
     marker='<!-- HARD_TARGETS_DACH_LTV_20260830 -->'
     s=c.find(marker)
     if s<0: raise RuntimeError('hard-target marker missing')
-    # Find the target table immediately after the marker.
     t0=c.find('<table',s); t1=c.find('</table>',t0)
     if t0<0 or t1<0: raise RuntimeError('hard-target table missing')
     table=c[t0:t1]
@@ -90,10 +86,8 @@ def board(c):
         add='''\n<tr><td><b>31 DEC 2029</b></td><td><b>CHF 2.74M/day</b></td><td>CHF 82.2M</td><td><b>CHF 1B/year</b></td></tr>\n<tr><td><b>31 DEC 2030</b></td><td><b>CHF 5.48M/day</b></td><td>CHF 164.4M</td><td><b>CHF 2B/year</b></td></tr>'''
         c=c[:t1]+add+c[t1:]
     else:
-        # Normalize existing 2029/2030 rows if another writer landed them.
         c=re.sub(r'<tr><td><b>31 DEC 2029</b></td>.*?</tr>', '<tr><td><b>31 DEC 2029</b></td><td><b>CHF 2.74M/day</b></td><td>CHF 82.2M</td><td><b>CHF 1B/year</b></td></tr>', c, count=1, flags=re.S)
         c=re.sub(r'<tr><td><b>31 DEC 2030</b></td>.*?</tr>', '<tr><td><b>31 DEC 2030</b></td><td><b>CHF 5.48M/day</b></td><td>CHF 164.4M</td><td><b>CHF 2B/year</b></td></tr>', c, count=1, flags=re.S)
-    # Pin the existing target card and reuse it as the persistent STARTEND header.
     card_start=c.find('<div class="card"',s)
     if card_start<0: raise RuntimeError('target card missing')
     card_open_end=c.find('>',card_start)
@@ -104,27 +98,23 @@ def board(c):
         else:
             opening=opening[:-1]+' style="position:sticky;top:0;z-index:999;background:#f7f4ec;box-shadow:0 8px 22px rgba(0,0,0,.14)">'
         c=c[:card_start]+opening+c[card_open_end+1:]
-    # Add compact STARTEND wordmark inside the same existing card, not a second banner.
     card_open_end=c.find('>',card_start)
-    next_chunk=c[card_open_end+1:card_open_end+1000]
-    if 'STARTEND · HQ' not in next_chunk:
+    next_chunk=c[card_open_end+1:card_open_end+1200]
+    if 'EXPONENTIAL ONLY' not in next_chunk or 'STARTEND' not in next_chunk:
         brand='''\n<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-2px 0 6px"><div style="font-weight:900;font-size:15px;letter-spacing:.18em">STARTEND <span style="color:#DA291C">·</span> HQ</div><div class="dim" style="font-size:9px;letter-spacing:.08em">EXPONENTIAL ONLY</div></div>'''
         c=c[:card_open_end+1]+brand+c[card_open_end+1:]
-    # Condense target table so the pinned area stays useful rather than obstructive.
     t0=c.find('<table',s); open_end=c.find('>',t0)
     topen=c[t0:open_end+1]
     if 'font-size:10px' not in topen:
         if 'style="' in topen: topen=topen.replace('style="','style="font-size:10px;line-height:1.1;',1)
         else: topen=topen[:-1]+' style="font-size:10px;line-height:1.1">'
         c=c[:t0]+topen+c[open_end+1:]
-    # State the annual nature explicitly beneath the table once.
     t1=c.find('</table>',t0)+len('</table>')
-    if '2029/2030 are annual targets' not in c[t1:t1+1200]:
+    if '2029/2030 are annual targets' not in c[t1:t1+1400]:
         note='''\n<div style="font-size:9.5px;margin-top:5px"><b>2029/2030 are annual targets:</b> CHF 1B/year → CHF 2B/year. 2026–2028 remain daily run-rate targets. Targets ≠ forecasts.</div>'''
         c=c[:t1]+note+c[t1:]
-    # Marker for canon post-write verification.
     if MARK not in c: c=c.replace(marker,marker+'<!-- '+MARK+' -->',1)
-    checks=['position:sticky','STARTEND · HQ','31 DEC 2029','CHF 1B/year','31 DEC 2030','CHF 2B/year']
+    checks=['position:sticky','EXPONENTIAL ONLY','STARTEND','31 DEC 2029','CHF 1B/year','31 DEC 2030','CHF 2B/year']
     miss=[x for x in checks if x not in c]
     if miss: raise RuntimeError('board checks missing '+repr(miss))
     return c
@@ -137,7 +127,6 @@ def has_true(x,key):
     return False
 
 def main():
-    # Mandatory asset gate before mutation: reuse the existing target/header component.
     a=latest('02_ASSETS'); print('ASSETS_OK',a['version'],a['id'])
     v1=write('01_STRATEGY',strategy,'Correct 2029/2030 to annual hard targets; retain exponential forcing ladder')
     v2=write('03_DECISIONS',decisions,'Founder targets: CHF1B/year 2029; CHF2B/year 2030; pin STARTEND target block')
