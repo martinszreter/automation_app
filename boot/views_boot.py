@@ -31,14 +31,13 @@ import sys
 import urllib.error
 import urllib.request
 
-# canon key -> file served under /srv. Mirrors what the boot5 environment
-# variable was writing on 2026-08-25, plus nothing else: these four keys are
-# exactly the ones its deploy logs reported.
+# canon key -> file served under /srv.
 CANON_VIEWS: list[tuple[str, str]] = [
     ("STRAT_HTML", "trading-k4x9m2.html"),
     ("X_OPS_HTML", "x-ops-k4x9m2.html"),
     ("GROKYWOOD_OPS_HTML", "grokywood-ops-k4x9m2.html"),
     ("MOBILE_OPS_HTML", "mobile-ops-k4x9m2.html"),
+    ("NEXT_HTML", "next-k4x9m2.html"),
 ]
 
 # Views whose HTML is static and therefore belongs in the repo rather than in
