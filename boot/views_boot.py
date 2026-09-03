@@ -38,6 +38,7 @@ CANON_VIEWS: list[tuple[str, str]] = [
     ("GROKYWOOD_OPS_HTML", "grokywood-ops-k4x9m2.html"),
     ("MOBILE_OPS_HTML", "mobile-ops-k4x9m2.html"),
     ("NEXT_HTML", "next-k4x9m2.html"),
+    ("INIT_CHAMDIGITAL_HTML", "init-chamdigital-k4x9m2.html"),
 ]
 
 # Views whose HTML is static and therefore belongs in the repo rather than in
