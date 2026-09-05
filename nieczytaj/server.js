@@ -38,6 +38,28 @@ const FEEDS = [
   { id: 'o2',      name: 'o2',                url: 'https://www.o2.pl/rss.xml',                     cat: 'kraj' },
 ];
 
+const FEEDS_DACH = [
+  { id: 'tagesschau', name: 'tagesschau',     url: 'https://www.tagesschau.de/xml/rss2',                    cat: 'kraj' },
+  { id: 'spiegel',    name: 'DER SPIEGEL',    url: 'https://www.spiegel.de/schlagzeilen/index.rss',         cat: 'kraj' },
+  { id: 'zeit',       name: 'DIE ZEIT',       url: 'https://newsfeed.zeit.de/index',                        cat: 'kraj' },
+  { id: 'welt',       name: 'WELT',           url: 'https://www.welt.de/feeds/latest.rss',                  cat: 'kraj' },
+  { id: 'sz',         name: 'SZ',             url: 'https://rss.sueddeutsche.de/alles',                     cat: 'kraj' },
+  { id: 'faz',        name: 'FAZ',            url: 'https://www.faz.net/rss/aktuell',                       cat: 'kraj' },
+  { id: 'ntv',        name: 'n-tv',           url: 'https://www.n-tv.de/rss',                               cat: 'kraj' },
+  { id: 'tsp',        name: 'Tagesspiegel',   url: 'https://www.tagesspiegel.de/contentexport/feed/home',   cat: 'kraj' },
+  { id: 'srf',        name: 'SRF',            url: 'https://www.srf.ch/news/bnf/rss/1890',                  cat: 'kraj' },
+  { id: 'nzz',        name: 'NZZ',            url: 'https://www.nzz.ch/recent.rss',                         cat: 'kraj' },
+  { id: 'ta',         name: 'Tages-Anzeiger', url: 'https://www.tagesanzeiger.ch/rss.html',                 cat: 'kraj' },
+  { id: 'standard',   name: 'DER STANDARD',   url: 'https://www.derstandard.at/rss',                        cat: 'kraj' },
+  { id: 'blick',      name: 'Blick',          url: 'https://www.blick.ch/rss',                              cat: 'kraj' },
+  { id: 'hb',         name: 'Handelsblatt',   url: 'https://www.handelsblatt.com/contentexport/feed/schlagzeilen', cat: 'biznes' },
+  { id: 'spobiz',     name: 'SPIEGEL Wirtschaft', url: 'https://www.spiegel.de/wirtschaft/index.rss',       cat: 'biznes' },
+  { id: 'sportschau', name: 'Sportschau',     url: 'https://www.sportschau.de/index~rss2.xml',              cat: 'sport' },
+  { id: 'sposport',   name: 'SPIEGEL Sport',  url: 'https://www.spiegel.de/sport/index.rss',                cat: 'sport' },
+  { id: 'heise',      name: 'heise',          url: 'https://www.heise.de/rss/heise.rdf',                    cat: 'tech' },
+  { id: 'golem',      name: 'Golem',          url: 'https://www.golem.de/rss.php?feed=RSS2',                cat: 'tech' },
+];
+
 const CATS = [
   { id: 'kraj',     label: 'Wiadomości' },
   { id: 'biznes',   label: 'Biznes' },
@@ -92,6 +114,7 @@ const state = {
   summaries: new Map(),
   pv: { total: 0, days: {}, cities: {}, geo: {} },
   lastError: '',
+  de: { clusters: [], byCat: {}, latest: [], cities: {} },
 };
 
 // ------------------------- utils -------------------------
@@ -120,7 +143,10 @@ const STOP = new Set(('i w we z ze na do nie sie jest ze po za od o u a jak ale 
   'ktory ktora ktore ktorzy ktorych pod nad przed ich jego jej ono ona on oni my wy je go mu im nas was niz bardzo ' +
   'lat lata roku rok zl mln mld proc procent wiecej mniej dzis dzisiaj wczoraj jutro godz min tys jak sie kiedy gdzie ' +
   'dlaczego czym jaki jaka jakie jest znow znowu wobec m in oto tak nie ma czy hit szok pilne wideo zdjecia zobacz ' +
-  'sprawdz relacja live quiz sondaz komentarz opinia').split(/\s+/));
+  'sprawdz relacja live quiz sondaz komentarz opinia ' +
+  'der die das und oder ein eine einem einer eines im in den dem des von zu mit nach bei als auch nur noch wie ist ' +
+  'sind war waren wird werden hat haben fuer fuer fuer ueber unter auf aus am zum zur vom sich nicht so da dann ' +
+  'aber oder weil wenn dass dasss mehr weniger heute gestern morgen jahr jahre prozent live video meinung kommentar').split(/\s+/));
 function tokens(title) {
   const out = [];
   for (const w of normTxt(title).split(/\s+/)) {
@@ -129,7 +155,7 @@ function tokens(title) {
   return [...new Set(out)];
 }
 // daily template content — never "hot news", pollutes clustering
-const JUNK = /(pogoda|horoskop|wyniki losowania|lotto|kartka z kalendarza|imieniny obchodz|jaki to dzien|jaki dzis dzien|krzyzowka|quiz|program tv|co obejrzec)/;
+const JUNK = /(pogoda|horoskop|wyniki losowania|lotto|kartka z kalendarza|imieniny obchodz|jaki to dzien|jaki dzis dzien|krzyzowka|quiz|program tv|co obejrzec|wetterlage|lottozahlen|sudoku|tv.?programm)/;
 function tokMatch(a, b) {
   if (a === b) return true;
   if (a.length >= 5 && b.length >= 5) return a.slice(0, 5) === b.slice(0, 5);
@@ -207,23 +233,10 @@ async function fetchFeed(feed) {
   return items;
 }
 
-async function refresh() {
-  const ALL = FEEDS.concat(CITIES.flatMap(c => c.feeds));
-  const results = await Promise.allSettled(ALL.map(f => fetchFeed(f)));
-  const now = Date.now();
-  results.forEach((r, i) => {
-    const f = ALL[i];
-    if (r.status === 'fulfilled' && r.value.length) {
-      state.feedCache[f.id] = { items: r.value, at: now, ok: true, error: '' };
-    } else {
-      const prev = state.feedCache[f.id];
-      state.feedCache[f.id] = { items: prev ? prev.items : [], at: prev ? prev.at : 0, ok: false, error: r.status === 'rejected' ? String(r.reason).slice(0, 120) : 'empty' };
-    }
-  });
-  // pool: fresh, deduped by link
+function fillPool(feedList, now) {
   const seen = new Set();
   const pool = [];
-  for (const f of FEEDS) {
+  for (const f of feedList) {
     const c = state.feedCache[f.id];
     if (!c) continue;
     for (const it of c.items) {
@@ -235,8 +248,23 @@ async function refresh() {
       pool.push(it);
     }
   }
+  return pool;
+}
+async function refresh() {
+  const ALL = FEEDS.concat(CITIES.flatMap(c => c.feeds)).concat(FEEDS_DACH);
+  const results = await Promise.allSettled(ALL.map(f => fetchFeed(f)));
+  const now = Date.now();
+  results.forEach((r, i) => {
+    const f = ALL[i];
+    if (r.status === 'fulfilled' && r.value.length) {
+      state.feedCache[f.id] = { items: r.value, at: now, ok: true, error: '' };
+    } else {
+      const prev = state.feedCache[f.id];
+      state.feedCache[f.id] = { items: prev ? prev.items : [], at: prev ? prev.at : 0, ok: false, error: r.status === 'rejected' ? String(r.reason).slice(0, 120) : 'empty' };
+    }
+  });
+  const pool = fillPool(FEEDS, now);
   cluster(pool);
-  // per-city pools
   for (const c of CITIES) {
     const cseen = new Set();
     const cpool = [];
@@ -253,15 +281,20 @@ async function refresh() {
     }
     state.cities[c.slug] = cityCluster(cpool);
   }
+  const deEd = clusterEdition(fillPool(FEEDS_DACH, now));
+  state.de.clusters = deEd.clusters;
+  state.de.byCat = deEd.byCat;
+  state.de.latest = deEd.latest;
   state.lastRefresh = now;
   state.refreshCount++;
   const okN = FEEDS.filter(f => state.feedCache[f.id] && state.feedCache[f.id].ok).length;
-  console.log(`[refresh #${state.refreshCount}] feeds ok=${okN}/${FEEDS.length} pool=${pool.length} clusters=${state.clusters.length} hot=${state.clusters.filter(c => c.srcCount >= 2).length} pv_today=${state.pv.days[warsawDay()] || 0}`);
+  const okDe = FEEDS_DACH.filter(f => state.feedCache[f.id] && state.feedCache[f.id].ok).length;
+  console.log(`[refresh #${state.refreshCount}] feeds ok=${okN}/${FEEDS.length} dach=${okDe}/${FEEDS_DACH.length} pool=${pool.length} clusters=${state.clusters.length} hot=${state.clusters.filter(c => c.srcCount >= 2).length} pv_today=${state.pv.days[warsawDay()] || 0}`);
   if (ANTHROPIC_API_KEY) selfSummarize().catch(e => console.log('[ai] error: ' + String(e).slice(0, 200)));
 }
 
 // ------------------------- clustering & ranking -------------------------
-const BREAKING = /(pilne|nagle|nie zyje|zmarl|zmarla|katastrofa|wybuch|trzesienie|eksplozja|atak|ewakuacja|alarm|awaria|tragedia|wypadek)/;
+const BREAKING = /(pilne|nagle|nie zyje|zmarl|zmarla|katastrofa|wybuch|trzesienie|eksplozja|atak|ewakuacja|alarm|awaria|tragedia|wypadek|eilmeldung|tot|explosion|evakuier|anschlag|unglueck|unfall)/;
 function buildClusters(pool) {
   pool.sort((a, b) => b.at - a.at);
   const clusters = [];
@@ -312,7 +345,7 @@ function scoreClusters(clusters) {
     c.chips = [...per.values()];
   }
 }
-function cluster(pool) {
+function clusterEdition(pool) {
   const clusters = buildClusters(pool);
   scoreClusters(clusters);
   clusters.sort((a, b) => b.score - a.score);
@@ -326,9 +359,13 @@ function cluster(pool) {
     if (hotLinks.has(it.link)) continue;
     if (byCat[c.cat] && byCat[c.cat].length < 8) byCat[c.cat].push(c);
   }
-  state.clusters = hot;
-  state.byCat = byCat;
-  state.latest = pool.filter(i => !hotLinks.has(i.link)).slice(0, 16);
+  return { clusters: hot, byCat, latest: pool.filter(i => !hotLinks.has(i.link)).slice(0, 16) };
+}
+function cluster(pool) {
+  const ed = clusterEdition(pool);
+  state.clusters = ed.clusters;
+  state.byCat = ed.byCat;
+  state.latest = ed.latest;
 }
 // ------------------------- AI briefs -------------------------
 function clustersNeedingSummary() {
@@ -407,9 +444,10 @@ const PRICE = { baner7: 490, baner30: 1490, kaf7: 390, kaf30: 990, box7: 190, bo
 const PRICE_DE_LOCKED = Object.freeze({
   baner7: 149, baner30: 449, kaf7: 119, kaf30: 299, box7: 89, box30: 199,
 });
+const STRIPE_CHF1 = 'https://buy.stripe.com/6oU5kE8RD3DrgzG2Tx0x20f';
 function requestHost(req) {
   const h = (req && req.headers) || {};
-  return String(h.host || h[':authority'] || '').toLowerCase().split(':')[0];
+  return String(h.host || h['x-forwarded-host'] || h[':authority'] || '').toLowerCase().split(',')[0].split(':')[0];
 }
 function tenantFromHost(host) {
   const raw = String(host || '').toLowerCase();
@@ -497,14 +535,17 @@ function page(cityDef, t) {
     ? new Intl.DateTimeFormat(loc, { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastRefresh))
     : '—';
   const today = new Intl.DateTimeFormat(loc, { timeZone: tz, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
-  const cd = cityDef ? (state.cities[cityDef.slug] || { clusters: [], latest: [] }) : null;
-  const hot = cd ? cd.clusters : state.clusters;
+  const edition = de ? state.de : state;
+  const feedN = de ? FEEDS_DACH.length : FEEDS.length;
+  const cd = cityDef ? ((de ? state.de.cities : state.cities)[cityDef.slug] || { clusters: [], latest: [] }) : null;
+  const hot = cd ? cd.clusters : edition.clusters;
   const loading = !state.lastRefresh;
   const aiOn = ANTHROPIC_API_KEY || [...state.summaries.values()].some(s => Date.now() - s.at < 3 * 3600e3);
   const hero = hot[0];
   const rest = hot.slice(1);
-  const latest = cd ? cd.latest : (state.latest || []);
-  const country = de ? 'Polen' : 'Polska';
+  const latest = cd ? cd.latest : (edition.latest || []);
+  const byCatSrc = de ? state.de.byCat : state.byCat;
+  const country = de ? 'DACH' : 'Polska';
   // single pill: shows the current edition. On a local edition it returns to Polska; on Polska it finds your area.
   const pill = cityDef
     ? `<a class="edpill on" href="/" title="${de ? 'Zurück zur Landesausgabe' : 'Wróć do wydania krajowego'}">📍 ${esc(cityDef.name)} <span class="pillx">✕</span></a>`
@@ -523,18 +564,18 @@ function page(cityDef, t) {
     return a.length ? `<div class="ggrid">${a.join('\n')}</div>` : '';
   };
   const pillHint = cityDef
-    ? (de ? '✕ = zurück zu ganz Polen' : '✕ = powrót do całej Polski')
+    ? (de ? '✕ = zurück zu DACH' : '✕ = powrót do całej Polski')
     : (de ? 'klicken → Nachrichten aus deiner Gegend' : 'kliknij → wiadomości z Twojej okolicy');
   const title = de
     ? `${t.brand}${cityDef ? ' · ' + cityDef.name : ''} — nicht alles lesen. KI wählt die heissen Nachrichten`
     : `NIECZYTAJ.PL${cityDef ? ' · ' + cityDef.name : ''} — nie czytaj wszystkiego. AI wybiera gorące wiadomości`;
   const desc = de
-    ? `KI liest polnische Nachrichtenportale alle ${REFRESH_MIN} Minuten und zeigt nur, worüber wirklich gesprochen wird. Nicht alles lesen — lies, was heiss ist.`
+    ? `KI liest DACH-Nachrichtenportale alle ${REFRESH_MIN} Minuten und zeigt nur, worüber wirklich gesprochen wird. Nicht alles lesen — lies, was heiss ist.`
     : `AI czyta polskie serwisy informacyjne co ${REFRESH_MIN} minut i pokazuje tylko to, o czym naprawdę się mówi. Nie czytaj wszystkiego — czytaj to, co gorące.`;
   const ogTitle = de ? `${t.brand} — heisse Nachrichten, gewählt von KI` : 'NIECZYTAJ.PL — gorące wiadomości wybrane przez AI';
   const ogDesc = de
-    ? `Nicht alles lesen. KI überwacht ${FEEDS.length} polnische Dienste und rangiert Themen, über die alle sprechen.`
-    : `Nie czytaj wszystkiego. AI monitoruje ${FEEDS.length} polskich serwisów i ranguje tematy, o których mówią wszyscy.`;
+    ? `Nicht alles lesen. KI überwacht ${feedN} DACH-Dienste und rangiert Themen, über die alle sprechen.`
+    : `Nie czytaj wszystkiego. AI monitoruje ${feedN} polskich serwisów i ranguje tematy, o których mówią wszyscy.`;
   return `<!DOCTYPE html><html lang="${t.lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="refresh" content="600">
@@ -611,8 +652,8 @@ footer a{color:var(--mut)}
 <header>
 <h1 class="logo"><a href="/">${t.brandHtml}</a></h1>
 <p class="tagline">${de
-    ? `<b>Nicht alles lesen.</b> KI liest ${cityDef ? 'lokale Dienste' : FEEDS.length + ' Dienste'} alle ${REFRESH_MIN} Min. — du liest, was heiss ist.`
-    : `<b>Nie czytaj wszystkiego.</b> AI czyta ${cityDef ? 'lokalne serwisy' : FEEDS.length + ' serwisów'} co ${REFRESH_MIN} min — Ty czytasz to, co gorące.`}</p>
+    ? `<b>Nicht alles lesen.</b> KI liest ${cityDef ? 'lokale Dienste' : feedN + ' DACH-Dienste'} alle ${REFRESH_MIN} Min. — du liest, was heiss ist.`
+    : `<b>Nie czytaj wszystkiego.</b> AI czyta ${cityDef ? 'lokalne serwisy' : feedN + ' serwisów'} co ${REFRESH_MIN} min — Ty czytasz to, co gorące.`}</p>
 <div class="edwrap">${pill}<span class="edhint">${pillHint}</span></div>
 <div class="updline"><span class="dotlive">${de ? '● LIVE' : '● NA ŻYWO'}</span><span>${esc(today)}</span><span>${de ? 'Aktualisierung' : 'aktualizacja'} ${esc(upd)}</span><a class="geolink" onclick="ncGeo();return false" href="#">📍 ${de ? 'mein Standort' : 'moja lokalizacja'}</a><span id="geonote" class="geonote" style="display:none"></span>${aiOn ? `<span>${de ? 'Kurzfassungen: KI' : 'skróty: AI'}</span>` : ''}<a class="geolink" href="${t.adsPath}" style="border:0">${de ? 'Werbung' : 'reklama'}</a></div>
 </header>
@@ -627,7 +668,7 @@ ${rest.slice(0, 2).map(c => tileHtml(c, false, t)).join('\n')}
 ${adBanner(t)}
 ${grid([adTileSold(t), ...rest.slice(2).map(c => tileHtml(c, false, t))])}
 ${cityDef ? '' : CATS.map(cat => {
-    const list = (state.byCat[cat.id] || []).slice(0, 8);
+    const list = (byCatSrc[cat.id] || []).slice(0, 8);
     if (!list.length) return '';
     return `<h2>${catLabel(cat, t)}</h2>${grid(list.map(c => tileHtml(c, false, t)))}`;
   }).join('\n')}
@@ -641,14 +682,14 @@ ${latest.slice(4).map(it => railRow(it, t)).join('\n')}
 </div>`}
 <footer>
 ${de
-    ? `<b>${esc(t.brand)}</b> — vollautomatische Seite: KI aggregiert Schlagzeilen und Vorschaubilder aus polnischen Medien, gruppiert Themen und rangiert sie nach Quellenanzahl und Frische. Schlagzeilen, Fotos und Links führen zu den Ursprungsmedien — alle Rechte an Artikeln und Bildern liegen bei den Verlagen. Kurze Zusammenfassungen schreibt die KI in eigenen Worten.<br>
+    ? `<b>${esc(t.brand)}</b> — vollautomatische Seite: KI aggregiert Schlagzeilen und Vorschaubilder aus DACH-Medien, gruppiert Themen und rangiert sie nach Quellenanzahl und Frische. Schlagzeilen, Fotos und Links führen zu den Ursprungsmedien — alle Rechte an Artikeln und Bildern liegen bei den Verlagen. Kurze Zusammenfassungen schreibt die KI in eigenen Worten.<br>
 MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="${t.adsPath}">Werbung auf liesnicht.ch</a> · <a href="${t.legalPath}">Impressum</a> · <a href="${t.privacyPath}">Datenschutz</a> · Kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>`
     : `<b>NIECZYTAJ.PL</b> — strona w pełni automatyczna: AI agreguje nagłówki i miniatury z polskich serwisów, grupuje tematy i ranguje je według liczby źródeł i świeżości. Nagłówki, zdjęcia i linki prowadzą do serwisów źródłowych — wszystkie prawa do artykułów i zdjęć należą do ich wydawców. Krótkie podsumowania pisze AI własnymi słowami.<br>
 MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="/reklama">reklama na nieczytaj.pl</a> · <a href="/regulamin">regulamin</a> · kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>`}
 </footer>
 </div>
 <script>
-var NC_GEO=${JSON.stringify(CITIES.map(c => ({ s: c.slug, n: c.name, a: c.lat, o: c.lon })))};
+var NC_GEO=${JSON.stringify(de ? [] : CITIES.map(c => ({ s: c.slug, n: c.name, a: c.lat, o: c.lon })))};
 function ncDist(a1,o1,a2,o2){var R=6371,dA=(a2-a1)*Math.PI/180,dO=(o2-o1)*Math.PI/180,x=Math.sin(dA/2)*Math.sin(dA/2)+Math.cos(a1*Math.PI/180)*Math.cos(a2*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2);return 2*R*Math.asin(Math.sqrt(x));}
 function ncToast(m){var t=document.createElement('div');t.className='nctoast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.style.opacity='0';},2800);setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},3500);}
 function ncBeacon(n,d){try{if(navigator.sendBeacon)navigator.sendBeacon('/api/geo',JSON.stringify({n:n,d:d}));}catch(e){}}
@@ -977,6 +1018,7 @@ footer a{color:var(--mut)}
 </header>
 <h1>Werbung, die niemand wegscrollt</h1>
 <p class="lede"><b>Bild oder Video</b> — dort, wo die Leser ohnehin hinschauen: zwischen den heissen News. Keine Pop-ups, kein Ton, kein Nutzer-Tracking. Reservation in einer Minute.</p>
+<div class="note"><b>CHF 1 Test:</b> Zahlungslink prüfen — <a class="buy" href="${esc(STRIPE_CHF1)}" target="_blank" rel="noopener" style="margin-top:10px">Test · CHF 1</a></div>
 
 <h2>Formate</h2>
 <div class="fmt">
@@ -1093,22 +1135,25 @@ const server = http.createServer((req, res) => {
         res.writeHead(204); res.end();
       });
     }
-    const cityDef = CITIES.find(c => '/' + c.slug === url);
+    const cityList = t.id === 'de' ? [] : CITIES;
+    const cityDef = cityList.find(c => '/' + c.slug === url);
     if (cityDef && req.method === 'GET') {
       countView(cityDef.slug);
       return sendHtml(res, 200, page(cityDef, t), 120);
     }
     if (url === '/health') {
-      const okN = FEEDS.filter(f => state.feedCache[f.id] && state.feedCache[f.id].ok).length;
+      const list = t.id === 'de' ? FEEDS_DACH : FEEDS;
+      const hotN = t.id === 'de' ? state.de.clusters.length : state.clusters.length;
+      const okN = list.filter(f => state.feedCache[f.id] && state.feedCache[f.id].ok).length;
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
         ok: state.lastRefresh > 0, lastRefresh: new Date(state.lastRefresh).toISOString(),
-        refreshCount: state.refreshCount, feedsOk: okN, feedsTotal: FEEDS.length,
-        hot: state.clusters.length, summaries: state.summaries.size,
+        refreshCount: state.refreshCount, feedsOk: okN, feedsTotal: list.length,
+        hot: hotN, summaries: state.summaries.size,
         cities: Object.fromEntries(CITIES.map(c => [c.slug, (state.cities[c.slug] || { clusters: [] }).clusters.length])),
         ads: ADS.length, price: t.price, tenant: t.id, aiSelf: !!ANTHROPIC_API_KEY, pv: state.pv,
         uptimeMin: Math.round((Date.now() - state.boot) / 60000),
-        feeds: FEEDS.map(f => ({ id: f.id, ok: !!(state.feedCache[f.id] && state.feedCache[f.id].ok), n: state.feedCache[f.id] ? state.feedCache[f.id].items.length : 0, via: f.via || '', err: state.feedCache[f.id] ? state.feedCache[f.id].error : 'pending' })),
+        feeds: list.map(f => ({ id: f.id, ok: !!(state.feedCache[f.id] && state.feedCache[f.id].ok), n: state.feedCache[f.id] ? state.feedCache[f.id].items.length : 0, via: f.via || '', err: state.feedCache[f.id] ? state.feedCache[f.id].error : 'pending' })),
       }));
     }
     if (url === '/api/top') {

@@ -55,6 +55,7 @@ const ready = new Promise((resolve, reject) => {
     assert(/LIESNICHT/.test(deHome.body), 'DE / brand LIESNICHT');
     assert(!/NIECZYTAJ/.test(deHome.body), 'DE / no NIECZYTAJ');
     assert(/Nicht alles lesen/.test(deHome.body), 'DE / German copy');
+    assert(/DACH/.test(deHome.body), 'DE / DACH feeds copy');
     assert(/Werbung/.test(deHome.body), 'DE / Werbung link');
 
     const deRail = await req('liesnicht-production.up.railway.app', '/');
@@ -72,6 +73,8 @@ const ready = new Promise((resolve, reject) => {
     assert(/CHF 149/.test(deAds.body) && /CHF 119/.test(deAds.body) && /CHF 89/.test(deAds.body), 'DE 7d locked 149/119/89');
     assert(/CHF 449/.test(deAds.body) && /CHF 299/.test(deAds.body) && /CHF 199/.test(deAds.body), 'DE 30d locked 449/299/199');
     assert(!/490/.test(deAds.body) && !/NIECZYTAJ/.test(deAds.body), 'DE /werbung no Polish prices/brand');
+    assert(deAds.body.includes('https://buy.stripe.com/6oU5kE8RD3DrgzG2Tx0x20f'), 'DE /werbung CHF1 Stripe test link');
+    assert(/CHF 1/.test(deAds.body), 'DE /werbung CHF 1 label');
 
     const plAds = await req('www.nieczytaj.pl', '/reklama');
     assert(plAds.status === 200, 'PL /reklama 200');
@@ -93,6 +96,8 @@ const ready = new Promise((resolve, reject) => {
     const plJ = JSON.parse(plHealth.body);
     assert(deJ.price.baner7 === 149 && deJ.price.kaf7 === 119 && deJ.price.box7 === 89, 'DE health locked prices');
     assert(plJ.price.baner7 === 490 && plJ.price.kaf7 === 390 && plJ.price.box7 === 290, 'PL health 490/390/290');
+    assert((deJ.feeds || []).some(f => f.id === 'tagesschau'), 'DE health lists DACH feeds');
+    assert((plJ.feeds || []).some(f => f.id === 'onet') && !(plJ.feeds || []).some(f => f.id === 'tagesschau'), 'PL health still Polish feeds');
   } catch (e) {
     fails.push(String(e));
     console.log('FAIL', e);
