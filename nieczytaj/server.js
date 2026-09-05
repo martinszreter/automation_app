@@ -843,12 +843,12 @@ header{padding:14px 0 10px;border-bottom:3px solid var(--ink);display:flex;flex-
 .pillx{opacity:.75;margin-left:3px}
 .updline{display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
 .dotlive{color:var(--acc);font-weight:700}
-.langsw{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.04em;margin-left:10px}
+${de ? `.langsw{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.04em;margin-left:10px}
 .langsw a{color:var(--mut);text-decoration:none}
 .langsw a[aria-current="page"]{color:var(--ink);border-bottom:2px solid var(--acc)}
 .rchips{display:inline-flex;gap:4px;margin-left:2px;vertical-align:middle}
 .rchips button{font:700 11px -apple-system,'Segoe UI',Roboto,Arial,sans-serif;border:1px solid var(--line);background:#fff;border-radius:12px;padding:2px 8px;cursor:pointer;color:var(--ink)}
-.rchips button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.rchips button.on{border-color:var(--ink);background:var(--ink);color:#fff}` : ''}
 .geolink{color:var(--acc);font-weight:700;text-decoration:none;border-bottom:1px dotted var(--acc);cursor:pointer}
 .geonote{font-size:11px;color:var(--acc);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
 .nctoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#141414;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;z-index:99;opacity:1;transition:opacity .5s;max-width:90vw;text-align:center}
