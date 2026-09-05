@@ -374,24 +374,28 @@ function putSummary(key, text, by) {
 function chipHtml(it) {
   return `<a class="chip" href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.srcName)}</a>`;
 }
-function srcBadge(c) {
+function srcBadge(c, t) {
+  if (t && t.id === 'de') {
+    return `<span class="src${c.srcCount >= 4 ? ' many' : ''}">🔥 ${c.srcCount} ${c.srcCount === 1 ? 'Quelle' : 'Quellen'}</span>`;
+  }
   return `<span class="src${c.srcCount >= 4 ? ' many' : ''}">🔥 ${c.srcCount} ${c.srcCount === 1 ? 'źródło' : (c.srcCount < 5 ? 'źródła' : 'źródeł')}</span>`;
 }
-function tileHtml(c, big) {
+function tileHtml(c, big, t) {
+  t = t || tenantFromHost('');
   const s = big ? state.summaries.get(c.key) : null;
-  const img = c.img ? `<a class="timg" href="${esc(c.lead.link)}" target="_blank" rel="noopener"><img src="${esc(c.img)}" alt="" ${big ? '' : 'loading="lazy" '}onerror="this.parentNode.style.display='none'"></a>` : `<a class="timg noimg" href="${esc(c.lead.link)}" target="_blank" rel="noopener"><span>NIECZYTAJ.PL</span></a>`;
+  const img = c.img ? `<a class="timg" href="${esc(c.lead.link)}" target="_blank" rel="noopener"><img src="${esc(c.img)}" alt="" ${big ? '' : 'loading="lazy" '}onerror="this.parentNode.style.display='none'"></a>` : `<a class="timg noimg" href="${esc(c.lead.link)}" target="_blank" rel="noopener"><span>${esc(t.brand)}</span></a>`;
   return `<article class="tile${big ? ' hero' : ''}">
 ${img}
 <h3><a href="${esc(c.lead.link)}" target="_blank" rel="noopener">${esc(c.lead.title)}</a></h3>
-${s ? `<p class="ai"><span class="ailab">AI w skrócie</span> ${esc(s.text)}</p>` : ''}
-<div class="cm">${srcBadge(c)}<span>${agoPL(c.newest)}</span></div>
+${s ? `<p class="ai"><span class="ailab">${t.id === 'de' ? 'KI kurzgefasst' : 'AI w skrócie'}</span> ${esc(s.text)}</p>` : ''}
+<div class="cm">${srcBadge(c, t)}<span>${agoTxt(c.newest, t)}</span></div>
 </article>`;
 }
-function railRow(it) {
+function railRow(it, t) {
   return `<div class="rrow">
 ${it.img ? `<a class="rimg" href="${esc(it.link)}" target="_blank" rel="noopener"><img src="${esc(it.img)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></a>` : ''}
 <div class="rtx"><h4><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a></h4>
-<div class="rmeta">${esc(it.srcName)} · ${agoPL(it.at)}</div></div>
+<div class="rmeta">${esc(it.srcName)} · ${agoTxt(it.at, t)}</div></div>
 </div>`;
 }
 // ------------------------- ads -------------------------
@@ -399,29 +403,100 @@ ${it.img ? `<a class="rimg" href="${esc(it.link)}" target="_blank" rel="noopener
 let ADS = [];
 try { ADS = JSON.parse(process.env.ADS_JSON || '[]'); } catch (e) { console.log('[ads] bad ADS_JSON'); ADS = []; }
 const PRICE = { baner7: 490, baner30: 1490, kaf7: 390, kaf30: 990, box7: 190, box30: 590 };
+// Host-tenant: liesnicht (*.ch / railway.app named liesnicht) is DE. Polish prices stay on PRICE.
+const PRICE_DE_LOCKED = Object.freeze({
+  baner7: 149, baner30: 449, kaf7: 119, kaf30: 299, box7: 89, box30: 199,
+});
+function requestHost(req) {
+  const h = (req && req.headers) || {};
+  return String(h.host || h[':authority'] || '').toLowerCase().split(':')[0];
+}
+function tenantFromHost(host) {
+  const raw = String(host || '').toLowerCase();
+  if (raw.includes('liesnicht')) {
+    const ch = raw.includes('.ch');
+    return {
+      id: 'de', lang: 'de', brand: 'LIESNICHT',
+      brandHtml: ch ? 'LIESNICHT<span class="pl">.CH</span>' : 'LIESNICHT',
+      currency: 'CHF', price: PRICE_DE_LOCKED,
+      adsPath: '/werbung', legalPath: '/impressum', privacyPath: '/datenschutz', ch,
+    };
+  }
+  return {
+    id: 'pl', lang: 'pl', brand: 'NIECZYTAJ',
+    brandHtml: 'NIECZYTAJ<span class="pl">.PL</span>',
+    currency: 'zł', price: PRICE,
+    adsPath: '/reklama', legalPath: '/regulamin', privacyPath: '/regulamin', ch: false,
+  };
+}
+function money(n, t) { return t && t.id === 'de' ? ('CHF ' + n) : (n + ' zł'); }
+function agoTxt(ms, t) {
+  if (!(t && t.id === 'de')) return agoPL(ms);
+  const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (m < 2) return 'gerade eben';
+  if (m < 60) return m + ' Min.';
+  const h = Math.round(m / 60);
+  if (h < 24) return h + ' Std.';
+  const d = Math.round(h / 24);
+  return d + (d === 1 ? ' Tag' : ' Tage');
+}
+function catLabel(cat, t) {
+  if (!(t && t.id === 'de')) return cat.label;
+  return ({ kraj: 'Nachrichten', biznes: 'Wirtschaft', sport: 'Sport', tech: 'Technologie', rozrywka: 'Unterhaltung' })[cat.id] || cat.label;
+}
 function adFor(slot) {
   const now = Date.now();
   return ADS.find(a => a && a.slot === slot && a.src && (!a.until || Date.parse(a.until) > now)) || null;
 }
-function adCreative(a) {
+function adCreative(a, t) {
+  const alt = (t && t.id === 'de') ? 'Werbung' : 'Reklama';
   return a.type === 'video'
     ? `<video class="adcre" src="${esc(a.src)}" autoplay muted loop playsinline preload="metadata"></video>`
-    : `<img class="adcre" src="${esc(a.src)}" alt="${esc(a.alt || 'Reklama')}" loading="lazy">`;
+    : `<img class="adcre" src="${esc(a.src)}" alt="${esc(a.alt || alt)}" loading="lazy">`;
 }
-function adSlot(slot, houseText) {
+function adSlot(slot, houseText, t) {
+  t = t || tenantFromHost('');
+  const lab = t.id === 'de' ? 'Werbung' : 'Reklama';
+  const cta = t.id === 'de' ? 'Angebot ansehen →' : 'Zobacz ofertę →';
   const a = adFor(slot);
-  if (a) return `<a class="adbox ${slot}" href="${esc(a.href || '/reklama')}" target="_blank" rel="noopener sponsored"><span class="adlab">Reklama</span>${adCreative(a)}</a>`;
-  return `<a class="adbox ${slot} house" href="/reklama"><span class="adlab">Reklama</span><b>${houseText}</b><span class="adcta">Zobacz ofertę →</span></a>`;
+  if (a) return `<a class="adbox ${slot}" href="${esc(a.href || t.adsPath)}" target="_blank" rel="noopener sponsored"><span class="adlab">${lab}</span>${adCreative(a, t)}</a>`;
+  return `<a class="adbox ${slot} house" href="${t.adsPath}"><span class="adlab">${lab}</span><b>${houseText}</b><span class="adcta">${cta}</span></a>`;
 }
-const adBanner = () => `<div class="adwrap">${adSlot('baner', `Twoja reklama tutaj — od ${PRICE.baner7} zł/tydzień`)}</div>`;
+function adBanner(t) {
+  const p = t.price;
+  const house = t.id === 'de'
+    ? `Ihre Werbung hier — ab ${money(p.baner7, t)} / 7 Tage`
+    : `Twoja reklama tutaj — od ${p.baner7} zł/tydzień`;
+  return `<div class="adwrap">${adSlot('baner', house, t)}</div>`;
+}
 // paid kafelek keeps its own high slot; house kafelek only ever fills a hole in the grid
-const adTileSold = () => (adFor('kafelek') ? `<article class="tile ad">${adSlot('kafelek', '')}</article>` : '');
-const adTileHouse = () => `<article class="tile ad"><a class="adbox kafelek house" href="/reklama"><span class="adlab">Reklama</span><b>Twoja reklama — od ${PRICE.kaf7} zł/tydzień</b><span class="adcta">Zobacz ofertę →</span></a></article>`;
-const adRail = () => `<div class="adwrap">${adSlot('box', `Reklama — od ${PRICE.box7} zł/tydzień`)}</div>`;
+function adTileSold(t) { return adFor('kafelek') ? `<article class="tile ad">${adSlot('kafelek', '', t)}</article>` : ''; }
+function adTileHouse(t) {
+  const p = t.price;
+  const house = t.id === 'de'
+    ? `Ihre Werbung — ab ${money(p.kaf7, t)} / 7 Tage`
+    : `Twoja reklama — od ${p.kaf7} zł/tydzień`;
+  const lab = t.id === 'de' ? 'Werbung' : 'Reklama';
+  const cta = t.id === 'de' ? 'Angebot ansehen →' : 'Zobacz ofertę →';
+  return `<article class="tile ad"><a class="adbox kafelek house" href="${t.adsPath}"><span class="adlab">${lab}</span><b>${house}</b><span class="adcta">${cta}</span></a></article>`;
+}
+function adRail(t) {
+  const p = t.price;
+  const house = t.id === 'de'
+    ? `Werbung — ab ${money(p.box7, t)} / 7 Tage`
+    : `Reklama — od ${p.box7} zł/tydzień`;
+  return `<div class="adwrap">${adSlot('box', house, t)}</div>`;
+}
 
-function page(cityDef) {
-  const upd = state.lastRefresh ? warsaw({ hour: '2-digit', minute: '2-digit' }, new Date(state.lastRefresh)) : '—';
-  const today = warsaw({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+function page(cityDef, t) {
+  t = t || tenantFromHost('');
+  const de = t.id === 'de';
+  const tz = de ? 'Europe/Zurich' : 'Europe/Warsaw';
+  const loc = de ? 'de-CH' : 'pl-PL';
+  const upd = state.lastRefresh
+    ? new Intl.DateTimeFormat(loc, { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastRefresh))
+    : '—';
+  const today = new Intl.DateTimeFormat(loc, { timeZone: tz, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   const cd = cityDef ? (state.cities[cityDef.slug] || { clusters: [], latest: [] }) : null;
   const hot = cd ? cd.clusters : state.clusters;
   const loading = !state.lastRefresh;
@@ -429,10 +504,11 @@ function page(cityDef) {
   const hero = hot[0];
   const rest = hot.slice(1);
   const latest = cd ? cd.latest : (state.latest || []);
+  const country = de ? 'Polen' : 'Polska';
   // single pill: shows the current edition. On a local edition it returns to Polska; on Polska it finds your area.
   const pill = cityDef
-    ? `<a class="edpill on" href="/" title="Wróć do wydania krajowego">📍 ${esc(cityDef.name)} <span class="pillx">✕</span></a>`
-    : `<button class="edpill" onclick="ncGeo()" title="Wiadomości z Twojej okolicy">📍 Polska</button>`;
+    ? `<a class="edpill on" href="/" title="${de ? 'Zurück zur Landesausgabe' : 'Wróć do wydania krajowego'}">📍 ${esc(cityDef.name)} <span class="pillx">✕</span></a>`
+    : `<button class="edpill" onclick="ncGeo()" title="${de ? 'Nachrichten aus deiner Gegend' : 'Wiadomości z Twojej okolicy'}">📍 ${country}</button>`;
   // 3-column grid: a trailing hole is either sold space or a dropped tile — never empty air
   let fillers = 0;
   const MAX_FILLERS = 3;
@@ -441,21 +517,31 @@ function page(cityDef) {
     const r = a.length % 3;
     if (r === 1) a = a.slice(0, -1);
     else if (r === 2) {
-      if (fillers < MAX_FILLERS) { a.push(adTileHouse()); fillers++; }
+      if (fillers < MAX_FILLERS) { a.push(adTileHouse(t)); fillers++; }
       else a = a.slice(0, -2);
     }
     return a.length ? `<div class="ggrid">${a.join('\n')}</div>` : '';
   };
   const pillHint = cityDef
-    ? '✕ = powrót do całej Polski'
-    : 'kliknij → wiadomości z Twojej okolicy';
-  return `<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8">
+    ? (de ? '✕ = zurück zu ganz Polen' : '✕ = powrót do całej Polski')
+    : (de ? 'klicken → Nachrichten aus deiner Gegend' : 'kliknij → wiadomości z Twojej okolicy');
+  const title = de
+    ? `${t.brand}${cityDef ? ' · ' + cityDef.name : ''} — nicht alles lesen. KI wählt die heissen Nachrichten`
+    : `NIECZYTAJ.PL${cityDef ? ' · ' + cityDef.name : ''} — nie czytaj wszystkiego. AI wybiera gorące wiadomości`;
+  const desc = de
+    ? `KI liest polnische Nachrichtenportale alle ${REFRESH_MIN} Minuten und zeigt nur, worüber wirklich gesprochen wird. Nicht alles lesen — lies, was heiss ist.`
+    : `AI czyta polskie serwisy informacyjne co ${REFRESH_MIN} minut i pokazuje tylko to, o czym naprawdę się mówi. Nie czytaj wszystkiego — czytaj to, co gorące.`;
+  const ogTitle = de ? `${t.brand} — heisse Nachrichten, gewählt von KI` : 'NIECZYTAJ.PL — gorące wiadomości wybrane przez AI';
+  const ogDesc = de
+    ? `Nicht alles lesen. KI überwacht ${FEEDS.length} polnische Dienste und rangiert Themen, über die alle sprechen.`
+    : `Nie czytaj wszystkiego. AI monitoruje ${FEEDS.length} polskich serwisów i ranguje tematy, o których mówią wszyscy.`;
+  return `<!DOCTYPE html><html lang="${t.lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="refresh" content="600">
-<title>NIECZYTAJ.PL${cityDef ? ' · ' + cityDef.name : ''} — nie czytaj wszystkiego. AI wybiera gorące wiadomości</title>
-<meta name="description" content="AI czyta polskie serwisy informacyjne co ${REFRESH_MIN} minut i pokazuje tylko to, o czym naprawdę się mówi. Nie czytaj wszystkiego — czytaj to, co gorące.">
-<meta property="og:title" content="NIECZYTAJ.PL — gorące wiadomości wybrane przez AI">
-<meta property="og:description" content="Nie czytaj wszystkiego. AI monitoruje ${FEEDS.length} polskich serwisów i ranguje tematy, o których mówią wszyscy.">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}">
+<meta property="og:title" content="${esc(ogTitle)}">
+<meta property="og:description" content="${esc(ogDesc)}">
 <style>
 :root{--paper:#fbfbfa;--ink:#141414;--mut:#6f6a64;--acc:#c8102e;--line:#e7e5e1;--aibg:#f3f0ea}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.4 -apple-system,'Segoe UI',Roboto,Arial,sans-serif}
@@ -523,37 +609,42 @@ footer a{color:var(--mut)}
 @media(max-width:520px){.logo{font-size:26px}.tile.hero h3{font-size:18.5px}.updline{margin-left:0}.tile h3{font-size:13.5px}.edwrap{align-items:flex-start;margin-left:0}.edhint{text-align:left}}
 </style></head><body><div class="wrap">
 <header>
-<h1 class="logo"><a href="/">NIECZYTAJ<span class="pl">.PL</span></a></h1>
-<p class="tagline"><b>Nie czytaj wszystkiego.</b> AI czyta ${cityDef ? 'lokalne serwisy' : FEEDS.length + ' serwisów'} co ${REFRESH_MIN} min — Ty czytasz to, co gorące.</p>
+<h1 class="logo"><a href="/">${t.brandHtml}</a></h1>
+<p class="tagline">${de
+    ? `<b>Nicht alles lesen.</b> KI liest ${cityDef ? 'lokale Dienste' : FEEDS.length + ' Dienste'} alle ${REFRESH_MIN} Min. — du liest, was heiss ist.`
+    : `<b>Nie czytaj wszystkiego.</b> AI czyta ${cityDef ? 'lokalne serwisy' : FEEDS.length + ' serwisów'} co ${REFRESH_MIN} min — Ty czytasz to, co gorące.`}</p>
 <div class="edwrap">${pill}<span class="edhint">${pillHint}</span></div>
-<div class="updline"><span class="dotlive">● NA ŻYWO</span><span>${esc(today)}</span><span>aktualizacja ${esc(upd)}</span><a class="geolink" onclick="ncGeo();return false" href="#">📍 moja lokalizacja</a><span id="geonote" class="geonote" style="display:none"></span>${aiOn ? '<span>skróty: AI</span>' : ''}<a class="geolink" href="/reklama" style="border:0">reklama</a></div>
+<div class="updline"><span class="dotlive">${de ? '● LIVE' : '● NA ŻYWO'}</span><span>${esc(today)}</span><span>${de ? 'Aktualisierung' : 'aktualizacja'} ${esc(upd)}</span><a class="geolink" onclick="ncGeo();return false" href="#">📍 ${de ? 'mein Standort' : 'moja lokalizacja'}</a><span id="geonote" class="geonote" style="display:none"></span>${aiOn ? `<span>${de ? 'Kurzfassungen: KI' : 'skróty: AI'}</span>` : ''}<a class="geolink" href="${t.adsPath}" style="border:0">${de ? 'Werbung' : 'reklama'}</a></div>
 </header>
-${loading ? `<div class="empty">Pobieram najnowsze wiadomości…<br>Strona odświeży się automatycznie.</div><script>setTimeout(()=>location.reload(),8000)</script>` : `
+${loading ? `<div class="empty">${de ? 'Lade die neuesten Nachrichten…' : 'Pobieram najnowsze wiadomości…'}<br>${de ? 'Die Seite wird automatisch aktualisiert.' : 'Strona odświeży się automatycznie.'}</div><script>setTimeout(()=>location.reload(),8000)</script>` : `
 <div class="layout">
 <main>
-<h2><span class="n">🔥</span> ${cityDef ? 'Gorące: ' + cityDef.name : 'Gorące teraz — o tym mówią wszyscy'}</h2>
+<h2><span class="n">🔥</span> ${cityDef ? (de ? 'Heiss: ' : 'Gorące: ') + cityDef.name : (de ? 'Jetzt heiss — darüber sprechen alle' : 'Gorące teraz — o tym mówią wszyscy')}</h2>
 <div class="ggrid">
-${hero ? tileHtml(hero, true) : ''}
-${rest.slice(0, 2).map(c => tileHtml(c, false)).join('\n')}
+${hero ? tileHtml(hero, true, t) : ''}
+${rest.slice(0, 2).map(c => tileHtml(c, false, t)).join('\n')}
 </div>
-${adBanner()}
-${grid([adTileSold(), ...rest.slice(2).map(c => tileHtml(c, false))])}
+${adBanner(t)}
+${grid([adTileSold(t), ...rest.slice(2).map(c => tileHtml(c, false, t))])}
 ${cityDef ? '' : CATS.map(cat => {
     const list = (state.byCat[cat.id] || []).slice(0, 8);
     if (!list.length) return '';
-    return `<h2>${cat.label}</h2>${grid(list.map(c => tileHtml(c, false)))}`;
+    return `<h2>${catLabel(cat, t)}</h2>${grid(list.map(c => tileHtml(c, false, t)))}`;
   }).join('\n')}
 </main>
 <aside class="rail">
-<h2>Najnowsze${cityDef ? ': ' + cityDef.name : ''}</h2>
-${latest.slice(0, 4).map(railRow).join('\n')}
-${adRail()}
-${latest.slice(4).map(railRow).join('\n')}
+<h2>${de ? 'Neueste' : 'Najnowsze'}${cityDef ? ': ' + cityDef.name : ''}</h2>
+${latest.slice(0, 4).map(it => railRow(it, t)).join('\n')}
+${adRail(t)}
+${latest.slice(4).map(it => railRow(it, t)).join('\n')}
 </aside>
 </div>`}
 <footer>
-<b>NIECZYTAJ.PL</b> — strona w pełni automatyczna: AI agreguje nagłówki i miniatury z polskich serwisów, grupuje tematy i ranguje je według liczby źródeł i świeżości. Nagłówki, zdjęcia i linki prowadzą do serwisów źródłowych — wszystkie prawa do artykułów i zdjęć należą do ich wydawców. Krótkie podsumowania pisze AI własnymi słowami.<br>
-MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="/reklama">reklama na nieczytaj.pl</a> · <a href="/regulamin">regulamin</a> · kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>
+${de
+    ? `<b>${esc(t.brand)}</b> — vollautomatische Seite: KI aggregiert Schlagzeilen und Vorschaubilder aus polnischen Medien, gruppiert Themen und rangiert sie nach Quellenanzahl und Frische. Schlagzeilen, Fotos und Links führen zu den Ursprungsmedien — alle Rechte an Artikeln und Bildern liegen bei den Verlagen. Kurze Zusammenfassungen schreibt die KI in eigenen Worten.<br>
+MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="${t.adsPath}">Werbung auf liesnicht.ch</a> · <a href="${t.legalPath}">Impressum</a> · <a href="${t.privacyPath}">Datenschutz</a> · Kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>`
+    : `<b>NIECZYTAJ.PL</b> — strona w pełni automatyczna: AI agreguje nagłówki i miniatury z polskich serwisów, grupuje tematy i ranguje je według liczby źródeł i świeżości. Nagłówki, zdjęcia i linki prowadzą do serwisów źródłowych — wszystkie prawa do artykułów i zdjęć należą do ich wydawców. Krótkie podsumowania pisze AI własnymi słowami.<br>
+MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="/reklama">reklama na nieczytaj.pl</a> · <a href="/regulamin">regulamin</a> · kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>`}
 </footer>
 </div>
 <script>
@@ -561,9 +652,9 @@ var NC_GEO=${JSON.stringify(CITIES.map(c => ({ s: c.slug, n: c.name, a: c.lat, o
 function ncDist(a1,o1,a2,o2){var R=6371,dA=(a2-a1)*Math.PI/180,dO=(o2-o1)*Math.PI/180,x=Math.sin(dA/2)*Math.sin(dA/2)+Math.cos(a1*Math.PI/180)*Math.cos(a2*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2);return 2*R*Math.asin(Math.sqrt(x));}
 function ncToast(m){var t=document.createElement('div');t.className='nctoast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.style.opacity='0';},2800);setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},3500);}
 function ncBeacon(n,d){try{if(navigator.sendBeacon)navigator.sendBeacon('/api/geo',JSON.stringify({n:n,d:d}));}catch(e){}}
-function ncBtnReset(){var b=document.querySelector('.edpill');if(b&&b.tagName==='BUTTON'){b.disabled=false;b.innerHTML='📍 Polska';}}
+function ncBtnReset(){var b=document.querySelector('.edpill');if(b&&b.tagName==='BUTTON'){b.disabled=false;b.innerHTML=${JSON.stringify('📍 ' + country)};}}
 function ncGeo(){
-  if(!navigator.geolocation){ncToast('Twoja przeglądarka nie obsługuje lokalizacji');return;}
+  if(!navigator.geolocation){ncToast(${JSON.stringify(de ? 'Dein Browser unterstützt keinen Standort' : 'Twoja przeglądarka nie obsługuje lokalizacji')});return;}
   var b=document.querySelector('.edpill');if(b&&b.tagName==='BUTTON'){b.disabled=true;b.innerHTML='📍 …';}
   navigator.geolocation.getCurrentPosition(function(p){
     var la=p.coords.latitude,lo=p.coords.longitude,best=null,bd=1e9;
@@ -574,11 +665,11 @@ function ncGeo(){
       location.href='/'+best.s+'?geo=1';
     }else{
       ncBeacon(best?best.s:'none',bd<=150?'100-150':'>150');
-      ncToast('Twoja okolica już wkrótce 📍 Najbliższa edycja: '+(best?best.n:'—')+' ('+Math.round(bd)+' km)');
+      ncToast(${JSON.stringify(de ? 'Deine Gegend kommt bald 📍 Nächste Ausgabe: ' : 'Twoja okolica już wkrótce 📍 Najbliższa edycja: ')}+(best?best.n:'—')+' ('+Math.round(bd)+' km)');
       ncBtnReset();
     }
   },function(err){
-    ncToast(err&&err.code===1?'Odmówiono dostępu do lokalizacji':'Nie udało się pobrać lokalizacji');
+    ncToast(err&&err.code===1?${JSON.stringify(de ? 'Standortzugriff verweigert' : 'Odmówiono dostępu do lokalizacji')}:${JSON.stringify(de ? 'Standort konnte nicht gelesen werden' : 'Nie udało się pobrać lokalizacji')});
     ncBtnReset();
   },{enableHighAccuracy:false,timeout:8000,maximumAge:600000});
 }
@@ -586,7 +677,7 @@ function ncGeo(){
   if(location.search.indexOf('geo=1')>-1){
     var p=location.pathname.replace(/\\//g,'');
     for(var i=0;i<NC_GEO.length;i++){
-      if(NC_GEO[i].s===p){var g=document.getElementById('geonote');if(g){g.textContent='📍 Wykryto: '+NC_GEO[i].n;g.style.display='inline';}break;}
+      if(NC_GEO[i].s===p){var g=document.getElementById('geonote');if(g){g.textContent=${JSON.stringify(de ? '📍 Erkannt: ' : '📍 Wykryto: ')}+NC_GEO[i].n;g.style.display='inline';}break;}
     }
   }
 })();
@@ -594,7 +685,12 @@ function ncGeo(){
 </body></html>`;
 }
 // ------------------------- /reklama -------------------------
-function buyLink(pkg, label, price) {
+function buyLink(pkg, label, price, t) {
+  t = t || tenantFromHost('');
+  if (t.id === 'de') {
+    const href = `mailto:info@startend.ch?subject=${encodeURIComponent('Werbung LIESNICHT — ' + label)}&body=${encodeURIComponent('Guten Tag,\n\nich möchte reservieren: ' + label + ' (CHF ' + price + ' netto).\n\nFirma:\nUID/MWST:\nMotiv (Bild/Video):\nZiel-Link:\nKampagnenstart:\n\n')}`;
+    return `<a class="buy" href="${esc(href)}">Bestellen · CHF ${price}</a>`;
+  }
   const env = process.env['STRIPE_' + pkg.toUpperCase()];
   const href = env || `mailto:info@startend.ch?subject=${encodeURIComponent('Reklama nieczytaj.pl — ' + label)}&body=${encodeURIComponent('Dzień dobry,\n\nchcę zarezerwować: ' + label + ' (' + price + ' zł netto).\n\nFirma:\nNIP:\nMateriał (obraz/wideo):\nLink docelowy:\nStart kampanii:\n\n')}`;
   return `<a class="buy" href="${esc(href)}"${env ? ' target="_blank" rel="noopener"' : ''}>Zamów · ${price} zł</a>`;
@@ -772,6 +868,175 @@ a{color:var(--acc)}
 </div></body></html>`;
 }
 
+function legalShell(t, title, body) {
+  return `<!DOCTYPE html><html lang="${t.lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${esc(title)} — ${esc(t.brand)}</title>
+<style>
+:root{--paper:#fbfbfa;--ink:#141414;--mut:#6f6a64;--acc:#c8102e;--line:#e7e5e1;--aibg:#f3f0ea}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 -apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 60px}
+header{padding:14px 0 10px;border-bottom:3px solid var(--ink);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.logo{font-family:Georgia,serif;font-size:28px;font-weight:700;letter-spacing:-1px;margin:0}
+.logo a{color:var(--ink);text-decoration:none}.logo .pl{color:var(--acc)}
+.back{margin-left:auto;font-size:13px}.back a{color:var(--mut);text-decoration:none;border:1.5px solid var(--line);border-radius:20px;padding:6px 13px}
+h1{font-family:Georgia,serif;font-size:30px;margin:30px 0 6px}
+.sub{color:var(--mut);font-size:13.5px;margin:0 0 8px}
+h2{font-family:Georgia,serif;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;border-bottom:2px solid var(--ink);padding-bottom:5px;margin:30px 0 12px}
+p,li{font-size:14.5px}ul{padding-left:18px}li{margin:6px 0}
+footer{margin-top:40px;padding-top:14px;border-top:3px solid var(--ink);font-size:12.5px;color:var(--mut)}
+footer a,a{color:var(--acc)}
+</style></head><body><div class="wrap">
+<header>
+<h1 class="logo"><a href="/">${t.brandHtml}</a></h1>
+<div class="back"><a href="/">← ${t.id === 'de' ? 'Zur Startseite' : 'Wróć'}</a></div>
+</header>
+${body}
+<footer>
+<b>${esc(t.brand)}</b> · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="${t.adsPath}">${t.id === 'de' ? 'Werbung' : 'reklama'}</a> · <a href="mailto:info@startend.ch">info@startend.ch</a>
+</footer>
+</div></body></html>`;
+}
+
+function impressumPage(t) {
+  t = t || tenantFromHost('liesnicht.ch');
+  return legalShell(t, 'Impressum', `
+<h1>Impressum</h1>
+<p class="sub">Angaben gemäss schweizerischem Recht. Herausgeberin von LIESNICHT.</p>
+<h2>Herausgeberin</h2>
+<p><b>STARTEND GmbH</b><br>Cham, Schweiz<br>UID CHE-223.488.613<br>E-Mail: <a href="mailto:info@startend.ch">info@startend.ch</a></p>
+<h2>Vertretung</h2>
+<p>Vertreten durch die Geschäftsführung der STARTEND GmbH. Verantwortlich für den Inhalt dieser Website: STARTEND GmbH, Cham.</p>
+<h2>Dienst</h2>
+<p>LIESNICHT ist ein vollautomatischer Nachrichtendienst. Schlagzeilen, Fotos und Links stammen von Drittmedien; Rechte liegen bei den jeweiligen Verlagen.</p>
+<h2>Haftung</h2>
+<p>Kein Anspruch auf Vollständigkeit oder ununterbrochene Verfügbarkeit. Externe Links werden beim Setzen geprüft; für deren Inhalt sind die Betreiber verantwortlich.</p>`);
+}
+
+function datenschutzPage(t) {
+  t = t || tenantFromHost('liesnicht.ch');
+  return legalShell(t, 'Datenschutz', `
+<h1>Datenschutz</h1>
+<p class="sub">STARTEND GmbH, Cham, Schweiz · Kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a></p>
+<h2>Welche Daten</h2>
+<ul>
+<li>Kein Login, keine Werbe-Tracking-Cookies, kein Verkauf von Nutzerprofilen.</li>
+<li>Beim Abruf können technische Server-Logs (IP, User-Agent, Zeitpunkt) kurz beim Hosting anfallen — nur für Betrieb und Missbrauchsschutz.</li>
+<li>Die optionale Standortfunktion läuft im Browser; der ungefähre Ort wird nur gesendet, wenn Sie zustimmen.</li>
+<li>Werbungsanfragen per E-Mail enthalten die Angaben, die Sie selbst schicken (Firma, Motiv, Ziel-Link).</li>
+</ul>
+<h2>Zweck und Speicherung</h2>
+<p>Logs nur so lange wie für Betrieb und Sicherheit nötig. E-Mail-Anfragen speichern wir zur Vertragserfüllung und Buchhaltung. Zahlungen, falls genutzt, laufen über den Zahlungsanbieter — keine Kartendaten bei uns.</p>
+<h2>Rechte</h2>
+<p>Auskunft, Berichtigung, Löschung: <a href="mailto:info@startend.ch">info@startend.ch</a>. Aufsicht: Eidgenössischer Datenschutz- und Öffentlichkeitsbeauftragter (EDÖB).</p>`);
+}
+
+function werbungPage(t) {
+  t = t || tenantFromHost('liesnicht.ch');
+  const P = PRICE_DE_LOCKED; // locked — never PRICE / Polish tail
+  const pv = state.pv.days[warsawDay()] || 0;
+  const cur = t.ch ? 'CHF' : 'CHF';
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Werbung auf LIESNICHT — Bild oder Video, ab ${cur} ${P.box7} / 7 Tage</title>
+<meta name="description" content="Werbung auf LIESNICHT — Bild und Video zwischen heissen Nachrichten. Fixpreise in CHF, B2B.">
+<style>
+:root{--paper:#fbfbfa;--ink:#141414;--mut:#6f6a64;--acc:#c8102e;--line:#e7e5e1;--aibg:#f3f0ea}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 -apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:0 16px 60px}
+header{padding:14px 0 10px;border-bottom:3px solid var(--ink);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.logo{font-family:Georgia,serif;font-size:28px;font-weight:700;letter-spacing:-1px;margin:0}
+.logo a{color:var(--ink);text-decoration:none}.logo .pl{color:var(--acc)}
+.back{margin-left:auto;font-size:13px}.back a{color:var(--mut);text-decoration:none;border:1.5px solid var(--line);border-radius:20px;padding:6px 13px}
+h1{font-family:Georgia,serif;font-size:36px;line-height:1.15;margin:34px 0 10px}
+.lede{font-size:17px;color:var(--mut);max-width:62ch}
+.lede b{color:var(--ink)}
+h2{font-family:Georgia,serif;font-size:14px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid var(--ink);padding-bottom:5px;margin:38px 0 14px}
+.fmt{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:720px){.fmt{grid-template-columns:1fr 1fr 1fr}}
+.card{border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff;display:flex;flex-direction:column;gap:8px}
+.card h3{font-family:Georgia,serif;font-size:19px;margin:0}
+.mock{border-radius:6px;background:repeating-linear-gradient(45deg,#faf8f4,#faf8f4 10px,#f4f1ea 10px,#f4f1ea 20px);display:flex;align-items:center;justify-content:center;color:#b9b3a9;font-size:11px;font-weight:700;letter-spacing:.1em}
+.m1{aspect-ratio:970/170}.m2{aspect-ratio:16/10}.m3{aspect-ratio:1/1;max-width:150px}
+.card p{margin:0;font-size:14px;color:var(--mut)}
+.prices{margin-top:auto;padding-top:6px;display:flex;flex-direction:column;gap:6px}
+.buy{display:block;text-align:center;background:var(--acc);color:#fff;font-weight:700;text-decoration:none;border-radius:8px;padding:9px 12px;font-size:14px}
+.buy:hover{opacity:.9}
+table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+th{background:var(--ink);color:#fff;text-align:left;padding:9px 12px;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+td{border-bottom:1px solid var(--line);padding:9px 12px}
+td.p{font-weight:700;white-space:nowrap}
+.note{background:var(--aibg);border-left:3px solid var(--acc);padding:14px 16px;border-radius:0 8px 8px 0;font-size:14.5px;margin:26px 0}
+footer{margin-top:44px;padding-top:14px;border-top:3px solid var(--ink);font-size:12.5px;color:var(--mut);line-height:1.6}
+footer a{color:var(--mut)}
+</style></head><body><div class="wrap">
+<header>
+<h1 class="logo"><a href="/">${t.brandHtml}</a></h1>
+<div class="back"><a href="/">← Zurück zu den Nachrichten</a></div>
+</header>
+<h1>Werbung, die niemand wegscrollt</h1>
+<p class="lede"><b>Bild oder Video</b> — dort, wo die Leser ohnehin hinschauen: zwischen den heissen News. Keine Pop-ups, kein Ton, kein Nutzer-Tracking. Reservation in einer Minute.</p>
+
+<h2>Formate</h2>
+<div class="fmt">
+<div class="card">
+<div class="mock m1">BANNER 970×170</div>
+<h3>Hauptbanner</h3>
+<p>Volle Breite, direkt unter der Top-Story. Bild oder Video (stumm, Loop). Mindestlaufzeit: 7 Tage.</p>
+<div class="prices">
+${buyLink('baner7', 'Hauptbanner — 7 Tage', P.baner7, t)}
+${buyLink('baner30', 'Hauptbanner — 30 Tage', P.baner30, t)}
+</div>
+</div>
+<div class="card">
+<div class="mock m2">KACHEL 16:10</div>
+<h3>Kachel im Raster</h3>
+<p>Sieht aus wie eine Story, gekennzeichnet als „Werbung". Bild oder Video.</p>
+<div class="prices">
+${buyLink('kaf7', 'Kachel — 7 Tage', P.kaf7, t)}
+${buyLink('kaf30', 'Kachel — 30 Tage', P.kaf30, t)}
+</div>
+</div>
+<div class="card">
+<div class="mock m3">BOX 1:1</div>
+<h3>Box in der Spalte</h3>
+<p>Quadrat in der Spalte „Neueste". Bild oder Video.</p>
+<div class="prices">
+${buyLink('box7', 'Box — 7 Tage', P.box7, t)}
+${buyLink('box30', 'Box — 30 Tage', P.box30, t)}
+</div>
+</div>
+</div>
+
+<h2>Preise</h2>
+<table>
+<tr><th>Format</th><th>7 Tage</th><th>30 Tage</th></tr>
+<tr><td>Hauptbanner (Bild / Video)</td><td class="p">${cur} ${P.baner7}</td><td class="p">${cur} ${P.baner30}</td></tr>
+<tr><td>Kachel im Raster (Bild / Video)</td><td class="p">${cur} ${P.kaf7}</td><td class="p">${cur} ${P.kaf30}</td></tr>
+<tr><td>Box in der Spalte</td><td class="p">${cur} ${P.box7}</td><td class="p">${cur} ${P.box30}</td></tr>
+</table>
+<p style="font-size:13px;color:var(--mut);margin-top:8px">Nettopreise, Mindestlaufzeit 7 Tage, nur B2B — Rechnung von STARTEND GmbH (Schweiz), Steuerschuldnerschaft des Leistungsempfängers. Zahlung im Voraus. <a href="/impressum" style="color:var(--acc)">Impressum</a> · <a href="/datenschutz" style="color:var(--acc)">Datenschutz</a>.</p>
+
+<div class="note"><b>Offene Karten:</b> LIESNICHT ist neu — darum echte Zahlen statt Versprechen. Heute: <b>${pv}</b> Aufrufe (seit Mitternacht, ohne Bots). Ihr Satz gilt für die gebuchte Laufzeit, auch wenn der Preis später steigt.</div>
+
+<h2>Spezifikation</h2>
+<ul>
+<li><b>Bild:</b> JPG oder PNG — Banner 1940×340 px, Kachel 1200×750 px, Box 1000×1000 px.</li>
+<li><b>Video:</b> MP4 (H.264), bis 15 Sekunden, ohne Ton, bis 6 MB — Loop, kein Vollbild.</li>
+<li>Motiv und Ziel-Link nach der Bestellung per Mail — Schaltung innert 24 Arbeitstunden.</li>
+<li>Jede Anzeige trägt die Kennzeichnung „Werbung".</li>
+<li>Keine Anzeigen: unlizenzierte Glücksspiele, Erwachseneninhalte, Kurzzeitkredite, rezeptpflichtige Arzneimittel, spekulative Krypto.</li>
+</ul>
+
+<h2>Kontakt</h2>
+<p>Fragen, Sonderformate, Jahrespakete: <a href="mailto:info@startend.ch" style="color:var(--acc);font-weight:700">info@startend.ch</a></p>
+<footer>
+<b>LIESNICHT</b> — automatischer Nachrichtendienst. © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham, Schweiz · <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a>.
+</footer>
+</div></body></html>`;
+}
+
 // ------------------------- server -------------------------
 function countView(city) {
   state.pv.total++;
@@ -786,21 +1051,37 @@ function readBody(req, cb) {
   req.on('data', c => { b += c; if (b.length > 1e6) req.destroy(); });
   req.on('end', () => cb(b));
 }
+function sendHtml(res, status, html, maxAge) {
+  res.writeHead(status, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=' + (maxAge || 120) });
+  return res.end(html);
+}
 const server = http.createServer((req, res) => {
   const url = (req.url || '/').split('?')[0];
+  const t = tenantFromHost(requestHost(req));
   try {
     if (url === '/' && req.method === 'GET') {
       countView();
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=120' });
-      return res.end(page());
+      return sendHtml(res, 200, page(null, t), 120);
     }
     if (url === '/reklama' && req.method === 'GET') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300' });
-      return res.end(reklamaPage());
+      if (t.id === 'de') { res.writeHead(302, { location: '/werbung' }); return res.end(); }
+      return sendHtml(res, 200, reklamaPage(), 300);
+    }
+    if (url === '/werbung' && req.method === 'GET') {
+      if (t.id !== 'de') { res.writeHead(302, { location: '/reklama' }); return res.end(); }
+      return sendHtml(res, 200, werbungPage(t), 300);
     }
     if (url === '/regulamin' && req.method === 'GET') {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' });
-      return res.end(regulaminPage());
+      if (t.id === 'de') { res.writeHead(302, { location: '/impressum' }); return res.end(); }
+      return sendHtml(res, 200, regulaminPage(), 3600);
+    }
+    if (url === '/impressum' && req.method === 'GET') {
+      if (t.id !== 'de') { res.writeHead(302, { location: '/regulamin' }); return res.end(); }
+      return sendHtml(res, 200, impressumPage(t), 3600);
+    }
+    if (url === '/datenschutz' && req.method === 'GET') {
+      if (t.id !== 'de') { res.writeHead(302, { location: '/regulamin' }); return res.end(); }
+      return sendHtml(res, 200, datenschutzPage(t), 3600);
     }
     if (url === '/api/geo' && req.method === 'POST') {
       return readBody(req, b => {
@@ -815,8 +1096,7 @@ const server = http.createServer((req, res) => {
     const cityDef = CITIES.find(c => '/' + c.slug === url);
     if (cityDef && req.method === 'GET') {
       countView(cityDef.slug);
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=120' });
-      return res.end(page(cityDef));
+      return sendHtml(res, 200, page(cityDef, t), 120);
     }
     if (url === '/health') {
       const okN = FEEDS.filter(f => state.feedCache[f.id] && state.feedCache[f.id].ok).length;
@@ -826,7 +1106,7 @@ const server = http.createServer((req, res) => {
         refreshCount: state.refreshCount, feedsOk: okN, feedsTotal: FEEDS.length,
         hot: state.clusters.length, summaries: state.summaries.size,
         cities: Object.fromEntries(CITIES.map(c => [c.slug, (state.cities[c.slug] || { clusters: [] }).clusters.length])),
-        ads: ADS.length, price: PRICE, aiSelf: !!ANTHROPIC_API_KEY, pv: state.pv,
+        ads: ADS.length, price: t.price, tenant: t.id, aiSelf: !!ANTHROPIC_API_KEY, pv: state.pv,
         uptimeMin: Math.round((Date.now() - state.boot) / 60000),
         feeds: FEEDS.map(f => ({ id: f.id, ok: !!(state.feedCache[f.id] && state.feedCache[f.id].ok), n: state.feedCache[f.id] ? state.feedCache[f.id].items.length : 0, via: f.via || '', err: state.feedCache[f.id] ? state.feedCache[f.id].error : 'pending' })),
       }));
