@@ -1,0 +1,15 @@
+{% extends "x_autopilot/base.html" %}
+{% block title %}Sheets reconnect — X Autopilot{% endblock %}
+{% block header_meta %}<span class="pill pill-on">Env-only token</span>{% endblock %}
+{% block content %}
+<h1>Paste this into Railway.</h1>
+<p class="sub">The refresh token is not stored in the database. Put it in <span class="mono">GOOGLE_SHEETS_REFRESH_TOKEN</span> and redeploy. Access tokens are refreshed from that env var at runtime.</p>
+<div class="card">
+  {% if has_refresh %}
+  <p class="k" style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;color:#4A5250">GOOGLE_SHEETS_REFRESH_TOKEN</p>
+  <div class="token">{{ refresh_token }}</div>
+  {% else %}
+  <p class="err">Google did not return a refresh token. Revoke prior access and reconnect with prompt=consent.</p>
+  {% endif %}
+</div>
+{% endblock %}

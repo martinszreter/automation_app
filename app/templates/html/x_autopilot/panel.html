@@ -1,0 +1,54 @@
+{% extends "x_autopilot/base.html" %}
+{% block title %}Panel — X Autopilot{% endblock %}
+{% block header_meta %}
+  {% if plan_active %}
+  <span class="pill pill-on">Plan active</span>
+  {% else %}
+  <span class="pill pill-off">No active plan</span>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<h1>X Autopilot panel</h1>
+<p class="sub">Signed in as <b>{{ user.email }}</b></p>
+
+<div class="card">
+  <ul class="facts">
+    <li><span class="k">Plan</span><span>{% if plan_active %}Active{% elif plan %}{{ plan.status.value }}{% else %}None{% endif %}</span></li>
+    <li><span class="k">Product</span><span>X Autopilot</span></li>
+    {% if plan %}
+    <li><span class="k">Amount</span><span>{{ amount_label }} {{ plan.currency|upper }}</span></li>
+    <li><span class="k">Stripe email</span><span>{{ plan.stripe_email or plan.email }}</span></li>
+    {% endif %}
+  </ul>
+  {% if not plan_active %}
+  <p class="sub" style="margin:16px 0 0">No active plan on this Google account. Pay from the <a href="/x-autopilot/">pricing page</a> and come back — no contact needed.</p>
+  {% endif %}
+  {% if plan_active and plan and plan.amount_cents <= 100 %}
+  <form method="post" action="/x-autopilot/panel/refund" style="margin-top:18px">
+    <button class="btn btn-ghost" type="submit">Refund CHF 1 test payment</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if plan_active %}
+<div class="card">
+  <h2 style="font-size:18px;margin-bottom:8px">Google Sheets</h2>
+  {% if sheets %}
+  <p class="pill pill-on">Read ok · {{ sheets.row_count }} rows</p>
+  <table>
+    <tbody>
+      {% for row in sheets.rows %}
+      <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ sheets_error or "Sheets is not connected. Operator: set GOOGLE_SHEETS_REFRESH_TOKEN (env only) or open /x-autopilot/sheets/reconnect." }}</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<form method="post" action="/x-autopilot/auth/logout" style="margin-top:8px">
+  <button class="btn btn-ghost" type="submit">Sign out</button>
+</form>
+{% endblock %}

@@ -44,6 +44,39 @@ class Guest(Base):
     bookings: Mapped[list["Booking"]] = relationship(back_populates="guest")
 
 
+class PlanStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACTIVE = "active"
+    CANCELED = "canceled"
+    REFUNDED = "refunded"
+
+
+class XAutopilotPlan(Base):
+    """Paid X Autopilot access, keyed by email after Stripe Checkout + Google Sign-In."""
+
+    __tablename__ = "x_autopilot_plans"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    stripe_email: Mapped[str | None] = mapped_column(String(320))
+    status: Mapped[PlanStatus] = mapped_column(
+        Enum(PlanStatus, name="x_autopilot_plan_status"),
+        default=PlanStatus.PENDING,
+        nullable=False,
+    )
+    stripe_checkout_session_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255))
+    stripe_payment_intent_id: Mapped[str | None] = mapped_column(String(255), index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255))
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="chf")
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class ContactRequest(Base):
     __tablename__ = "contact_requests"
 

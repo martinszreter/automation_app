@@ -267,10 +267,12 @@ async def test_x_autopilot_landing_carries_exactly_one_price_and_one_stripe_link
     assert set(re.findall(r"CHF\s?[\d'.,]+", body)) == {"CHF 149"}
     for removed in ("330", "660", "990"):
         assert removed not in body
-    # One Stripe target, and it is the placeholder Marcin fills in.
+    # Checkout is a first-party route, not a hardcoded Payment Link.
     assert "buy.stripe.com" not in body
-    assert len(re.findall(r"https://buy\.", body)) == 0
-    assert "STRIPE_XAUTOPILOT_149" in body
+    assert "STRIPE_XAUTOPILOT_149" not in body
+    assert 'href="/x-autopilot/checkout"' in body
+    assert 'href="/impressum/"' in body
+    assert "Impressum" in body
     # One offer button, one lead form.
     assert body.count('id="startBtn"') == 1
     assert body.count('action="/contact"') == 1
