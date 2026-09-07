@@ -31,6 +31,7 @@ from app.services.apps_checkout import (
 from app.services.apps_orders import (
     AppsOrderError,
     AppsOrderNotConfigured,
+    cancellation_row_from_subscription,
     details_row,
     paid_row_from_session,
     post_order_row,
@@ -169,6 +170,50 @@ async def apps_success_submit(
     return _render("done.html", request=request, t=apps_de)
 
 
+async def handle_checkout_completed(session: dict[str, Any]) -> Response:
+    """Store the paid row for one /apps Checkout Session.
+
+    Shared by ``/apps/stripe/webhook`` and the unified ``/stripe/webhook``
+    dispatcher, so both endpoints write the same row through the same errors.
+    The caller has already decided the session belongs to /apps.
+    """
+    try:
+        row = paid_row_from_session(session)
+    except ValueError as exc:
+        logger.warning("/apps webhook has no usable session: %s", exc)
+        return JSONResponse({"received": True, "error": str(exc)}, status_code=422)
+
+    try:
+        await post_order_row(row)
+    except (AppsOrderNotConfigured, AppsOrderError) as exc:
+        # 5xx makes Stripe retry, which is exactly what a lost order needs.
+        logger.warning("/apps order row not stored: %s", exc)
+        raise HTTPException(status_code=503, detail="order store unavailable") from exc
+
+    return JSONResponse({"received": True, "stored": True})
+
+
+async def handle_subscription_deleted(subscription: dict[str, Any]) -> Response:
+    """Store the cancellation row for a churned /apps subscription."""
+    try:
+        row = cancellation_row_from_subscription(subscription)
+    except ValueError as exc:
+        logger.warning("/apps cancellation has no usable subscription: %s", exc)
+        return JSONResponse({"received": True, "error": str(exc)}, status_code=422)
+
+    try:
+        await post_order_row(row)
+    except AppsOrderNotConfigured as exc:
+        # Nothing to write to (local/dev): acknowledge rather than make Stripe retry.
+        logger.warning("/apps cancellation row not stored: %s", exc)
+        return JSONResponse({"received": True, "stored": False})
+    except AppsOrderError as exc:
+        logger.warning("/apps cancellation row could not be stored: %s", exc)
+        raise HTTPException(status_code=503, detail="order store unavailable") from exc
+
+    return JSONResponse({"received": True, "stored": True})
+
+
 @router.post("/stripe/webhook", include_in_schema=False)
 async def apps_stripe_webhook(request: Request) -> Response:
     payload = await request.body()
@@ -191,17 +236,4 @@ async def apps_stripe_webhook(request: Request) -> Response:
         # The same endpoint may receive events for the other products.
         return JSONResponse({"received": True, "ignored": True})
 
-    try:
-        row = paid_row_from_session(session)
-    except ValueError as exc:
-        logger.warning("/apps webhook has no usable session: %s", exc)
-        return JSONResponse({"received": True, "error": str(exc)}, status_code=422)
-
-    try:
-        await post_order_row(row)
-    except (AppsOrderNotConfigured, AppsOrderError) as exc:
-        # 5xx makes Stripe retry, which is exactly what a lost order needs.
-        logger.warning("/apps order row not stored: %s", exc)
-        raise HTTPException(status_code=503, detail="order store unavailable") from exc
-
-    return JSONResponse({"received": True, "stored": True})
+    return await handle_checkout_completed(session)

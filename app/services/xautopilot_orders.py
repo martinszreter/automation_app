@@ -1,8 +1,12 @@
 """Order rows for the n8n data table behind ``N8N_XAUTOPILOT_ORDER_URL``.
 
-One row per paid Checkout Session, written by the
-``checkout.session.completed`` webhook and keyed by the session id, so a Stripe
-retry overwrites rather than duplicates.
+Two kinds of row, both keyed by a Stripe id so a Stripe retry overwrites
+rather than duplicates:
+
+* ``paid``     — one row per paid Checkout Session, written by the
+  ``checkout.session.completed`` webhook and keyed by the session id;
+* ``canceled`` — written by ``customer.subscription.deleted``, keyed by the
+  subscription id, so a churned tier stops looking like a live one.
 
 The URL is env-only: an n8n webhook is a write key, so it never enters the repo.
 """
@@ -16,11 +20,13 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
+from app.services.stripe_events import price_ids
 
 logger = logging.getLogger(__name__)
 
 ORDER_TABLE = "xautopilot_orders"
 ROW_PAID = "paid"
+ROW_CANCELED = "canceled"
 
 
 class XAOrderNotConfigured(RuntimeError):
@@ -40,6 +46,17 @@ def _identifier(value: Any) -> str:
     if isinstance(value, dict):
         return str(value.get("id") or "")
     return str(value or "")
+
+
+def _timestamp(value: Any) -> str:
+    """Stripe sends times as unix seconds; fall back to now when absent."""
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return _now()
+    if seconds <= 0:
+        return _now()
+    return datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat(timespec="seconds")
 
 
 def order_row_from_session(session: dict[str, Any]) -> dict[str, Any]:
@@ -62,6 +79,26 @@ def order_row_from_session(session: dict[str, Any]) -> dict[str, Any]:
         "payment_status": str(session.get("payment_status") or ""),
         "amount_total_cents": int(session.get("amount_total") or 0),
         "currency": str(session.get("currency") or "chf").lower(),
+        "created_at": _now(),
+    }
+
+
+def cancellation_row_from_subscription(subscription: dict[str, Any]) -> dict[str, Any]:
+    """Flat ``xautopilot_orders`` row built from a deleted subscription object."""
+    subscription_id = _identifier(subscription.get("id"))
+    if not subscription_id:
+        raise ValueError("subscription has no id")
+    metadata = subscription.get("metadata") or {}
+    prices = price_ids(subscription)
+    return {
+        "table": ORDER_TABLE,
+        "kind": ROW_CANCELED,
+        "subscription_id": subscription_id,
+        "customer_id": _identifier(subscription.get("customer")),
+        "tier": str(metadata.get("tier") or ""),
+        "price_id": prices[0] if prices else "",
+        "status": str(subscription.get("status") or ""),
+        "canceled_at": _timestamp(subscription.get("canceled_at") or subscription.get("ended_at")),
         "created_at": _now(),
     }
 

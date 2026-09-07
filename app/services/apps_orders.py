@@ -7,6 +7,10 @@ Session id:
 * ``details`` — written by the success page once the restaurant has filled in
   its name, phone number and opening hours.
 
+A third kind, ``canceled``, is written by ``customer.subscription.deleted`` and
+keyed by the subscription id, so a churned restaurant stops looking like a live
+one.
+
 The table lives in n8n, reached over the webhook URL in ``N8N_APPS_ORDER_URL``.
 The URL is env-only: an n8n webhook is a write key, so it never enters the repo.
 """
@@ -21,12 +25,14 @@ from typing import Any
 import httpx
 
 from app.core.config import settings
+from app.services.stripe_events import price_ids
 
 logger = logging.getLogger(__name__)
 
 ORDER_TABLE = "apps_orders"
 ROW_PAID = "paid"
 ROW_DETAILS = "details"
+ROW_CANCELED = "canceled"
 
 _DIGITS = re.compile(r"[^0-9+]")
 _OPENING_HOURS_MAX = 500
@@ -78,6 +84,17 @@ def _identifier(value: Any) -> str:
     return str(value or "")
 
 
+def _timestamp(value: Any) -> str:
+    """Stripe sends times as unix seconds; fall back to now when absent."""
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return _now()
+    if seconds <= 0:
+        return _now()
+    return datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat(timespec="seconds")
+
+
 def paid_row_from_session(session: dict[str, Any]) -> dict[str, Any]:
     """Flat ``apps_orders`` row built from a Checkout Session object."""
     session_id = _identifier(session.get("id"))
@@ -119,6 +136,24 @@ def details_row(
         "restaurant_name": name,
         "phone": normalize_swiss_phone(phone),
         "opening_hours": hours,
+        "created_at": _now(),
+    }
+
+
+def cancellation_row_from_subscription(subscription: dict[str, Any]) -> dict[str, Any]:
+    """Flat ``apps_orders`` row built from a deleted subscription object."""
+    subscription_id = _identifier(subscription.get("id"))
+    if not subscription_id:
+        raise ValueError("subscription has no id")
+    prices = price_ids(subscription)
+    return {
+        "table": ORDER_TABLE,
+        "kind": ROW_CANCELED,
+        "subscription_id": subscription_id,
+        "customer_id": _identifier(subscription.get("customer")),
+        "price_id": prices[0] if prices else "",
+        "status": str(subscription.get("status") or ""),
+        "canceled_at": _timestamp(subscription.get("canceled_at") or subscription.get("ended_at")),
         "created_at": _now(),
     }
 
