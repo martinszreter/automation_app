@@ -24,11 +24,11 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: "--max-turns ${{ vars.CLAUDE_MAX_TURNS || 50 }} --allowedTools Bash,Read,Write,Edit,Glob,Grep"
+          claude_args: "--max-turns ${{ vars.CLAUDE_MAX_TURNS || 80 }} --allowedTools Bash,Read,Write,Edit,Glob,Grep"
           prompt: |
             You are executing a STARTEND task contract in automation mode (No Human Touch).
             Issue #${{ github.event.issue.number }} in ${{ github.repository }}.
-            Rules: create branch from main named from the contract; implement fully; run tests/py_compile/npm test where present;
+            Rules: FIRST create the branch and push it immediately; commit and push after every completed step so partial work is never lost; if you are near the turn budget, stop implementing, push, open the PR with what exists and comment PARTIAL: with the remaining steps. Then: implement fully; run tests/py_compile/npm test where present;
             open a PR to main with `gh pr create`, then `gh pr merge --auto --squash`; comment on the issue with the PR URL.
             Never commit secrets; env-only config. If something needs Marcin (Stripe dashboard, OAuth consent, DNS, capital),
             comment on the issue starting with "ASK:" or "BLOCKED:" and stop.
