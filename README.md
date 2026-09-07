@@ -57,11 +57,16 @@ could not be reviewed, diffed or rolled back.
 from this repository**, over raw.githubusercontent.com, on every boot:
 
 ```sh
-python3 -c "import urllib.request as u; open('/boot5.py','wb').write(
-  u.urlopen('https://raw.githubusercontent.com/martinszreter/automation_app/main/boot/views_boot.py').read())" \
-  && python3 /boot5.py \
-  || { printf "%s" "$VIEWS_BOOT_PY" > /boot5_fallback.py; python3 /boot5_fallback.py || true; }
+if python3 -c "import urllib.request as u;open(\"/boot5.py\",\"wb\").write(
+     u.urlopen(\"https://raw.githubusercontent.com/martinszreter/automation_app/main/boot/views_boot.py\").read())" \
+   && python3 /boot5.py
+then echo "boot5 source=repo"
+else echo "boot5 source=env-fallback"; printf "%s" "$VIEWS_BOOT_PY" > /boot5f.py; python3 /boot5f.py || true
+fi
 ```
+
+(The deployed start command has it on one line; `BOOT5_SOURCE` on the service
+records where boot5 is meant to come from.)
 
 `VIEWS_BOOT_PY` is kept only as that fallback: if the fetch fails, or this file
 exits non-zero, the previous script still writes the canon-backed views. Delete
