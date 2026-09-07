@@ -36,6 +36,30 @@ docker compose exec app alembic revision --autogenerate -m "describe change"
 - **Server-rendered dashboard** with Jinja2 + HTMX (coming soon)
 - All guest-facing messages are **German-first** via a template layer
 
+## X Autopilot checkout
+
+`/x-autopilot/` sells three tiers. Each one is a Stripe Price created in the
+dashboard and handed to the app through the environment:
+
+| Tier | Variable | Button target |
+| --- | --- | --- |
+| CHF 149 / month | `PRICE_ID_XA_149` | `/x-autopilot/checkout/149` |
+| CHF 330 / month | `PRICE_ID_XA_330` | `/x-autopilot/checkout/330` |
+| CHF 990 / month | `PRICE_ID_XA_990` | `/x-autopilot/checkout/990` |
+
+The landing page ships every button **disabled**, carrying
+`data-missing-env="PRICE_ID_XA_…"`. The server turns a button into a link only
+for the tiers whose Price id is set, so an unset tier can never render a broken
+checkout link. After payment Stripe returns the buyer to
+`/x-autopilot/success?session_id=…`, which confirms the order and links to the X
+authorization step (`X_OAUTH_ONBOARDING_URL`, falling back to
+`/x-autopilot/onboarding.html`).
+
+`checkout.session.completed` on `/x-autopilot/stripe/webhook` writes one
+`xautopilot_orders` row to the n8n webhook in `N8N_XAUTOPILOT_ORDER_URL`. If that
+write fails the endpoint answers `503` so Stripe retries; if the variable is
+unset the order is only logged, and the plan row in Postgres is still written.
+
 ## Agent bus
 
 `bus/` holds the STARTEND Agent Bus V0: one endpoint, one table, six message

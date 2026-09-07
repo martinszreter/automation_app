@@ -8,6 +8,8 @@ from app.core.config import settings
 from app.db.models import PlanStatus, XAutopilotPlan
 from app.db.session import get_db
 from app.main import app
+from app.services import xautopilot_orders as xa_orders
+from app.services import xautopilot_tiers as xa_tiers
 from app.services.google_oauth import dumps_state
 from app.services.stripe_checkout import (
     checkout_urls,
@@ -404,3 +406,263 @@ async def test_sheets_token_refresh_is_env_only(monkeypatch: pytest.MonkeyPatch)
     result = await google_oauth.read_sheet_values()
     assert result["row_count"] == 1
     assert result["rows"] == [["ok"]]
+
+
+# --- three tiers: CHF 149 / 330 / 990 ----------------------------------------
+
+
+TIER_PRICES = {"149": "price_xa_149", "330": "price_xa_330", "990": "price_xa_990"}
+
+
+def _configure_tiers(monkeypatch: pytest.MonkeyPatch, **overrides: str) -> None:
+    for slug, price_id in {**TIER_PRICES, **overrides}.items():
+        monkeypatch.setattr(settings, f"price_id_xa_{slug}", price_id)
+
+
+def test_session_builder_covers_all_three_tiers() -> None:
+    for slug, price_id in TIER_PRICES.items():
+        tier = xa_tiers.get_tier(slug)
+        payload = xa_tiers.build_checkout_session_payload(
+            "https://www.startend.ch/", tier, price_id
+        )
+
+        assert payload["mode"] == "subscription"
+        assert payload["line_items[0][price]"] == price_id
+        assert payload["line_items[0][quantity]"] == "1"
+        assert payload["metadata[tier]"] == slug
+        assert payload["metadata[price_id]"] == price_id
+        assert payload["metadata[product]"] == "x-autopilot"
+        assert payload["subscription_data[metadata][tier]"] == slug
+        assert payload["success_url"] == (
+            "https://www.startend.ch/x-autopilot/success?session_id={CHECKOUT_SESSION_ID}"
+        )
+        assert payload["cancel_url"] == "https://www.startend.ch/x-autopilot/"
+        # No amount is ever hard-coded: only the Price id reaches Stripe.
+        assert not [key for key in payload if "price_data" in key]
+
+    assert [tier.slug for tier in xa_tiers.TIERS] == ["149", "330", "990"]
+    assert [tier.price_label for tier in xa_tiers.TIERS] == ["CHF 149", "CHF 330", "CHF 990"]
+
+
+def test_session_builder_refuses_a_tier_without_a_price_id() -> None:
+    with pytest.raises(xa_tiers.TierPriceNotConfigured) as excinfo:
+        xa_tiers.build_checkout_session_payload(
+            "https://www.startend.ch", xa_tiers.get_tier("330"), "  "
+        )
+    assert "PRICE_ID_XA_330" in str(excinfo.value)
+
+
+def test_session_builder_supports_one_time_prices() -> None:
+    payload = xa_tiers.build_checkout_session_payload(
+        "https://www.startend.ch", xa_tiers.get_tier("990"), "price_once", mode="payment"
+    )
+    assert payload["mode"] == "payment"
+    assert "subscription_data[metadata][tier]" not in payload
+
+
+def test_unknown_tier_is_rejected() -> None:
+    with pytest.raises(xa_tiers.UnknownTier):
+        xa_tiers.get_tier("500")
+
+
+@pytest.mark.asyncio
+async def test_tier_checkout_redirects_to_stripe(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict = {}
+    _configure_tiers(monkeypatch)
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test")
+
+    async def fake_request(method: str, path: str, data: dict | None = None) -> dict:
+        captured["path"] = path
+        captured["data"] = data
+        return {"id": "cs_tier", "url": "https://checkout.stripe.com/c/pay/cs_tier"}
+
+    monkeypatch.setattr("app.services.xautopilot_tiers.stripe_request", fake_request)
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.get("/x-autopilot/checkout/330")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "https://checkout.stripe.com/c/pay/cs_tier"
+    assert captured["path"] == "/checkout/sessions"
+    assert captured["data"]["line_items[0][price]"] == "price_xa_330"
+
+
+@pytest.mark.asyncio
+async def test_tier_checkout_is_503_when_the_price_id_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure_tiers(monkeypatch, **{"990": ""})
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test")
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.get("/x-autopilot/checkout/990")
+
+    assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_unknown_tier_checkout_is_404(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test")
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.get("/x-autopilot/checkout/500")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_success_page_renders_for_any_session_id() -> None:
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.get("/x-autopilot/success?session_id=test")
+
+    assert response.status_code == 200
+    assert "test" in response.text
+    # Confirmation + the X authorization step, which is the whole point of it.
+    assert "Payment received" in response.text
+    assert 'id="xOauthLink"' in response.text
+    assert "/x-autopilot/onboarding.html?session_id=test" in response.text
+
+
+@pytest.mark.asyncio
+async def test_success_page_uses_the_configured_x_oauth_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "x_oauth_onboarding_url", "https://n8n.example/x-auth?v=1")
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.get("/x-autopilot/success?session_id=cs_test_1")
+
+    assert response.status_code == 200
+    assert "https://n8n.example/x-auth?v=1&amp;session_id=cs_test_1" in response.text
+
+
+@pytest.mark.asyncio
+async def test_success_page_without_a_session_id_still_renders() -> None:
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.get("/x-autopilot/success")
+
+    assert response.status_code == 200
+    assert 'href="/x-autopilot/onboarding.html"' in response.text
+
+
+def test_tier_buttons_are_disabled_until_the_price_id_is_set() -> None:
+    html = (
+        '<div>'
+        + "".join(xa_tiers.disabled_button_html(tier) for tier in xa_tiers.TIERS)
+        + "</div>"
+    )
+
+    rendered = xa_tiers.render_tier_buttons(html, configured={"149", "990"})
+
+    assert 'href="/x-autopilot/checkout/149"' in rendered
+    assert 'href="/x-autopilot/checkout/990"' in rendered
+    # The unconfigured tier keeps the disabled button and names the variable.
+    assert 'data-missing-env="PRICE_ID_XA_330"' in rendered
+    assert "/x-autopilot/checkout/330" not in rendered
+    assert rendered.count("disabled") == 1
+
+
+def test_tier_buttons_stay_disabled_when_the_markup_drifts() -> None:
+    drifted = '<button class="btn" id="startBtn149">Start</button>'
+    assert xa_tiers.render_tier_buttons(drifted, configured={"149"}) == drifted
+
+
+def test_order_row_carries_the_tier() -> None:
+    row = xa_orders.order_row_from_session(
+        {**PAID_SESSION, "metadata": {"product": "x-autopilot", "tier": "330",
+                                      "price_id": "price_xa_330"}}
+    )
+
+    assert row["table"] == "xautopilot_orders"
+    assert row["kind"] == "paid"
+    assert row["session_id"] == "cs_test_1"
+    assert row["tier"] == "330"
+    assert row["price_id"] == "price_xa_330"
+    assert row["email"] == "buyer@example.com"
+    assert row["amount_total_cents"] == 100
+    assert row["currency"] == "chf"
+
+
+def test_order_row_needs_a_session_id() -> None:
+    with pytest.raises(ValueError):
+        xa_orders.order_row_from_session({"payment_status": "paid"})
+
+
+@pytest.mark.asyncio
+async def test_webhook_posts_the_order_to_n8n(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test")
+    monkeypatch.setattr(settings, "n8n_xautopilot_order_url", "https://n8n.example/orders")
+    posted: dict = {}
+
+    async def fake_post(row: dict) -> None:
+        posted.update(row)
+
+    monkeypatch.setattr("app.api.x_autopilot.post_order_row", fake_post)
+    session = {**PAID_SESSION, "metadata": {"product": "x-autopilot", "tier": "990"}}
+    payload = json.dumps(
+        {"id": "evt_3", "type": "checkout.session.completed", "data": {"object": session}}
+    ).encode()
+    header = sign_webhook_payload(payload, "whsec_test")
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.post(
+            "/x-autopilot/stripe/webhook",
+            content=payload,
+            headers={"stripe-signature": header, "content-type": "application/json"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"received": True, "status": "active", "stored": True}
+    assert posted["session_id"] == "cs_test_1"
+    assert posted["tier"] == "990"
+
+
+@pytest.mark.asyncio
+async def test_webhook_asks_stripe_to_retry_when_n8n_is_down(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test")
+    monkeypatch.setattr(settings, "n8n_xautopilot_order_url", "https://n8n.example/orders")
+
+    async def fake_post(row: dict) -> None:
+        raise xa_orders.XAOrderError("n8n responded 500")
+
+    monkeypatch.setattr("app.api.x_autopilot.post_order_row", fake_post)
+    payload = json.dumps(
+        {"id": "evt_4", "type": "checkout.session.completed", "data": {"object": PAID_SESSION}}
+    ).encode()
+    header = sign_webhook_payload(payload, "whsec_test")
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.post(
+            "/x-autopilot/stripe/webhook",
+            content=payload,
+            headers={"stripe-signature": header, "content-type": "application/json"},
+        )
+
+    assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_webhook_still_activates_the_plan_without_an_n8n_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test")
+    monkeypatch.setattr(settings, "n8n_xautopilot_order_url", "")
+    payload = json.dumps(
+        {"id": "evt_5", "type": "checkout.session.completed", "data": {"object": PAID_SESSION}}
+    ).encode()
+    header = sign_webhook_payload(payload, "whsec_test")
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.post(
+            "/x-autopilot/stripe/webhook",
+            content=payload,
+            headers={"stripe-signature": header, "content-type": "application/json"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["stored"] is False
+    db.add.assert_called_once()

@@ -54,8 +54,10 @@
 
   /* 4 — price */
   .price{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:32px;display:flex;gap:28px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .price + .price{margin-top:16px}
   .price-tag{font-family:'IBM Plex Mono',monospace;font-size:38px;font-weight:600;letter-spacing:-0.02em}
   .price-tag small{font-size:16px;color:var(--ink-soft);font-weight:400}
+  .price-tag small.scope{display:block;font-family:'Archivo',system-ui,sans-serif;font-size:15px;margin-top:2px}
   .btn{
     display:inline-block;padding:15px 40px;border-radius:2px;
     font-weight:700;font-size:17px;text-decoration:none;letter-spacing:-0.01em;
@@ -64,6 +66,10 @@
   }
   .btn:hover{background:#C42417;border-color:#C42417}
   .btn:active{transform:translateY(1px)}
+  /* A tier whose Stripe Price id is not in the environment ships like this:
+     no link to follow, and the button says which variable is missing. */
+  .btn-off,.btn-off:hover{background:transparent;color:var(--ink-soft);border-color:var(--rule);cursor:not-allowed}
+  .btn-off:active{transform:none}
 
   /* 5 — teardown */
   form{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
@@ -119,9 +125,19 @@
   <!-- 4 — price -->
   <section>
     <div class="wrap">
+      <!-- Buttons ship disabled. The server swaps in the checkout link of every
+           tier whose PRICE_ID_XA_* is set (app/services/xautopilot_tiers.py). -->
       <div class="price">
-        <div class="price-tag mono">CHF 149<small> / month</small></div>
-        <a class="btn" id="startBtn" href="/x-autopilot/checkout">Start</a>
+        <div class="price-tag mono">CHF 149<small> / month</small><small class="scope">3 posts per day</small></div>
+        <button class="btn btn-off" type="button" id="startBtn149" data-tier="149" data-missing-env="PRICE_ID_XA_149" disabled>Start</button>
+      </div>
+      <div class="price">
+        <div class="price-tag mono">CHF 330<small> / month</small><small class="scope">5 posts per day</small></div>
+        <button class="btn btn-off" type="button" id="startBtn330" data-tier="330" data-missing-env="PRICE_ID_XA_330" disabled>Start</button>
+      </div>
+      <div class="price">
+        <div class="price-tag mono">CHF 990<small> / month</small><small class="scope">Custom rhythm</small></div>
+        <button class="btn btn-off" type="button" id="startBtn990" data-tier="990" data-missing-env="PRICE_ID_XA_990" disabled>Start</button>
       </div>
     </div>
   </section>
@@ -160,20 +176,20 @@
       msg.value += ' [utm_source=' + (utmSource || 'none') + ' utm_campaign=' + (utmCampaign || 'none') + ']';
     }
 
-    var btn = document.getElementById('startBtn');
-    if (!btn) return;
-
-    btn.addEventListener('click', function () {
-      var body = new URLSearchParams({
-        event: 'stripe',
-        utm_source: utmSource,
-        utm_campaign: utmCampaign
+    // One counter for all three tiers — the endpoint only accepts 'stripe'.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tier]'), function (btn) {
+      btn.addEventListener('click', function () {
+        var body = new URLSearchParams({
+          event: 'stripe',
+          utm_source: utmSource,
+          utm_campaign: utmCampaign
+        });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/x-autopilot/event', body);
+        } else {
+          fetch('/x-autopilot/event', { method: 'POST', body: body, keepalive: true });
+        }
       });
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon('/x-autopilot/event', body);
-      } else {
-        fetch('/x-autopilot/event', { method: 'POST', body: body, keepalive: true });
-      }
     });
   })();
 </script>

@@ -1,10 +1,18 @@
-"""X Autopilot self-serve: Stripe Checkout → Google Sign-In panel."""
+"""X Autopilot self-serve: Stripe Checkout → Google Sign-In panel.
+
+Tier flow (the three published tiers, CHF 149 / 330 / 990):
+
+    GET  /x-autopilot/checkout/{tier}  -> Stripe Checkout for that tier's Price
+    GET  /x-autopilot/success          confirmation + X authorization link
+    POST /x-autopilot/stripe/webhook   checkout.session.completed -> n8n row
+"""
 
 from __future__ import annotations
 
 import json
 import logging
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -30,11 +38,22 @@ from app.services.stripe_checkout import (
     session_is_paid,
     verify_stripe_signature,
 )
+from app.services.xautopilot_orders import (
+    XAOrderError,
+    XAOrderNotConfigured,
+    order_row_from_session,
+    post_order_row,
+)
 from app.services.xautopilot_plans import (
     get_active_plan_for_email,
     mark_plan_refunded,
     refund_plan,
     upsert_plan_from_checkout,
+)
+from app.services.xautopilot_tiers import (
+    TierPriceNotConfigured,
+    UnknownTier,
+    create_tier_checkout_session,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,6 +61,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/x-autopilot", tags=["x-autopilot"])
 _USER_KEY = "xa_user"
 _CHECKOUT_KEY = "xa_checkout_session_id"
+_SESSION_ID_MAX = 160
 
 
 def _base_url(request: Request) -> str:
@@ -85,6 +105,65 @@ async def checkout(request: Request) -> RedirectResponse:
     return RedirectResponse(url=session["url"], status_code=303)
 
 
+@router.api_route("/checkout/{tier}", methods=["GET", "POST"], include_in_schema=False)
+async def checkout_tier(request: Request, tier: str) -> RedirectResponse:
+    """One of the three published tiers -> its own Stripe Checkout Session."""
+    try:
+        session = await create_tier_checkout_session(_base_url(request), tier)
+    except UnknownTier as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (StripeNotConfigured, TierPriceNotConfigured) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except StripeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return RedirectResponse(url=session["url"], status_code=303)
+
+
+def _onboarding_url(session_id: str) -> str:
+    """Where the buyer authorizes posting on X. Env-configurable; the on-site
+    onboarding form is the fallback so the page is never a dead end."""
+    base = settings.x_oauth_onboarding_url.strip() or "/x-autopilot/onboarding.html"
+    if not session_id:
+        return base
+    joiner = "&" if "?" in base else "?"
+    return f"{base}{joiner}session_id={quote(session_id, safe='')}"
+
+
+@router.get("/success", response_class=HTMLResponse, response_model=None, include_in_schema=False)
+async def success(request: Request, session_id: str = "") -> HTMLResponse:
+    """Shown right after Stripe. Never calls Stripe, so it renders even when the
+    session id is unknown — the buyer has already paid and must not hit an error."""
+    clean = session_id.strip()[:_SESSION_ID_MAX]
+    if clean:
+        request.session[_CHECKOUT_KEY] = clean
+    return _render(
+        "success.html",
+        request=request,
+        session_id=clean,
+        onboarding_url=_onboarding_url(clean),
+    )
+
+
+async def _store_order_row(session: dict[str, Any]) -> bool:
+    """Write the paid row to n8n. Returns False when there is nowhere to write."""
+    try:
+        row = order_row_from_session(session)
+    except ValueError as exc:
+        logger.warning("x-autopilot webhook has no usable session: %s", exc)
+        return False
+    try:
+        await post_order_row(row)
+    except XAOrderNotConfigured as exc:
+        # Nothing to write to (local/dev): the plan is already stored in Postgres.
+        logger.warning("x-autopilot order row not stored: %s", exc)
+        return False
+    except XAOrderError as exc:
+        # 5xx makes Stripe retry, which is exactly what a lost order needs.
+        logger.warning("x-autopilot order row could not be stored: %s", exc)
+        raise HTTPException(status_code=503, detail="order store unavailable") from exc
+    return True
+
+
 @router.post("/stripe/webhook", include_in_schema=False)
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
     payload = await request.body()
@@ -107,12 +186,19 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
             return JSONResponse({"received": True, "ignored": True})
         if not session_is_paid(obj) and event_type != "checkout.session.completed":
             return JSONResponse({"received": True, "pending": True})
+        # The order row goes out first: it is the commercial record, and it does
+        # not depend on the buyer's email the way the plan row does.
+        stored = (
+            await _store_order_row(obj) if event_type == "checkout.session.completed" else False
+        )
         try:
             await upsert_plan_from_checkout(db, obj)
         except ValueError as exc:
             logger.warning("Stripe webhook could not activate plan: %s", exc)
-            return JSONResponse({"received": True, "error": str(exc)}, status_code=422)
-        return JSONResponse({"received": True, "status": "active"})
+            return JSONResponse(
+                {"received": True, "stored": stored, "error": str(exc)}, status_code=422
+            )
+        return JSONResponse({"received": True, "status": "active", "stored": stored})
 
     if event_type in {"charge.refunded", "refund.created"}:
         payment_intent = obj.get("payment_intent")
