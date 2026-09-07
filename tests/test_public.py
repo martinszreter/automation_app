@@ -109,19 +109,23 @@ async def test_unknown_path_returns_404_without_redirect():
 
 @pytest.mark.asyncio
 async def test_generic_landing_serves_canon_page_dirs(tmp_path, monkeypatch):
-    """Pages the deploy drops under static/ (apps, agents, …) are served generically."""
-    (tmp_path / "apps").mkdir()
-    (tmp_path / "apps" / "index.html").write_text("<html>Business Apps</html>")
+    """Pages the deploy drops under static/ (agents, …) are served generically.
+
+    /apps/ is no longer an example here: it has its own router (app/api/apps.py)
+    which is registered before this catch-all.
+    """
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents" / "index.html").write_text("<html>Business Agents</html>")
     monkeypatch.setattr("app.api.public._STATIC_DIR", tmp_path)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        page = await client.get("/apps/")
-        redirect = await client.get("/apps")
+        page = await client.get("/agents/")
+        redirect = await client.get("/agents")
 
     assert page.status_code == 200
-    assert "Business Apps" in page.text
+    assert "Business Agents" in page.text
     assert redirect.status_code == 301
-    assert redirect.headers["location"] == "/apps/"
+    assert redirect.headers["location"] == "/agents/"
 
 
 @pytest.mark.asyncio

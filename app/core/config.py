@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     stripe_xautopilot_mode: str = "payment"
     stripe_xautopilot_price_id: str = ""
 
+    # /apps — WhatsApp reservation setup. One Checkout Session carries both
+    # prices: the one-time setup fee and the monthly subscription.
+    price_id_apps_setup: str = ""
+    price_id_apps_monthly: str = ""
+    # n8n data table webhook that stores the apps_orders rows.
+    n8n_apps_order_url: str = ""
+
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     google_sheets_refresh_token: str = ""

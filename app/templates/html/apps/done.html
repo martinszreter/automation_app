@@ -1,0 +1,11 @@
+{% extends "apps/base.html" %}
+{% block title %}Danke — WhatsApp-Reservierung{% endblock %}
+{% block header_meta %}<span class="pill">Angaben erhalten</span>{% endblock %}
+{% block content %}
+<h1>{{ t.DONE_HEADLINE }}</h1>
+<p class="sub">{{ t.DONE_LEAD }}</p>
+<div class="card">
+  <p>Sie hören von uns unter der Nummer, die Sie angegeben haben — per WhatsApp.</p>
+</div>
+<p><a class="btn" href="/apps/">Zurück zur Übersicht</a></p>
+{% endblock %}

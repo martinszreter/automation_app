@@ -1,0 +1,36 @@
+{% extends "apps/base.html" %}
+{% block title %}Einrichtung — WhatsApp-Reservierung{% endblock %}
+{% block header_meta %}<span class="pill">Zahlung erhalten</span>{% endblock %}
+{% block content %}
+<h1>{{ t.SUCCESS_HEADLINE }}</h1>
+<p class="sub">{{ t.SUCCESS_LEAD }}</p>
+
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+
+<form class="card" method="post" action="/apps/success">
+  <input type="hidden" name="session_id" value="{{ session_id }}">
+
+  <div class="field">
+    <label for="restaurant_name">{{ t.FIELD_RESTAURANT }}</label>
+    <input type="text" id="restaurant_name" name="restaurant_name" required maxlength="160"
+           autocomplete="organization" value="{{ restaurant_name }}">
+  </div>
+
+  <div class="field">
+    <label for="phone">{{ t.FIELD_PHONE }}</label>
+    <input type="tel" id="phone" name="phone" required maxlength="32"
+           autocomplete="tel" inputmode="tel" value="{{ phone }}">
+    <p class="hint">{{ t.FIELD_PHONE_HINT }}</p>
+  </div>
+
+  <div class="field">
+    <label for="opening_hours">{{ t.FIELD_OPENING_HOURS }}</label>
+    <textarea id="opening_hours" name="opening_hours" required maxlength="500">{{ opening_hours }}</textarea>
+    <p class="hint">{{ t.FIELD_OPENING_HOURS_HINT }}</p>
+  </div>
+
+  <button class="btn" type="submit">{{ t.SUBMIT }}</button>
+</form>
+
+{% if session_id %}<p class="ref">Referenz: {{ session_id }}</p>{% endif %}
+{% endblock %}
