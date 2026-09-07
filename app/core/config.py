@@ -35,6 +35,20 @@ class Settings(BaseSettings):
     stripe_xautopilot_mode: str = "payment"
     stripe_xautopilot_price_id: str = ""
 
+    # /x-autopilot tiers — one Stripe Price id per published tier. Unset means
+    # the tier's button stays disabled instead of pointing at a broken link.
+    price_id_xa_149: str = ""
+    price_id_xa_330: str = ""
+    price_id_xa_990: str = ""
+    # The tier Prices are recurring monthly, so their sessions run in
+    # subscription mode. Override to "payment" for one-time tier Prices.
+    stripe_xa_tier_mode: str = "subscription"
+    # n8n data table webhook that stores the xautopilot_orders rows.
+    n8n_xautopilot_order_url: str = ""
+    # Where the success page sends the buyer to authorize posting on X.
+    # Empty falls back to the on-site onboarding form.
+    x_oauth_onboarding_url: str = ""
+
     # /apps — WhatsApp reservation setup. One Checkout Session carries both
     # prices: the one-time setup fee and the monthly subscription.
     price_id_apps_setup: str = ""

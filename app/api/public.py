@@ -3,12 +3,19 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ContactRequest
 from app.db.session import get_db
 from app.services.contact_email import send_contact_notification
+from app.services.xautopilot_tiers import render_tier_buttons
 
 router = APIRouter(tags=["public"])
 
@@ -98,16 +105,18 @@ async def x_autopilot_no_slash() -> RedirectResponse:
     return RedirectResponse(url="/x-autopilot/", status_code=301)
 
 
-@router.get("/x-autopilot/", response_class=FileResponse, include_in_schema=False)
-async def x_autopilot_landing(request: Request) -> FileResponse:
+@router.get("/x-autopilot/", response_class=HTMLResponse, include_in_schema=False)
+async def x_autopilot_landing(request: Request) -> HTMLResponse:
     _xa_count(
         "views",
         utm_source=request.query_params.get("utm_source"),
         utm_campaign=request.query_params.get("utm_campaign"),
     )
-    return FileResponse(
-        _STATIC_DIR / "x-autopilot" / "index.html",
-        media_type="text/html",
+    html = (_STATIC_DIR / "x-autopilot" / "index.html").read_text(encoding="utf-8")
+    return HTMLResponse(
+        # The file ships with every tier button disabled; only the tiers that
+        # have a Stripe Price id in the environment become links.
+        content=render_tier_buttons(html),
         # Every view has to reach the counter, so the page is never cached.
         headers={"Cache-Control": "no-store"},
     )

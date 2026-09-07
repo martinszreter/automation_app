@@ -1,0 +1,19 @@
+{% extends "x_autopilot/base.html" %}
+{% block title %}Payment received — X Autopilot{% endblock %}
+{% block header_meta %}<span class="pill pill-on">Payment received ✓</span>{% endblock %}
+{% block content %}
+<h1>Payment received. One step left.</h1>
+<p class="sub">Your seat is booked. To publish for you, the engine needs your authorization on X — you click one link, X's own consent screen asks you to allow posting, done.</p>
+<div class="card">
+  <a class="btn" id="xOauthLink" href="{{ onboarding_url }}">Authorize posting on X</a>
+  <p class="sub" style="margin:16px 0 0">We never ask for your password or your API keys. Access is scoped to publishing only and you can revoke it in your X settings at any time.</p>
+</div>
+<div class="card">
+  <ul class="facts">
+    <li><span class="k">Order</span><span class="mono">{{ session_id or "—" }}</span></li>
+    <li><span class="k">Next</span><span>Your build starts within 24 hours of the authorization.</span></li>
+    <li><span class="k">Questions</span><span><a href="mailto:info@startend.ch">info@startend.ch</a></span></li>
+  </ul>
+</div>
+<p><a class="btn btn-ghost" href="/x-autopilot/panel/login{% if session_id %}?session_id={{ session_id | urlencode }}{% endif %}">Open your panel</a></p>
+{% endblock %}

@@ -263,23 +263,42 @@ async def test_contact_email_message_content():
 
 
 @pytest.mark.asyncio
-async def test_x_autopilot_landing_carries_exactly_one_price_and_one_stripe_link():
+async def test_x_autopilot_landing_carries_the_three_tiers():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         body = (await client.get("/x-autopilot/")).text
 
-    # Exactly one amount anywhere on the page — no tiers, no setup variants.
-    assert set(re.findall(r"CHF\s?[\d'.,]+", body)) == {"CHF 149"}
-    for removed in ("330", "660", "990"):
-        assert removed not in body
+    # Three amounts, one per published tier — no setup variants.
+    assert set(re.findall(r"CHF\s?[\d'.,]+", body)) == {"CHF 149", "CHF 330", "CHF 990"}
     # Checkout is a first-party route, not a hardcoded Payment Link.
     assert "buy.stripe.com" not in body
     assert "STRIPE_XAUTOPILOT_149" not in body
-    assert 'href="/x-autopilot/checkout"' in body
     assert 'href="/impressum/"' in body
     assert "Impressum" in body
-    # One offer button, one lead form.
-    assert body.count('id="startBtn"') == 1
+    # One button per tier, one lead form.
+    for tier in ("149", "330", "990"):
+        assert body.count(f'data-tier="{tier}"') == 1
     assert body.count('action="/contact"') == 1
+
+
+@pytest.mark.asyncio
+async def test_x_autopilot_tier_button_is_disabled_without_its_price_id(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "price_id_xa_149", "price_xa_149")
+    monkeypatch.setattr(settings, "price_id_xa_330", "")
+    monkeypatch.setattr(settings, "price_id_xa_990", "")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        body = (await client.get("/x-autopilot/")).text
+
+    assert 'href="/x-autopilot/checkout/149"' in body
+    # An unset tier never renders a link — it says which variable is missing.
+    assert "/x-autopilot/checkout/330" not in body
+    assert "/x-autopilot/checkout/990" not in body
+    assert 'data-missing-env="PRICE_ID_XA_330"' in body
+    assert 'data-missing-env="PRICE_ID_XA_990"' in body
 
 
 @pytest.mark.asyncio
