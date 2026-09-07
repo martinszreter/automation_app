@@ -121,7 +121,7 @@
     <div class="wrap">
       <div class="price">
         <div class="price-tag mono">CHF 149<small> / month</small></div>
-        <a class="btn" id="startBtn" href="#">Start</a>
+        <a class="btn" id="startBtn" href="/x-autopilot/checkout">Start</a>
       </div>
     </div>
   </section>
@@ -145,18 +145,10 @@
 </main>
 
 <footer>
-  <div class="wrap">© 2026 STARTEND GmbH, Switzerland · <a href="mailto:info@startend.ch">info@startend.ch</a></div>
+  <div class="wrap">© 2026 STARTEND GmbH, Cham · <a href="/impressum/">Impressum</a> · <a href="mailto:info@startend.ch">info@startend.ch</a></div>
 </footer>
 
 <script>
-  // === CONFIG ===================================================
-  // Stripe Payment Link for X Autopilot, CHF 149 / month.
-  // PLACEHOLDER — Marcin supplies the real value. Do not reuse any older
-  // Stripe link from a previous version of this page without his confirmation.
-  // Until it is a https:// URL the Start button stays disabled.
-  var STRIPE_XAUTOPILOT_149 = "STRIPE_XAUTOPILOT_149";
-  // ==============================================================
-
   (function () {
     var params = new URLSearchParams(window.location.search);
     var utmSource = params.get('utm_source') || '';
@@ -171,18 +163,7 @@
     var btn = document.getElementById('startBtn');
     if (!btn) return;
 
-    var live = STRIPE_XAUTOPILOT_149.indexOf('https://') === 0;
-    if (live) {
-      btn.href = STRIPE_XAUTOPILOT_149;
-    } else {
-      btn.setAttribute('aria-disabled', 'true');
-      btn.style.opacity = '0.45';
-      btn.style.cursor = 'not-allowed';
-    }
-
-    btn.addEventListener('click', function (e) {
-      if (!live) { e.preventDefault(); return; }
-      // Count the click before leaving the page.
+    btn.addEventListener('click', function () {
       var body = new URLSearchParams({
         event: 'stripe',
         utm_source: utmSource,

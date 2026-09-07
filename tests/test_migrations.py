@@ -73,3 +73,4 @@ async def test_migrations_create_all_tables():
     assert "tenants" in tables, f"tenants table missing, got: {tables}"
     assert "guests" in tables, f"guests table missing, got: {tables}"
     assert "bookings" in tables, f"bookings table missing, got: {tables}"
+    assert "x_autopilot_plans" in tables, f"x_autopilot_plans table missing, got: {tables}"
