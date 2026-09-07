@@ -41,6 +41,7 @@ from app.services.stripe_checkout import (
 from app.services.xautopilot_orders import (
     XAOrderError,
     XAOrderNotConfigured,
+    cancellation_row_from_subscription,
     order_row_from_session,
     post_order_row,
 )
@@ -164,6 +165,49 @@ async def _store_order_row(session: dict[str, Any]) -> bool:
     return True
 
 
+async def handle_checkout_completed(
+    session: dict[str, Any],
+    db: AsyncSession,
+    *,
+    store_row: bool = True,
+) -> Response:
+    """Store the order row and activate the plan for one paid Checkout Session.
+
+    Shared by ``/x-autopilot/stripe/webhook`` and the unified ``/stripe/webhook``
+    dispatcher. The caller has already decided the session is x-autopilot's.
+    """
+    # The order row goes out first: it is the commercial record, and it does
+    # not depend on the buyer's email the way the plan row does.
+    stored = await _store_order_row(session) if store_row else False
+    try:
+        await upsert_plan_from_checkout(db, session)
+    except ValueError as exc:
+        logger.warning("Stripe webhook could not activate plan: %s", exc)
+        return JSONResponse({"received": True, "stored": stored, "error": str(exc)}, status_code=422)
+    return JSONResponse({"received": True, "status": "active", "stored": stored})
+
+
+async def handle_subscription_deleted(subscription: dict[str, Any]) -> Response:
+    """Store the cancellation row for a churned x-autopilot subscription."""
+    try:
+        row = cancellation_row_from_subscription(subscription)
+    except ValueError as exc:
+        logger.warning("x-autopilot cancellation has no usable subscription: %s", exc)
+        return JSONResponse({"received": True, "error": str(exc)}, status_code=422)
+
+    try:
+        await post_order_row(row)
+    except XAOrderNotConfigured as exc:
+        # Nothing to write to (local/dev): acknowledge rather than make Stripe retry.
+        logger.warning("x-autopilot cancellation row not stored: %s", exc)
+        return JSONResponse({"received": True, "stored": False})
+    except XAOrderError as exc:
+        logger.warning("x-autopilot cancellation row could not be stored: %s", exc)
+        raise HTTPException(status_code=503, detail="order store unavailable") from exc
+
+    return JSONResponse({"received": True, "stored": True})
+
+
 @router.post("/stripe/webhook", include_in_schema=False)
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
     payload = await request.body()
@@ -186,19 +230,9 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
             return JSONResponse({"received": True, "ignored": True})
         if not session_is_paid(obj) and event_type != "checkout.session.completed":
             return JSONResponse({"received": True, "pending": True})
-        # The order row goes out first: it is the commercial record, and it does
-        # not depend on the buyer's email the way the plan row does.
-        stored = (
-            await _store_order_row(obj) if event_type == "checkout.session.completed" else False
+        return await handle_checkout_completed(
+            obj, db, store_row=event_type == "checkout.session.completed"
         )
-        try:
-            await upsert_plan_from_checkout(db, obj)
-        except ValueError as exc:
-            logger.warning("Stripe webhook could not activate plan: %s", exc)
-            return JSONResponse(
-                {"received": True, "stored": stored, "error": str(exc)}, status_code=422
-            )
-        return JSONResponse({"received": True, "status": "active", "stored": stored})
 
     if event_type in {"charge.refunded", "refund.created"}:
         payment_intent = obj.get("payment_intent")

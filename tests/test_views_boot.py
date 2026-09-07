@@ -69,6 +69,8 @@ def test_bus_view_is_registered_like_the_other_views() -> None:
         "x-ops-k4x9m2.html",
         "grokywood-ops-k4x9m2.html",
         "mobile-ops-k4x9m2.html",
+        "next-k4x9m2.html",
+        "init-chamdigital-k4x9m2.html",
     ]
 
 
