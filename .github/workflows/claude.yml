@@ -1,0 +1,38 @@
+name: claude-dispatch
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+jobs:
+  dispatch:
+    if: >-
+      (github.event_name == 'issues' && github.event.label.name == 'dispatch') ||
+      (github.event_name == 'issue_comment' && contains(github.event.issue.labels.*.name, 'dispatch') && contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: "--max-turns ${{ vars.CLAUDE_MAX_TURNS || 50 }} --allowedTools Bash,Read,Write,Edit,Glob,Grep"
+          prompt: |
+            You are executing a STARTEND task contract in automation mode (No Human Touch).
+            Issue #${{ github.event.issue.number }} in ${{ github.repository }}.
+            Rules: create branch from main named from the contract; implement fully; run tests/py_compile/npm test where present;
+            open a PR to main with `gh pr create`, then `gh pr merge --auto --squash`; comment on the issue with the PR URL.
+            Never commit secrets; env-only config. If something needs Marcin (Stripe dashboard, OAuth consent, DNS, capital),
+            comment on the issue starting with "ASK:" or "BLOCKED:" and stop.
+            --- CONTRACT ---
+            ${{ github.event.issue.body }}
+            --- LATEST COMMENT (if any) ---
+            ${{ github.event.comment.body }}
