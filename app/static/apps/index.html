@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M16 0H64V48H48V64H0V16H16Z' fill='%23DA291C'/%3E%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E">
+<title>WhatsApp-Reservierung für Ihr Restaurant · startend.ch</title>
+<meta name="description" content="Reservierungen per WhatsApp, automatisch bestätigt und erinnert. Weniger No-Shows. CHF 1'990 Einrichtung, CHF 249 pro Monat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --paper:#EEF0EC; --card:#F7F8F5; --ink:#14181A; --ink-soft:#4A5250; --rule:#C9CDC6; --red:#E03123; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:'Archivo',system-ui,sans-serif;font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0;border-top:1px solid var(--rule)}
+  section:first-of-type{border-top:none}
+  h2{font-size:clamp(22px,3.4vw,30px);font-weight:800;letter-spacing:-0.02em;margin-bottom:22px}
+
+  .hero{padding:80px 0 56px}
+  h1{font-size:clamp(36px,6.4vw,58px);font-weight:800;letter-spacing:-0.03em;line-height:1.03;max-width:17ch}
+  .hero .sub{margin-top:20px;font-size:19px;color:var(--ink-soft);max-width:52ch}
+
+  .proof{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--ink);border-radius:2px;background:var(--card)}
+  .proof div{padding:22px 18px;border-right:1px solid var(--rule)}
+  .proof div:last-child{border-right:none}
+  .proof .num{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:600;letter-spacing:-0.02em}
+  .proof .lbl{font-size:13px;color:var(--ink-soft);margin-top:4px}
+  @media (max-width:620px){ .proof{grid-template-columns:1fr} .proof div{border-right:none;border-bottom:1px solid var(--rule)} .proof div:last-child{border-bottom:none} }
+
+  ul.mech{list-style:none;border-top:1.5px solid var(--ink)}
+  ul.mech li{padding:14px 0;border-bottom:1px solid var(--rule);font-size:16px;display:flex;gap:14px}
+  ul.mech li::before{content:attr(data-n);font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--red);font-weight:600;flex:none;padding-top:3px}
+
+  .price{border:1.5px solid var(--ink);border-radius:2px;background:var(--card);padding:32px;display:flex;gap:28px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .price-tag{font-family:'IBM Plex Mono',monospace;font-size:34px;font-weight:600;letter-spacing:-0.02em}
+  .price-tag small{display:block;font-size:16px;color:var(--ink-soft);font-weight:400;margin-top:6px;font-family:'Archivo',sans-serif}
+  .btn{
+    display:inline-block;padding:15px 40px;border-radius:2px;
+    font-weight:700;font-size:17px;text-decoration:none;letter-spacing:-0.01em;
+    border:1.5px solid var(--red);background:var(--red);color:#fff;cursor:pointer;
+    font-family:'Archivo',system-ui,sans-serif;
+  }
+  .btn:hover{background:#C42417;border-color:#C42417}
+  .btn:active{transform:translateY(1px)}
+  .price-note{margin-top:14px;font-size:14px;color:var(--ink-soft)}
+
+  dl.faq dt{font-weight:700;margin-top:18px}
+  dl.faq dd{color:var(--ink-soft)}
+
+  footer{border-top:1px solid var(--rule);padding:24px 0 40px;font-size:13px;color:var(--ink-soft)}
+  footer a{color:var(--ink-soft)}
+  :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1>Reservierungen per WhatsApp. Ohne No-Shows.</h1>
+      <p class="sub">Ihre Gäste schreiben, wie sie es ohnehin tun. Bestätigung, Erinnerung und Absage laufen automatisch — auf Deutsch, auf Ihrer Schweizer Nummer.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="proof">
+        <div><div class="num">24 / 7</div><div class="lbl">Reservierungen werden angenommen</div></div>
+        <div><div class="num">0</div><div class="lbl">Minuten am Telefon pro Reservierung</div></div>
+        <div><div class="num">1 Tag</div><div class="lbl">vorher: automatische Erinnerung</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Was eingerichtet wird</h2>
+      <ul class="mech">
+        <li data-n="01">WhatsApp-Nummer für Ihr Restaurant, angebunden an die offizielle WhatsApp Business API.</li>
+        <li data-n="02">Gast schreibt Datum, Uhrzeit und Personenanzahl — die Reservierung wird sofort bestätigt.</li>
+        <li data-n="03">Erinnerung am Vortag: JA bestätigt, NEIN storniert, eine Zahl ändert die Personenanzahl.</li>
+        <li data-n="04">Alle Reservierungen laufen in einer Übersicht zusammen, samt Absagen und Änderungen.</li>
+        <li data-n="05">Texte auf Deutsch, abgestimmt auf Ihre Öffnungszeiten.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Preis</h2>
+      <div class="price">
+        <div class="price-tag mono">CHF 1'990
+          <small>einmalige Einrichtung — danach CHF 249 pro Monat</small>
+        </div>
+        <a class="btn" href="/apps/checkout">Einrichtung starten</a>
+      </div>
+      <p class="price-note">Beides wird in einem Schritt bezahlt: die Einrichtung einmalig, das Abo monatlich und jederzeit kündbar. Preise in CHF, exkl. MwSt.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Häufige Fragen</h2>
+      <dl class="faq">
+        <dt>Wie geht es nach der Zahlung weiter?</dt>
+        <dd>Sie geben Restaurantname, Schweizer Nummer und Öffnungszeiten an. Wir richten ein und melden uns innerhalb eines Werktages.</dd>
+        <dt>Brauchen meine Gäste eine App?</dt>
+        <dd>Nein. Sie schreiben Ihnen ganz normal auf WhatsApp.</dd>
+        <dt>Kann ich monatlich kündigen?</dt>
+        <dd>Ja. Das Abo läuft monatlich; die einmalige Einrichtung wird nicht zurückerstattet.</dd>
+      </dl>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    STARTEND GmbH · CHE-223.488.613 · Bahnhofstrasse 7 · 6330 Cham ·
+    <a href="/impressum/">Impressum</a> · <a href="mailto:info@startend.ch">info@startend.ch</a>
+  </div>
+</footer>
+</body>
+</html>
