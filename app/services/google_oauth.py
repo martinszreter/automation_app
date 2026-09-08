@@ -33,6 +33,10 @@ class GoogleOAuthError(RuntimeError):
     pass
 
 
+class SheetsReconnectRequired(GoogleOAuthError):
+    """Google rejected the stored refresh token: an operator must reconnect Sheets."""
+
+
 def _signer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(settings.session_secret, salt="xautopilot-google-oauth")
 
@@ -136,6 +140,9 @@ async def sheets_access_token() -> str:
         )
     if response.status_code >= 400:
         logger.warning("Sheets token refresh failed: %s", response.text[:500])
+        if response.status_code < 500:
+            # 400 invalid_grant / 401: the refresh token itself is dead.
+            raise SheetsReconnectRequired("Sheets refresh token was rejected; reconnect needed")
         raise GoogleOAuthError("Sheets token refresh failed")
     payload = response.json()
     token = payload.get("access_token")

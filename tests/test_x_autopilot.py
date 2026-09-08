@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.main import app
 from app.services import xautopilot_orders as xa_orders
 from app.services import xautopilot_tiers as xa_tiers
-from app.services.google_oauth import GoogleNotConfigured, dumps_state
+from app.services.google_oauth import GoogleNotConfigured, SheetsReconnectRequired, dumps_state
 from app.services.stripe_checkout import (
     checkout_urls,
     create_checkout_session,
@@ -361,12 +361,22 @@ async def test_sheets_reconnect_starts_google_oauth(monkeypatch: pytest.MonkeyPa
     assert "access_type=offline" in response.headers["location"]
 
 
-@pytest.mark.asyncio
-async def test_panel_asks_for_sheets_reconnect_by_email(monkeypatch: pytest.MonkeyPatch) -> None:
+async def _open_panel_with_sheets_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    failure: Exception,
+    last_sent_at: float = 0.0,
+    reconnect_key: str = "secret-key",
+) -> tuple[int, AsyncMock]:
+    """Sign in with an active plan whose Sheets read raises ``failure``.
+
+    Returns the panel status code and the mocked ``send_hq_mail``.
+    """
     import app.api.x_autopilot as xa_api
 
-    monkeypatch.setattr(xa_api, "_sheets_reconnect_email_sent_at", 0.0)
-    monkeypatch.setattr(settings, "google_sheets_reconnect_key", "secret-key")
+    monkeypatch.setitem(xa_api._sheets_reconnect_mail, "sent_at", last_sent_at)
+    monkeypatch.setattr(settings, "google_oauth_client_id", "google-client")
+    monkeypatch.setattr(settings, "google_sheets_reconnect_key", reconnect_key)
     plan = _plan()
     monkeypatch.setattr(
         "app.api.x_autopilot.google_oauth.exchange_code",
@@ -379,7 +389,7 @@ async def test_panel_asks_for_sheets_reconnect_by_email(monkeypatch: pytest.Monk
     monkeypatch.setattr("app.api.x_autopilot.get_active_plan_for_email", AsyncMock(return_value=plan))
     monkeypatch.setattr(
         "app.api.x_autopilot.google_oauth.read_sheet_values",
-        AsyncMock(side_effect=GoogleNotConfigured("GOOGLE_SHEETS_REFRESH_TOKEN is not set")),
+        AsyncMock(side_effect=failure),
     )
     sent = AsyncMock()
     monkeypatch.setattr("app.api.x_autopilot.send_hq_mail", sent)
@@ -392,49 +402,125 @@ async def test_panel_asks_for_sheets_reconnect_by_email(monkeypatch: pytest.Monk
             params={"code": "auth-code", "state": state},
         )
         panel = await client.get("/x-autopilot/panel")
+    return panel.status_code, sent
 
-    assert panel.status_code == 200
+
+@pytest.mark.asyncio
+async def test_panel_asks_for_sheets_reconnect_by_email(monkeypatch: pytest.MonkeyPatch) -> None:
+    status, sent = await _open_panel_with_sheets_failure(
+        monkeypatch,
+        failure=GoogleNotConfigured("GOOGLE_SHEETS_REFRESH_TOKEN is not set"),
+    )
+
+    assert status == 200
     sent.assert_awaited_once()
-    args, _kwargs = sent.await_args
-    assert args[0] == "X Autopilot: Sheets reconnect needed"
-    assert "/x-autopilot/sheets/reconnect?key=secret-key" in args[1]
+    subject, body = sent.await_args.args
+    assert subject == "X Autopilot: Sheets reconnect needed"
+    assert "/x-autopilot/sheets/reconnect?key=secret-key" in body
+    assert "GOOGLE_SHEETS_REFRESH_TOKEN is not set" in body
+
+
+@pytest.mark.asyncio
+async def test_panel_asks_for_reconnect_when_refresh_token_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    status, sent = await _open_panel_with_sheets_failure(
+        monkeypatch,
+        failure=SheetsReconnectRequired("Sheets refresh token was rejected; reconnect needed"),
+        reconnect_key="se/cret key",
+    )
+
+    assert status == 200
+    sent.assert_awaited_once()
+    _subject, body = sent.await_args.args
+    assert "reconnect?key=se%2Fcret%20key" in body
+    assert "rejected" in body
 
 
 @pytest.mark.asyncio
 async def test_panel_sheets_reconnect_email_is_debounced(monkeypatch: pytest.MonkeyPatch) -> None:
     import time
 
-    import app.api.x_autopilot as xa_api
-
-    monkeypatch.setattr(xa_api, "_sheets_reconnect_email_sent_at", time.time())
-    monkeypatch.setattr(settings, "google_sheets_reconnect_key", "secret-key")
-    plan = _plan()
-    monkeypatch.setattr(
-        "app.api.x_autopilot.google_oauth.exchange_code",
-        AsyncMock(return_value={"access_token": "ya29.token"}),
+    status, sent = await _open_panel_with_sheets_failure(
+        monkeypatch,
+        failure=GoogleNotConfigured("GOOGLE_SHEETS_REFRESH_TOKEN is not set"),
+        last_sent_at=time.time(),
     )
-    monkeypatch.setattr(
-        "app.api.x_autopilot.google_oauth.fetch_userinfo",
-        AsyncMock(return_value={"email": "buyer@example.com", "name": "Buyer", "sub": "123"}),
-    )
-    monkeypatch.setattr("app.api.x_autopilot.get_active_plan_for_email", AsyncMock(return_value=plan))
-    monkeypatch.setattr(
-        "app.api.x_autopilot.google_oauth.read_sheet_values",
-        AsyncMock(side_effect=GoogleNotConfigured("GOOGLE_SHEETS_REFRESH_TOKEN is not set")),
-    )
-    sent = AsyncMock()
-    monkeypatch.setattr("app.api.x_autopilot.send_hq_mail", sent)
 
-    state = dumps_state({"purpose": "login", "checkout": ""})
-    db = _mock_db(existing=plan)
-    async with _client(db) as client:
-        await client.get(
-            "/x-autopilot/auth/google/callback",
-            params={"code": "auth-code", "state": state},
-        )
-        await client.get("/x-autopilot/panel")
-
+    assert status == 200
     sent.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_panel_skips_reconnect_email_without_reconnect_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    status, sent = await _open_panel_with_sheets_failure(
+        monkeypatch,
+        failure=GoogleNotConfigured("GOOGLE_SHEETS_REFRESH_TOKEN is not set"),
+        reconnect_key="",
+    )
+
+    assert status == 200
+    sent.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_transient_sheets_read_error_does_not_email(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services.google_oauth import GoogleOAuthError
+
+    status, sent = await _open_panel_with_sheets_failure(
+        monkeypatch,
+        failure=GoogleOAuthError("Sheets read failed"),
+    )
+
+    assert status == 200
+    sent.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_rejected_refresh_token_raises_reconnect_required(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services import google_oauth
+
+    google_oauth.clear_sheets_access_cache()
+    monkeypatch.setattr(settings, "google_oauth_client_id", "cid")
+    monkeypatch.setattr(settings, "google_oauth_client_secret", "csecret")
+    monkeypatch.setattr(settings, "google_sheets_refresh_token", "revoked")
+
+    def client_answering(status_code: int) -> type:
+        class FakeResponse:
+            def __init__(self) -> None:
+                self.status_code = status_code
+                self.text = '{"error": "invalid_grant"}'
+
+            def json(self) -> dict:
+                return {"error": "invalid_grant"}
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs) -> None:
+                pass
+
+            async def __aenter__(self) -> "FakeClient":
+                return self
+
+            async def __aexit__(self, *args) -> bool:
+                return False
+
+            async def post(self, url: str, data: dict | None = None) -> FakeResponse:
+                return FakeResponse()
+
+        return FakeClient
+
+    monkeypatch.setattr("app.services.google_oauth.httpx.AsyncClient", client_answering(400))
+    with pytest.raises(google_oauth.SheetsReconnectRequired):
+        await google_oauth.sheets_access_token()
+
+    monkeypatch.setattr("app.services.google_oauth.httpx.AsyncClient", client_answering(503))
+    with pytest.raises(google_oauth.GoogleOAuthError) as excinfo:
+        await google_oauth.sheets_access_token()
+    assert not isinstance(excinfo.value, google_oauth.SheetsReconnectRequired)
 
 
 @pytest.mark.asyncio
