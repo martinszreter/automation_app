@@ -1,6 +1,5 @@
 """Verify that 'alembic upgrade head' creates all expected tables."""
 
-import asyncio
 import os
 
 import pytest
@@ -21,7 +20,6 @@ async def _run_alembic_upgrade(db_url: str) -> None:
     cfg.set_main_option("sqlalchemy.url", db_url.replace("+asyncpg", ""))
 
     from app.db.session import _force_asyncpg_url
-    from alembic import context  # noqa: F811
 
     async_url = _force_asyncpg_url(db_url)
     engine = create_async_engine(async_url)

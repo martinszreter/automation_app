@@ -9,14 +9,16 @@ Tier flow (the three published tiers, CHF 149 / 330 / 990):
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import time
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -53,6 +55,18 @@ from app.services.xautopilot_plans import (
     mark_plan_refunded,
     refund_plan,
     upsert_plan_from_checkout,
+)
+from app.services.xautopilot_generate import (
+    GenerationError,
+    GenerationNotConfigured,
+    generate_variants,
+)
+from app.services.xautopilot_judge import (
+    RecentPost,
+    ToneProfile,
+    parse_posted_at,
+    pick_best,
+    record_vetoes,
 )
 from app.services.xautopilot_tiers import (
     TierPriceNotConfigured,
@@ -462,3 +476,85 @@ async def sheets_reconnect(request: Request, key: str = Query("")) -> RedirectRe
     except GoogleNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return RedirectResponse(url=url, status_code=302)
+
+
+# --- post quality judge (called by the n8n engines before posting) -----------
+
+
+class ToneProfileIn(BaseModel):
+    customer: str = ""
+    language: str = "de"
+    banned_terms: list[str] = Field(default_factory=list)
+    topics: list[str] = Field(default_factory=list)
+    voice: str = ""
+    max_hashtags: int = Field(default=2, ge=0, le=10)
+
+    def to_profile(self) -> ToneProfile:
+        return ToneProfile(
+            customer=self.customer,
+            language=self.language,
+            banned_terms=list(self.banned_terms),
+            topics=list(self.topics),
+            voice=self.voice,
+            max_hashtags=self.max_hashtags,
+        )
+
+
+class RecentPostIn(BaseModel):
+    text: str
+    posted_at: str | None = None
+
+
+class JudgeRequest(BaseModel):
+    profile: ToneProfileIn = Field(default_factory=ToneProfileIn)
+    candidates: list[str] = Field(default_factory=list, max_length=10)
+    recent_posts: list[RecentPostIn] = Field(default_factory=list, max_length=500)
+
+
+class ComposeRequest(BaseModel):
+    profile: ToneProfileIn = Field(default_factory=ToneProfileIn)
+    brief: str = Field(min_length=1, max_length=4000)
+    recent_posts: list[RecentPostIn] = Field(default_factory=list, max_length=500)
+    variants: int = Field(default=3, ge=1, le=5)
+
+
+def _require_judge_key(x_judge_key: str | None = Header(default=None)) -> None:
+    expected = settings.xautopilot_judge_key.strip()
+    if not expected:
+        raise HTTPException(status_code=503, detail="XAUTOPILOT_JUDGE_KEY is not set")
+    if not x_judge_key or not hmac.compare_digest(x_judge_key.strip(), expected):
+        raise HTTPException(status_code=401, detail="invalid judge key")
+
+
+async def _judge_candidates(
+    profile_in: ToneProfileIn, candidates: list[str], recent_in: list[RecentPostIn]
+) -> dict[str, Any]:
+    profile = profile_in.to_profile()
+    recent = [RecentPost(p.text, parse_posted_at(p.posted_at)) for p in recent_in]
+    best, reports = pick_best(candidates, profile, recent)
+    recorded = await record_vetoes(profile, reports)
+    return {
+        "best": best.text if best else None,
+        "reports": [report.to_dict() for report in reports],
+        "vetoes_recorded": recorded,
+    }
+
+
+@router.post("/judge", dependencies=[Depends(_require_judge_key)], include_in_schema=False)
+async def judge_candidates(payload: JudgeRequest) -> JSONResponse:
+    """Veto hard fails among the candidates and name the best one."""
+    result = await _judge_candidates(payload.profile, payload.candidates, payload.recent_posts)
+    return JSONResponse(result)
+
+
+@router.post("/compose", dependencies=[Depends(_require_judge_key)], include_in_schema=False)
+async def compose_post(payload: ComposeRequest) -> JSONResponse:
+    """Draft N variants with Claude, then judge them and pick the best."""
+    try:
+        candidates = await generate_variants(payload.brief, payload.profile.to_profile(), count=payload.variants)
+    except GenerationNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except GenerationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    result = await _judge_candidates(payload.profile, candidates, payload.recent_posts)
+    return JSONResponse(result)
