@@ -1,0 +1,16 @@
+{
+  "name": "automation_app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Quality tooling for the STARTEND FastAPI app: Playwright stranger journey (CI) and the LIVE checklist. The product itself is Python — see requirements.txt.",
+  "scripts": {
+    "e2e": "playwright test",
+    "live-checklist": "node scripts/live-checklist.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}
