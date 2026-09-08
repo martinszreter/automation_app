@@ -50,12 +50,25 @@ from app.services.xautopilot_orders import (
     order_row_from_session,
     post_order_row,
 )
+from app.services.xautopilot_panel import (
+    PanelLaneError,
+    PanelLaneNotConfigured,
+    digest_text,
+    format_chf,
+    lane_recent_posts,
+    load_panel_data,
+    set_agent_status,
+)
 from app.services.xautopilot_plans import (
+    ensure_e2e_plan,
     get_active_plan_for_email,
+    list_active_plans,
     mark_plan_refunded,
     refund_plan,
+    set_plan_paused,
     upsert_plan_from_checkout,
 )
+from app.templates.messages import xa_de
 from app.services.xautopilot_generate import (
     GenerationError,
     GenerationNotConfigured,
@@ -418,6 +431,7 @@ async def panel(request: Request, db: AsyncSession = Depends(get_db)) -> Respons
     plan_active = plan is not None and plan.status == PlanStatus.ACTIVE
     sheets: dict[str, Any] | None = None
     sheets_error: str | None = None
+    panel_data = None
     if plan_active:
         try:
             sheets = await google_oauth.read_sheet_values()
@@ -426,17 +440,72 @@ async def panel(request: Request, db: AsyncSession = Depends(get_db)) -> Respons
             await _request_sheets_reconnect(request, str(exc))
         except GoogleOAuthError as exc:
             sheets_error = str(exc)
+        panel_data = await load_panel_data(plan)
+        learned = str((panel_data.agent or {}).get("agent_name") or "").strip()
+        if learned and learned != (plan.agent_name or ""):
+            plan.agent_name = learned
+            await db.commit()
 
     return render(
         request,
         "x_autopilot/panel.html",
+        t=xa_de,
         user=user,
         plan=plan,
         plan_active=plan_active,
         amount_label=_format_amount(plan.amount_cents, plan.currency) if plan else "",
+        invoice_label=format_chf(panel_data.invoice["amount_due_cents"]) if panel_data and panel_data.invoice else "",
+        panel=panel_data,
         sheets=sheets,
         sheets_error=sheets_error,
     )
+
+
+async def _set_paused(request: Request, db: AsyncSession, *, paused: bool) -> RedirectResponse:
+    user = _current_user(request)
+    if user is None:
+        return RedirectResponse(url="/x-autopilot/panel/login", status_code=303)
+    plan = await get_active_plan_for_email(db, user["email"])
+    if plan is None:
+        raise HTTPException(status_code=404, detail="no active plan")
+    await set_plan_paused(db, plan, paused=paused)
+    if plan.agent_name:
+        try:
+            await set_agent_status(plan.agent_name, paused=paused)
+        except PanelLaneNotConfigured:
+            pass
+        except PanelLaneError as exc:
+            logger.warning("panel lane could not %s %s: %s", "pause" if paused else "resume", plan.agent_name, exc)
+    return RedirectResponse(url="/x-autopilot/panel", status_code=303)
+
+
+@router.post("/panel/pause", include_in_schema=False)
+async def panel_pause(request: Request, db: AsyncSession = Depends(get_db)) -> RedirectResponse:
+    return await _set_paused(request, db, paused=True)
+
+
+@router.post("/panel/resume", include_in_schema=False)
+async def panel_resume(request: Request, db: AsyncSession = Depends(get_db)) -> RedirectResponse:
+    return await _set_paused(request, db, paused=False)
+
+
+@router.get("/e2e/login", include_in_schema=False)
+async def e2e_login(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    key: str = Query(""),
+    email: str = Query(""),
+) -> RedirectResponse:
+    """CI only (XA_E2E_KEY set): sign a synthetic paid buyer in so Playwright can drive the panel."""
+    expected = settings.xa_e2e_key.strip()
+    if not expected or not key or not hmac.compare_digest(key, expected):
+        raise HTTPException(status_code=404)
+    clean = email.strip().lower()
+    if "@" not in clean:
+        raise HTTPException(status_code=422, detail="email required")
+    plan = await ensure_e2e_plan(db, clean)
+    request.session[_USER_KEY] = {"email": plan.email, "name": "E2E Buyer", "picture": "", "sub": "e2e"}
+    return RedirectResponse(url="/x-autopilot/panel", status_code=303)
 
 
 @router.post("/panel/refund", include_in_schema=False)
@@ -553,3 +622,26 @@ async def compose_post(payload: ComposeRequest) -> JSONResponse:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     result = await _judge_candidates(payload.profile, candidates, payload.recent_posts)
     return JSONResponse(result)
+
+
+@router.post("/digest/run", dependencies=[Depends(_require_judge_key)], include_in_schema=False)
+async def digest_run(request: Request, db: AsyncSession = Depends(get_db)) -> JSONResponse:
+    """Weekly digest: one mail per active plan (n8n schedule calls this with X-Judge-Key)."""
+    panel_url = f"{_base_url(request)}/x-autopilot/panel"
+    sent = 0
+    skipped: list[dict[str, str]] = []
+    for plan in await list_active_plans(db):
+        posts: list[dict[str, Any]] = []
+        if plan.agent_name:
+            try:
+                posts = await lane_recent_posts(plan.agent_name)
+            except (PanelLaneNotConfigured, PanelLaneError) as exc:
+                logger.warning("digest: no posts for %s: %s", plan.agent_name, exc)
+        data = await load_panel_data(plan)
+        subject, body = digest_text(plan, posts or data.posts, scheduled=data.scheduled_count, panel_url=panel_url)
+        try:
+            await send_hq_mail(subject, body, to=plan.email)
+            sent += 1
+        except (HQMailNotConfigured, HQMailError) as exc:
+            skipped.append({"email": plan.email, "reason": str(exc)})
+    return JSONResponse({"sent": sent, "skipped": skipped})

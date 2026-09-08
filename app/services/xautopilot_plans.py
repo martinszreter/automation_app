@@ -97,6 +97,46 @@ async def get_active_plan_for_email(db: AsyncSession, email: str) -> XAutopilotP
     return None
 
 
+async def list_active_plans(db: AsyncSession) -> list[XAutopilotPlan]:
+    result = await db.execute(
+        select(XAutopilotPlan)
+        .where(XAutopilotPlan.status == PlanStatus.ACTIVE)
+        .order_by(XAutopilotPlan.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def set_plan_paused(db: AsyncSession, plan: XAutopilotPlan, *, paused: bool) -> XAutopilotPlan:
+    plan.paused_at = _now() if paused else None
+    await db.commit()
+    await db.refresh(plan)
+    return plan
+
+
+async def ensure_e2e_plan(db: AsyncSession, email: str) -> XAutopilotPlan:
+    """CI only: an active CHF 1 plan for a synthetic checkout id, created once."""
+    needle = email.strip().lower()
+    checkout_id = f"e2e-{needle}"
+    plan = await get_plan_by_checkout_id(db, checkout_id)
+    if plan is None:
+        plan = XAutopilotPlan(
+            email=needle,
+            stripe_email=needle,
+            status=PlanStatus.ACTIVE,
+            stripe_checkout_session_id=checkout_id,
+            amount_cents=100,
+            currency="chf",
+            activated_at=_now(),
+        )
+        db.add(plan)
+    else:
+        plan.status = PlanStatus.ACTIVE
+        plan.paused_at = None
+    await db.commit()
+    await db.refresh(plan)
+    return plan
+
+
 async def get_plan_by_checkout_id(db: AsyncSession, checkout_id: str) -> XAutopilotPlan | None:
     result = await db.execute(
         select(XAutopilotPlan).where(XAutopilotPlan.stripe_checkout_session_id == checkout_id)

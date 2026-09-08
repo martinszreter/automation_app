@@ -24,3 +24,13 @@ async def test_health_check():
 
     assert response.status_code == 200
     assert response.json() == {"status": "healthy"}
+
+
+@pytest.mark.asyncio
+async def test_healthz_alias_answers_without_touching_the_database():
+    # No get_db override on purpose: the alias must not depend on the database.
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "app": "STARTEND"}

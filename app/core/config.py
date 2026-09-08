@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     n8n_xa_veto_log_url: str = ""
     anthropic_api_key: str = ""
     xautopilot_generate_model: str = "claude-opus-5"
+    # Panel lane (n8n webhook): profile / recent_posts / set_status on the
+    # agents, post_log and post_metrics tables. Env-only, like every lane.
+    n8n_xa_panel_url: str = ""
+    # CI only: /x-autopilot/e2e/login?key=…&email=… signs a test buyer in with an
+    # active plan so Playwright can drive the panel. Unset = route is 404.
+    xa_e2e_key: str = ""
 
     # /apps — WhatsApp reservation setup. One Checkout Session carries both
     # prices: the one-time setup fee and the monthly subscription.

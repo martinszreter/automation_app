@@ -336,12 +336,12 @@ async def test_google_signin_after_payment_shows_active_plan_and_sheets(
         panel = await client.get("/x-autopilot/panel")
 
     assert panel.status_code == 200
-    assert "Plan active" in panel.text
+    assert "Plan aktiv" in panel.text
     assert "buyer@example.com" in panel.text
     assert "CHF 1" in panel.text
-    assert "Read ok" in panel.text
+    assert "Lesen ok" in panel.text
     assert "pricing" in panel.text
-    assert "Refund CHF 1 test payment" in panel.text
+    assert "CHF 1 Testzahlung erstatten" in panel.text
 
 
 @pytest.mark.asyncio

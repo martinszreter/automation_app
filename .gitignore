@@ -6,3 +6,9 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 node_modules/
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+playwright-report/
+test-results/
+reports/live/
