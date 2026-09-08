@@ -145,6 +145,14 @@ webhook accepts unauthenticated writes and this repo is public):
   font links in the canon head are dropped and logged (`boot5 WARN`): the
   views use system fonts only.
 
+* **composed, NEXT + SOP** — `NEXT_HTML` → `next-k4x9m2.html` wraps the canon
+  NEXT page (unchanged, in its own collapsible section) under Marcin's click
+  queue, the open blockers and the next step per initiative; `SOP_HTML` →
+  `sop-k4x9m2.html` is rendered from `boot/data/sop.json` alone, click queue
+  first, one collapsible section per procedure. Both carry a search box that
+  filters every `[data-s]` item on the page. The click queue is every
+  checklist row with a `marcin` action, plus every row Marcin owns.
+
 Adding a view is a pull request: append to `CANON_VIEWS` or `REPO_VIEWS` in
 `boot/views_boot.py`, and for a repo-backed view drop the page in `boot/pages/`.
 

@@ -6,3 +6,10 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 node_modules/
+
+# quality CI / e2e
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+ci/out/
+srv/

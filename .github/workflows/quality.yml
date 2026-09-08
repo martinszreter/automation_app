@@ -72,7 +72,9 @@ jobs:
       - name: Lighthouse gate (mobile, >= 90, no CLS, no console errors)
         run: |
           python3 ci/lighthouse.py \
-            http://127.0.0.1:8098/ptf-k4x9m2.html
+            http://127.0.0.1:8098/ptf-k4x9m2.html \
+            http://127.0.0.1:8098/next-k4x9m2.html \
+            http://127.0.0.1:8098/sop-k4x9m2.html
 
       - name: Stranger e2e (Playwright, mobile + desktop)
         working-directory: e2e

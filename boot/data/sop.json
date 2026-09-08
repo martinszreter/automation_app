@@ -1,0 +1,128 @@
+{
+  "_about": "Standard operating procedures for running the STARTEND portfolio service. Rendered into sop-k4x9m2.html at every boot by boot/views_boot.py. Operational only — strategy and decisions stay in claude.ai. No URLs that act as write keys: those live in the Railway / n8n environment and are named here, never pasted.",
+  "updated": "2026-09-08",
+  "sops": [
+    {
+      "id": "redeploy-hq",
+      "title": "Redeploy the HQ views (hq.startend.ch)",
+      "owner": "CLAUDE_CLAUDECODE",
+      "when": "After every merge to main that touches boot/ or boot/data/",
+      "steps": [
+        "Merge the pull request to main. Railway fetches boot/views_boot.py from main on every boot, so nothing is built from a branch.",
+        "Trigger the portfolio redeploy: n8n webhook `redeploy-portfolio` (URL in the n8n workflow, not in this repo) or Railway → startend → portfolio → Redeploy.",
+        "Read the deploy log. Every view prints one line: `boot5 ok <KEY> <FILE> <BYTES>`. A `boot5 FAIL` line names what did not render; `boot5 WARN … dropped external link` is informational.",
+        "Open https://hq.startend.ch/ptf-k4x9m2.html on a phone. The live counter must show N/25 and the stamp must carry today's `board built` time.",
+        "Run `python3 scripts/publish_verify.py --live https://hq.startend.ch` from main: it compares the sha256 of the repo-rendered views with what is served."
+      ],
+      "links": [
+        {"label": "Board", "url": "https://hq.startend.ch/ptf-k4x9m2.html"},
+        {"label": "boot/views_boot.py", "url": "https://github.com/martinszreter/automation_app/blob/main/boot/views_boot.py"}
+      ]
+    },
+    {
+      "id": "update-checklist",
+      "title": "Move an initiative (LIVE counter, stage, next, owner, blocker)",
+      "owner": "CLAUDE_CLAUDECODE",
+      "when": "The moment a stage changes or a blocker appears or clears",
+      "steps": [
+        "Edit `boot/data/checklist.json` in a pull request. Allowed stages: spec, build, sell, live, paused. Allowed owners: MARCIN, CLAUDE_CLAUDECODE, GPT_CURSOR, GROK_MARKET.",
+        "Set `live: true` only when a stranger can reach the public page and pay the CHF 1 test. That flag is the N in N/25 — nothing else counts.",
+        "Add a `marcin` object (`action`, `link`) when the next step is one click that only Marcin can make. It lands in the click queue on NEXT and SOP.",
+        "CI validates the file (`tests/test_board_compose.py`) and re-renders the board with Lighthouse ≥ 90. Merge, then follow «Redeploy the HQ views»."
+      ],
+      "links": [
+        {"label": "checklist.json", "url": "https://github.com/martinszreter/automation_app/blob/main/boot/data/checklist.json"}
+      ]
+    },
+    {
+      "id": "add-view",
+      "title": "Add an HQ view",
+      "owner": "CLAUDE_CLAUDECODE",
+      "when": "A new initiative gets a SPEC page or an ops page",
+      "steps": [
+        "Canon-backed page: append `(\"KEY_HTML\", \"name-k4x9m2.html\")` to `CANON_VIEWS` in boot/views_boot.py. The highest canon `version` wins at boot.",
+        "Repo-backed page: drop the HTML in `boot/pages/` and append it to `REPO_VIEWS`. Runtime URLs go through `PLACEHOLDERS` and the Railway environment, never into the file.",
+        "Composed page (canon content plus a live layer): add a composer to `COMPOSERS` and register it in `COMPOSED_VIEWS`; the canon body must be carried over unchanged.",
+        "Add a fixture under `ci/fixtures/<KEY>.html` when the page needs realistic content for Lighthouse, and add its URL to the Lighthouse step in .github/workflows/quality.yml.",
+        "Merge, redeploy, check the `boot5 ok` line for the new key."
+      ],
+      "links": []
+    },
+    {
+      "id": "canon-write",
+      "title": "Write a canon page safely (read → insert → re-read → prune)",
+      "owner": "GPT_CURSOR",
+      "when": "Any script that changes BOARD_HTML, NEXT_HTML or a SPEC page in canon",
+      "steps": [
+        "Read the key immediately before writing and take the highest `version`. Never write from a copy that is minutes old.",
+        "Insert `version + 1` with a `note` and `updated_by`. The content must contain a durable marker so a rerun is a no-op.",
+        "Re-read at once. If two rows share the new version, re-apply your transform on the other writer's row, insert again, delete your orphan.",
+        "Prune to the three newest rows. Then trigger «Redeploy the HQ views» and verify the marker on the live page.",
+        "Reference implementation: boot/canon_patch_chamdigital_rollout_20260830.py. CANON_RW_URL is a write key: environment only."
+      ],
+      "links": [
+        {"label": "Reference script", "url": "https://github.com/martinszreter/automation_app/blob/main/boot/canon_patch_chamdigital_rollout_20260830.py"}
+      ]
+    },
+    {
+      "id": "chf1-test",
+      "title": "Prove a door is payable: the CHF 1 test, then the refund",
+      "owner": "MARCIN",
+      "when": "Before an initiative is flipped to live, and after every checkout change",
+      "steps": [
+        "Open the door as a stranger (private window, phone). You must understand the offer within 10 seconds; if not, that is the first fix.",
+        "Click the CHF 1 test button. Stripe Checkout opens in test mode (`STRIPE_SECRET_KEY` starts with `sk_test_`). Pay with 4242 4242 4242 4242, any future date, any CVC.",
+        "You must land on the success page with the reference shown, and the confirmation email must arrive.",
+        "Refund: Stripe dashboard → Payments → the CHF 1.00 payment → Refund → full amount. Under 30 seconds.",
+        "Check the order row (n8n data table, or the HQ Mail for ORIGICAST) and the `checkout.session.completed` delivery in Stripe → Developers → Webhooks. Then set `live: true` in the checklist."
+      ],
+      "links": [
+        {"label": "/apps", "url": "https://www.startend.ch/apps/"},
+        {"label": "/x-autopilot", "url": "https://www.startend.ch/x-autopilot/"},
+        {"label": "/origicast", "url": "https://www.startend.ch/origicast/"}
+      ]
+    },
+    {
+      "id": "error-alerts",
+      "title": "Wire error alerts to the Engine Error Alerts workflow",
+      "owner": "CLAUDE_CLAUDECODE",
+      "when": "Every new public service, before it goes live",
+      "steps": [
+        "Set `ERROR_ALERT_WEBHOOK_URL` on the Railway service to the webhook of n8n workflow «Engine Error Alerts» (id N6gYXlzZUn6OXOs4). The URL is a write key: environment only.",
+        "The app posts one JSON message per unhandled 5xx: `{service, path, method, error, ts}`. Nothing personal is sent.",
+        "Test: call a route that raises in a test deployment and confirm the diagnosis email arrives.",
+        "`GET /healthz` must answer 200 without touching the database; `GET /health` additionally checks Postgres. Railway's health check points at /health."
+      ],
+      "links": []
+    },
+    {
+      "id": "sheets-reconnect",
+      "title": "Reconnect Google Sheets for X Autopilot",
+      "owner": "MARCIN",
+      "when": "The HQ Mail «Sheets reconnect» email arrives",
+      "steps": [
+        "Open the reconnect link from the email (it carries the operator key from `GOOGLE_SHEETS_RECONNECT_KEY`).",
+        "Grant access with the Google account that owns the spreadsheet in `GOOGLE_SHEETS_SPREADSHEET_ID`.",
+        "Copy the refresh token shown into `GOOGLE_SHEETS_REFRESH_TOKEN` on the Railway service and redeploy.",
+        "Open the panel once to confirm the sheet renders."
+      ],
+      "links": []
+    },
+    {
+      "id": "outreach",
+      "title": "Manual outreach (restaurants, sponsors)",
+      "owner": "MARCIN",
+      "when": "Weekly, in a fixed slot",
+      "steps": [
+        "Manual and individual only — no automated cold outreach in CH, AT or DE.",
+        "Restaurants: docs/ZRH_R_OUTREACH.md, five mails per slot, each with the demo link /apps/demo.",
+        "Sponsors: docs/SPONSOR_DE.md or docs/SPONSOR_PL.md, run the five-point pre-send checklist in the document.",
+        "Log every reply on the checklist row (`next`), never in a side spreadsheet."
+      ],
+      "links": [
+        {"label": "ZRH outreach", "url": "https://github.com/martinszreter/automation_app/blob/main/docs/ZRH_R_OUTREACH.md"},
+        {"label": "Sponsor DE", "url": "https://github.com/martinszreter/automation_app/blob/main/docs/SPONSOR_DE.md"}
+      ]
+    }
+  ]
+}

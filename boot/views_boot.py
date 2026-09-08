@@ -84,7 +84,12 @@ CHECKLIST_TARGET = 25
 #   canon key -> (file, composer)
 COMPOSED_VIEWS: list[tuple[str, str, str]] = [
     ("BOARD_HTML", "ptf-k4x9m2.html", "board"),
+    ("NEXT_HTML", "next-k4x9m2.html", "next"),
+    ("SOP_HTML", "sop-k4x9m2.html", "sop"),
 ]
+# Composed views with no canon page behind them: rendered from repo data only.
+REPO_ONLY_COMPOSED = frozenset({"SOP_HTML"})
+SOP_PATH = "data/sop.json"
 
 DEFAULT_RAW_BASE = "https://raw.githubusercontent.com/martinszreter/automation_app/main/boot"
 TIMEOUT_SECONDS = 25
@@ -146,6 +151,64 @@ LIVE_LAYER_CSS = """
   .lb-row>[data-l="Next"],.lb-row>[data-l="Owner"],.lb-row>[data-l="Blocker"]{grid-column:auto;font-size:14px}
   .lb-row>[data-l="Blocker"] .lb-none{display:inline}
 }
+/* sections, click queue, search (NEXT + SOP) */
+.lb-search{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.lb-search input{flex:1 1 auto;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--lb-ink);border-radius:0;background:#fff;color:var(--lb-ink)}
+.lb-search input:focus{outline:2px solid var(--lb-swiss);outline-offset:1px}
+.lb-search output{font-size:12px;color:var(--lb-grey);white-space:nowrap}
+.lb-sec{border-top:2px solid var(--lb-ink);padding:0 0 6px}
+.lb-sec summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:12px 0;font-size:17px;font-weight:700}
+.lb-sec summary .lb-st{flex:1 1 200px}
+.lb-sec summary::-webkit-details-marker{display:none}
+.lb-sec summary::before{content:'';width:9px;height:9px;background:var(--lb-swiss);flex:none;transition:transform .15s}
+.lb-sec:not([open]) summary::before{transform:rotate(-90deg);background:var(--lb-grey)}
+.lb-sec summary .lb-n{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--lb-grey)}
+.lb-q{list-style:none;margin:0;padding:0}
+.lb-qi{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--lb-line)}
+.lb-qi:first-child{border-top:0}
+.lb-qi .lb-qn{font-size:12px;color:var(--lb-grey)}
+.lb-qi .lb-qa{font-size:15px;font-weight:600;grid-column:1}
+.lb a.lb-go,.lb-go{grid-column:2;grid-row:1 / span 2;display:inline-block;padding:9px 14px;background:var(--lb-swiss);color:#fff;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.lb-go.off{background:#fff;border:1px solid var(--lb-line);color:var(--lb-grey);pointer-events:none}
+.lb-group{margin:8px 0 4px;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--lb-grey)}
+.lb-when{margin:0 0 8px;font-size:13px;color:var(--lb-grey)}
+.lb-steps{margin:0;padding-left:22px}
+.lb-steps li{padding:4px 0;font-size:14.5px}
+.lb-steps code,.lb-qa code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;background:var(--lb-wash);padding:1px 4px}
+.lb-links{margin:8px 0 0;font-size:13px}
+.lb-links a{margin-right:14px}
+.lb-hide{display:none !important}
+.lb-canon-note{margin:0 0 8px;font-size:12px;color:var(--lb-grey)}
+"""
+
+SEARCH_SCRIPT = """
+(function(){
+  'use strict';
+  var input = document.getElementById('lb-search');
+  var count = document.getElementById('lb-search-count');
+  if (!input) return;
+  var items = Array.prototype.slice.call(document.querySelectorAll('[data-s]'));
+  var sections = Array.prototype.slice.call(document.querySelectorAll('details.lb-sec'));
+  function apply(){
+    var q = input.value.trim().toLowerCase();
+    var visible = 0;
+    items.forEach(function(el){
+      var hit = !q || (el.textContent || '').toLowerCase().indexOf(q) !== -1;
+      el.classList.toggle('lb-hide', !hit);
+      if (hit) visible += 1;
+    });
+    sections.forEach(function(sec){
+      var own = sec.querySelectorAll('[data-s]');
+      if (!own.length) return;               // free-form section: leave it alone
+      if (q) sec.open = true;
+      var any = Array.prototype.some.call(own, function(el){ return !el.classList.contains('lb-hide'); });
+      sec.classList.toggle('lb-hide', !!q && !any);
+    });
+    if (count) count.textContent = q ? String(visible) : String(items.length);
+  }
+  input.addEventListener('input', apply);
+  apply();
+})();
 """
 
 LIVE_LAYER_SCRIPT = """
@@ -391,8 +454,12 @@ def compose_document(
     canon_style: str,
     canon_body: str,
     lang: str = "en",
+    canon_before: str = "",
+    canon_after: str = "",
 ) -> str:
-    """The one document shell every composed view uses.
+    """The one document shell every composed view uses. ``canon_before`` /
+    ``canon_after`` wrap the canon body (e.g. in a collapsible section)
+    without touching it: the markers sit directly around the body.
 
     No robots noindex on purpose: the Lighthouse SEO gate (>= 90) fails a page
     that blocks indexing, and the contract makes that gate the acceptance
@@ -410,13 +477,200 @@ def compose_document(
         f"{CANON_STYLE_BEGIN}\n{canon_style}\n{CANON_STYLE_END}\n"
         "</head>\n<body>\n"
         f"{layer_html}\n"
-        f"{CANON_BODY_BEGIN}{canon_body}{CANON_BODY_END}\n"
+        f"{canon_before}{CANON_BODY_BEGIN}{canon_body}{CANON_BODY_END}{canon_after}\n"
         f"<script>{layer_script}</script>\n"
         "</body>\n</html>\n"
     )
 
 
-def compose_board(canon_html: str, checklist: dict, *, built_at: str | None = None) -> str:
+def load_sop(text: str) -> dict:
+    data = json.loads(text)
+    if not isinstance(data, dict) or not isinstance(data.get("sops"), list) or not data["sops"]:
+        raise ValueError("sop must be an object with a non-empty `sops` list")
+    seen: set[str] = set()
+    for index, sop in enumerate(data["sops"]):
+        if not isinstance(sop, dict):
+            raise ValueError(f"sop {index} is not an object")
+        for field in ("id", "title", "owner", "when"):
+            if not str(sop.get(field) or "").strip():
+                raise ValueError(f"sop {index} is missing `{field}`")
+        if sop["id"] in seen:
+            raise ValueError(f"sop id {sop['id']!r} appears twice")
+        seen.add(sop["id"])
+        steps = sop.get("steps")
+        if not isinstance(steps, list) or not steps or not all(isinstance(s, str) and s.strip() for s in steps):
+            raise ValueError(f"sop {sop['id']!r} needs a non-empty list of step strings")
+        if sop["owner"] not in OWNERS:
+            raise ValueError(f"sop {sop['id']!r} has unknown owner {sop['owner']!r}")
+        sop.setdefault("links", [])
+    data.setdefault("updated", "")
+    return data
+
+
+_CODE_RE = re.compile(r"`([^`]+)`")
+
+
+def rich(text: str) -> str:
+    """Escape, then turn `code` spans into <code>. Nothing else is markup."""
+    return _CODE_RE.sub(r"<code>\1</code>", esc(text))
+
+
+def section(section_id: str, title: str, badge: str, inner: str, *, is_open: bool = True) -> str:
+    open_attr = " open" if is_open else ""
+    return (
+        f'<details class="lb-sec" id="{esc(section_id)}"{open_attr}>'
+        f'<summary><span class="lb-st">{esc(title)}</span><span class="lb-n">{esc(badge)}</span></summary>'
+        f"{inner}</details>"
+    )
+
+
+def render_click_queue(checklist: dict) -> str:
+    queue = click_queue(checklist)
+    if not queue:
+        items = '<p class="lb-canon-note" data-s>Nothing waits on Marcin.</p>'
+    else:
+        items = '<ol class="lb-q">' + "".join(
+            f'<li class="lb-qi" data-s><span class="lb-qn">{esc(item["name"])}</span>'
+            f'<span class="lb-qa">{rich(item["action"])}</span>'
+            + (
+                f'<a class="lb-go" href="{esc(item["link"])}">Open</a>'
+                if item["link"]
+                else '<span class="lb-go off">No link</span>'
+            )
+            + "</li>"
+            for item in queue
+        ) + "</ol>"
+    return section("click-queue", "Marcin — click queue", f"{len(queue)} to click", items)
+
+
+def render_search() -> str:
+    return (
+        '<form class="lb-search" role="search" onsubmit="return false">'
+        '<label for="lb-search" class="lb-none" style="position:absolute;left:-9999px">Search this page</label>'
+        '<input id="lb-search" type="search" placeholder="Search initiatives, steps, blockers" autocomplete="off">'
+        '<output id="lb-search-count" for="lb-search" aria-live="polite"></output>'
+        "</form>"
+    )
+
+
+def render_blockers(checklist: dict) -> str:
+    rows = [row for row in checklist["initiatives"] if str(row.get("blocker") or "").strip()]
+    if not rows:
+        inner = '<p class="lb-canon-note" data-s>No blockers on the checklist.</p>'
+    else:
+        inner = '<ol class="lb-q">' + "".join(
+            f'<li class="lb-qi" data-s><span class="lb-qn">{esc(row["name"])} · {esc(row["owner"])}</span>'
+            f'<span class="lb-qa lb-blocker">{esc(row["blocker"])}</span>'
+            + (f'<a class="lb-go" href="{esc(row["link"])}">Open</a>' if row.get("link") else "")
+            + "</li>"
+            for row in rows
+        ) + "</ol>"
+    return section("blockers", "Blockers", f"{len(rows)} open", inner)
+
+
+def render_by_owner(checklist: dict) -> str:
+    groups: dict[str, list[dict]] = {}
+    for row in checklist["initiatives"]:
+        groups.setdefault(row["owner"], []).append(row)
+    parts = []
+    for owner in OWNERS:
+        rows = groups.get(owner)
+        if not rows:
+            continue
+        parts.append(f'<div class="lb-group">{esc(owner)} · {len(rows)}</div><ol class="lb-q">')
+        for row in rows:
+            parts.append(
+                f'<li class="lb-qi" data-s><span class="lb-qn">{esc(row["name"])} · '
+                f'<span class="lb-stage {esc(row["stage"])}">{esc(row["stage"])}</span></span>'
+                f'<span class="lb-qa">{esc(row["next"])}</span>'
+                + (f'<a class="lb-go" href="{esc(row["link"])}">Open</a>' if row.get("link") else "")
+                + "</li>"
+            )
+        parts.append("</ol>")
+    total = len(checklist["initiatives"])
+    return section("by-owner", "Next step per initiative", f"{total} rows", "".join(parts), is_open=False)
+
+
+def compose_next(canon_html: str, checklist: dict, sop: dict | None = None, *, built_at: str | None = None) -> str:
+    """next-k4x9m2: click queue, blockers, per-owner next steps, then the
+    canon NEXT page unchanged — every section collapsible, one search box."""
+    canon_style, canon_body, _dropped = split_canon(canon_html)
+    built = built_at or utc_now_stamp()
+    queue_size = len(click_queue(checklist))
+    layer = (
+        '<section class="lb" id="live" aria-labelledby="lb-title">'
+        '<div class="lb-top"><h1 class="lb-title" id="lb-title">Next <span>Clicks</span></h1>'
+        f'<div class="lb-counter" aria-label="Clicks waiting on Marcin"><b id="lb-queue">{queue_size}</b><small>to click</small></div></div>'
+        f'<p class="lb-stamp">Checklist updated <b id="lb-updated">{esc(checklist.get("updated") or "—")}</b> · page built <b>{esc(built)}</b></p>'
+        f"{render_search()}"
+        f"{render_click_queue(checklist)}"
+        f"{render_blockers(checklist)}"
+        f"{render_by_owner(checklist)}"
+        "</section>"
+    )
+    canon_before = (
+        '<details class="lb-sec lb" id="canon-next" open><summary><span class="lb-st">NEXT — canon page</span><span class="lb-n">unchanged</span></summary>'
+        '<p class="lb-canon-note">Read from canon NEXT_HTML at boot; nothing below is edited here.</p>'
+    )
+    return compose_document(
+        title=canon_title(canon_html, "STARTEND — NEXT"),
+        description=f"STARTEND NEXT: {queue_size} clicks waiting on Marcin, open blockers, next step per initiative, then the canon NEXT page.",
+        layer_css=LIVE_LAYER_CSS,
+        layer_html=layer,
+        layer_script=SEARCH_SCRIPT,
+        canon_style=canon_style,
+        canon_body=canon_body,
+        canon_before=canon_before,
+        canon_after="</details>",
+    )
+
+
+def render_sops(sop: dict) -> str:
+    parts = []
+    for item in sop["sops"]:
+        steps = "".join(f"<li data-s>{rich(step)}</li>" for step in item["steps"])
+        links = "".join(
+            f'<a href="{esc(link.get("url", ""))}">{esc(link.get("label", link.get("url", "")))}</a>'
+            for link in item.get("links", [])
+            if isinstance(link, dict) and link.get("url")
+        )
+        inner = (
+            f'<p class="lb-when" data-s>When: {esc(item["when"])}</p>'
+            f'<ol class="lb-steps">{steps}</ol>'
+            + (f'<p class="lb-links">{links}</p>' if links else "")
+        )
+        parts.append(section(f"sop-{item['id']}", item["title"], item["owner"], inner))
+    return "".join(parts)
+
+
+def compose_sop(canon_html: str, checklist: dict, sop: dict | None = None, *, built_at: str | None = None) -> str:
+    """sop-k4x9m2: click queue first, then one collapsible section per SOP."""
+    if sop is None:
+        raise ValueError("SOP view needs the sop data")
+    built = built_at or utc_now_stamp()
+    queue_size = len(click_queue(checklist))
+    layer = (
+        '<section class="lb" id="live" aria-labelledby="lb-title">'
+        '<div class="lb-top"><h1 class="lb-title" id="lb-title">SOP <span>Runbook</span></h1>'
+        f'<div class="lb-counter" aria-label="Procedures"><b id="lb-sops">{len(sop["sops"])}</b><small>procedures</small></div></div>'
+        f'<p class="lb-stamp">SOP updated <b>{esc(sop.get("updated") or "—")}</b> · checklist updated <b id="lb-updated">{esc(checklist.get("updated") or "—")}</b> · page built <b>{esc(built)}</b></p>'
+        f"{render_search()}"
+        f"{render_click_queue(checklist)}"
+        f"{render_sops(sop)}"
+        "</section>"
+    )
+    return compose_document(
+        title="STARTEND — SOP",
+        description=f"STARTEND standard operating procedures: {len(sop['sops'])} runbooks for redeploying the HQ views, moving initiatives, the CHF 1 test and refund, error alerts.",
+        layer_css=LIVE_LAYER_CSS,
+        layer_html=layer,
+        layer_script=SEARCH_SCRIPT,
+        canon_style="",
+        canon_body="",
+    )
+
+
+def compose_board(canon_html: str, checklist: dict, sop: dict | None = None, *, built_at: str | None = None) -> str:
     """ptf-k4x9m2: live layer (counter, rows, stamp) above the canon board."""
     canon_style, canon_body, _dropped = split_canon(canon_html)
     live = live_count(checklist)
@@ -447,8 +701,10 @@ def compose_board(canon_html: str, checklist: dict, *, built_at: str | None = No
     )
 
 
-COMPOSERS: dict[str, Callable[[str, dict], str]] = {
+COMPOSERS: dict[str, Callable[[str, dict, dict | None], str]] = {
     "board": compose_board,
+    "next": compose_next,
+    "sop": compose_sop,
 }
 
 
@@ -500,17 +756,27 @@ def main() -> int:
                 failures += 1
                 log(f"boot5 FAIL {key} {filename} {error}")
 
+    sop: dict | None = None
+    try:
+        sop = load_sop(read_repo_page(SOP_PATH))
+    except (OSError, ValueError, urllib.error.URLError) as error:
+        failures += 1
+        log(f"boot5 FAIL SOP_JSON {SOP_PATH} {error}")
+
     for key, filename, composer in COMPOSED_VIEWS:
         if checklist is None:
             log(f"boot5 FAIL {key} {filename} checklist unavailable")
             failures += 1
             continue
         try:
-            canon_html, source = read_canon_or_disk(canon_url, key, os.path.join(srv_dir, filename))
-            _style, _body, dropped = split_canon(canon_html)
-            for link in dropped:
-                log(f"boot5 WARN {key} dropped external link {link[:120]}")
-            html = COMPOSERS[composer](canon_html, checklist)
+            if key in REPO_ONLY_COMPOSED:
+                canon_html, source = "", "repo"
+            else:
+                canon_html, source = read_canon_or_disk(canon_url, key, os.path.join(srv_dir, filename))
+                _style, _body, dropped = split_canon(canon_html)
+                for link in dropped:
+                    log(f"boot5 WARN {key} dropped external link {link[:120]}")
+            html = COMPOSERS[composer](canon_html, checklist, sop)
             log(f"boot5 ok {key} {filename} {write_view(srv_dir, filename, html)} source={source}")
         except (OSError, ValueError) as error:
             failures += 1
