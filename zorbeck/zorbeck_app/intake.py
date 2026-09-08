@@ -100,14 +100,21 @@ def intake_from_session(session: dict[str, Any]) -> Intake:
     )
 
 
+def timeline_for(city: str) -> list[tuple[str, str]]:
+    """The first-value steps with the buyer's city filled in."""
+    return [(when, what.format(city=city)) for when, what in de.TIMELINE]
+
+
 def confirmation_mail(intake: Intake, amount_cents: int, base_url: str) -> tuple[str, str]:
     """Subject and body of the confirmation the buyer receives."""
     subject = de.MAIL_SUBJECT.format(city=intake.city)
+    steps = "\n".join(f"- {when}: {what}" for when, what in timeline_for(intake.city))
     body = de.MAIL_BODY.format(
         amount=chf(amount_cents),
         city=intake.city,
         budget=intake.budget_label,
         email=intake.email,
+        timeline=steps,
         base_url=base_url.rstrip("/"),
     )
     return subject, body

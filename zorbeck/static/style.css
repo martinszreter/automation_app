@@ -252,6 +252,41 @@ a:focus-visible {
   font-weight: 600;
 }
 
+.timeline {
+  list-style: none;
+  border-top: 1px solid var(--rule);
+}
+
+.timeline li {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 0.25rem 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.timeline .when {
+  font-weight: 700;
+}
+
+.timeline .what {
+  color: var(--ink-soft);
+}
+
+.card .fine-print {
+  margin-top: 0.9rem;
+}
+
+.card .fine-print a {
+  color: var(--ink);
+}
+
+@media (max-width: 480px) {
+  .timeline li {
+    grid-template-columns: 1fr;
+  }
+}
+
 .legal h1 {
   font-size: 2rem;
   letter-spacing: -0.02em;

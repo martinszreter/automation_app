@@ -32,6 +32,9 @@ outbox: list[dict[str, Any]] = []
 alerts: list[dict[str, Any]] = []
 leads: list[dict[str, Any]] = []
 webhook_deliveries: list[dict[str, Any]] = []
+# deliver_webhook=False simulates Stripe's webhook arriving late (or never):
+# the buyer lands on /danke before checkout.session.completed was delivered.
+config: dict[str, Any] = {"deliver_webhook": True}
 
 
 def reset() -> None:
@@ -40,6 +43,8 @@ def reset() -> None:
     alerts.clear()
     leads.clear()
     webhook_deliveries.clear()
+    config.clear()
+    config["deliver_webhook"] = True
 
 
 def _nested(flat: dict[str, str]) -> dict[str, Any]:
@@ -105,6 +110,21 @@ async def get_session(session_id: str) -> JSONResponse:
     return JSONResponse(session)
 
 
+@router.post("/v1/checkout/sessions/{session_id}")
+async def update_session(session_id: str, request: Request) -> JSONResponse:
+    """Stripe allows updating a Checkout Session's metadata; the app uses it
+    to record that the confirmation went out."""
+    session = sessions.get(session_id)
+    if session is None:
+        return JSONResponse({"error": {"message": "No such checkout.session"}}, status_code=404)
+    body = await request.body()
+    payload = _nested(dict(parse_qsl(body.decode("utf-8"))))
+    metadata = payload.get("metadata")
+    if isinstance(metadata, dict):
+        session["metadata"] = {**(session.get("metadata") or {}), **metadata}
+    return JSONResponse(session)
+
+
 # --- Stripe: hosted checkout page ---------------------------------------------
 
 
@@ -137,6 +157,16 @@ async def pay(session_id: str, request: Request) -> RedirectResponse:
     session["payment_intent"] = "pi_test_stub_" + secrets.token_hex(6)
     session["customer_details"] = {"email": session.get("customer_email"), "name": None}
 
+    if config.get("deliver_webhook", True):
+        await deliver_webhook(session_id, str(request.base_url))
+
+    success = str(session["success_url"]).replace("{CHECKOUT_SESSION_ID}", session_id)
+    return RedirectResponse(success, status_code=303)
+
+
+async def deliver_webhook(session_id: str, base_url: str) -> dict[str, Any]:
+    """Send checkout.session.completed for a paid session, signed like Stripe."""
+    session = sessions[session_id]
     event = {
         "id": "evt_test_stub_" + secrets.token_hex(6),
         "object": "event",
@@ -145,12 +175,11 @@ async def pay(session_id: str, request: Request) -> RedirectResponse:
         "data": {"object": session},
     }
     payload = json.dumps(event).encode("utf-8")
-    base = str(request.base_url).rstrip("/")
     delivery: dict[str, Any] = {"session_id": session_id, "status": None, "error": None}
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                f"{base}/stripe/webhook",
+                f"{base_url.rstrip('/')}/stripe/webhook",
                 content=payload,
                 headers={
                     "content-type": "application/json",
@@ -161,9 +190,28 @@ async def pay(session_id: str, request: Request) -> RedirectResponse:
     except httpx.HTTPError as exc:  # pragma: no cover - network failure inside CI
         delivery["error"] = str(exc)
     webhook_deliveries.append(delivery)
+    return delivery
 
-    success = str(session["success_url"]).replace("{CHECKOUT_SESSION_ID}", session_id)
-    return RedirectResponse(success, status_code=303)
+
+@router.post("/checkout/{session_id}/deliver-webhook")
+async def deliver_webhook_now(session_id: str, request: Request) -> JSONResponse:
+    """Deliver the (late) webhook for a paid session on demand — the e2e uses
+    it to prove a delayed Stripe webhook never mails the buyer twice."""
+    session = sessions.get(session_id)
+    if session is None or session.get("payment_status") != "paid":
+        return JSONResponse({"error": "not a paid session"}, status_code=404)
+    return JSONResponse(await deliver_webhook(session_id, str(request.base_url)))
+
+
+@router.get("/config")
+async def get_config() -> JSONResponse:
+    return JSONResponse(config)
+
+
+@router.post("/config")
+async def set_config(request: Request) -> JSONResponse:
+    config.update(await request.json())
+    return JSONResponse(config)
 
 
 # --- mail lane, alert handler, lead sink --------------------------------------

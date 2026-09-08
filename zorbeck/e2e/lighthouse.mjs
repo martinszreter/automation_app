@@ -14,6 +14,29 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 
 const BASE = (process.env.ZORBECK_BASE_URL || 'http://127.0.0.1:8765').replace(/\/$/, '');
 const PATHS = (process.env.LIGHTHOUSE_PATHS || '/,/impressum,/agb,/datenschutz').split(',');
+
+// With the stub on, the success page (the first value) is gated too: create
+// and pay a Checkout Session, then measure /danke for it.
+async function paidSuccessPath() {
+  const health = await fetch(`${BASE}/healthz`).then((r) => r.json()).catch(() => null);
+  if (!health?.stub) return null;
+  const form = new URLSearchParams({
+    mode: 'payment',
+    customer_email: 'lighthouse@example.ch',
+    success_url: `${BASE}/danke?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${BASE}/`,
+    'metadata[city]': 'Zug',
+    'metadata[budget_max]': '1200000',
+    'line_items[0][quantity]': '1',
+    'line_items[0][price_data][unit_amount]': '100',
+  });
+  const session = await fetch(`${BASE}/_stub/v1/checkout/sessions`, { method: 'POST', body: form }).then((r) => r.json());
+  await fetch(`${BASE}/_stub/checkout/${session.id}/pay`, { method: 'POST', redirect: 'manual' });
+  return `/danke?session_id=${session.id}`;
+}
+
+const successPath = await paidSuccessPath();
+if (successPath) PATHS.push(successPath);
 const MIN = Number(process.env.LIGHTHOUSE_MIN || 0.9);
 const RUNS = Math.max(1, Number(process.env.LIGHTHOUSE_RUNS || 3));
 const CATEGORIES = ['performance', 'accessibility', 'best-practices', 'seo'];
@@ -36,7 +59,7 @@ const rows = [];
 try {
   for (const path of PATHS) {
     const url = BASE + path;
-    const slug = path === '/' ? 'landing' : path.replace(/\W+/g, '_');
+    const slug = path === '/' ? 'landing' : path.startsWith('/danke') ? 'danke' : path.replace(/\W+/g, '_');
     const runs = [];
     for (let i = 0; i < RUNS; i += 1) {
       const result = await lighthouse(url, {
@@ -52,21 +75,29 @@ try {
         scores: Object.fromEntries(CATEGORIES.map((c) => [c, lhr.categories[c].score ?? 0])),
         cls: lhr.audits['cumulative-layout-shift']?.numericValue ?? 0,
         consoleOk: (lhr.audits['errors-in-console']?.score ?? 1) === 1,
+        noindex: (lhr.audits['is-crawlable']?.score ?? 1) === 0,
       });
     }
 
     const scores = Object.fromEntries(CATEGORIES.map((c) => [c, median(runs.map((r) => r.scores[c]))]));
     const cls = median(runs.map((r) => r.cls));
     const consoleOk = runs.every((r) => r.consoleOk);
+    // A page that is deliberately noindex (the per-buyer success page) fails
+    // Lighthouse's "is-crawlable" audit by design; SEO is not a goal there.
+    const noindex = runs.some((r) => r.noindex);
 
     const misses = [];
-    for (const c of CATEGORIES) if (scores[c] < MIN) misses.push(`${c}=${Math.round(scores[c] * 100)}`);
+    for (const c of CATEGORIES) {
+      if (c === 'seo' && noindex) continue;
+      if (scores[c] < MIN) misses.push(`${c}=${Math.round(scores[c] * 100)}`);
+    }
     if (cls > 0) misses.push(`CLS=${cls.toFixed(3)}`);
     if (!consoleOk) misses.push('console-errors');
     if (misses.length) failed = true;
     rows.push({
-      path,
+      path: path.startsWith('/danke') ? '/danke (paid)' : path,
       ...Object.fromEntries(CATEGORIES.map((c) => [c, Math.round(scores[c] * 100)])),
+      ...(noindex ? { seo: 'n/a (noindex)' } : {}),
       'perf runs': runs.map((r) => Math.round(r.scores.performance * 100)).join('/'),
       cls: Number(cls.toFixed(3)),
       console: consoleOk ? 'clean' : 'ERRORS',

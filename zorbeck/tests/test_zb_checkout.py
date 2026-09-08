@@ -5,7 +5,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from zorbeck_app import main
 from zorbeck_app.config import settings
+from zorbeck_app.mail import MailError
 from zorbeck_app.main import app
 from zorbeck_app.stripe_api import StripeError, build_checkout_payload, checkout_urls
 
@@ -29,6 +31,9 @@ def client() -> AsyncClient:
 def quiet_leads(monkeypatch):
     monkeypatch.setattr(settings, "signup_webhook_url", "")
     monkeypatch.setattr(settings, "alert_webhook_url", "")
+    main.confirmed_sessions.clear()
+    with patch("zorbeck_app.main.mark_confirmation_sent", AsyncMock()):
+        yield
 
 
 # --- payload ---------------------------------------------------------------------
@@ -155,9 +160,13 @@ async def test_success_page_without_a_session_is_a_soft_404() -> None:
 
 
 @pytest.mark.asyncio
-async def test_success_page_shows_the_paid_intake(monkeypatch) -> None:
+async def test_success_page_shows_the_paid_intake_and_the_timeline(monkeypatch) -> None:
     monkeypatch.setattr(settings, "stripe_secret_key", "k")
-    with patch("zorbeck_app.main.retrieve_checkout_session", AsyncMock(return_value=PAID_SESSION)):
+    mail = AsyncMock()
+    with (
+        patch("zorbeck_app.main.retrieve_checkout_session", AsyncMock(return_value=PAID_SESSION)),
+        patch("zorbeck_app.main.send_mail", mail),
+    ):
         async with client() as c:
             response = await c.get("/danke?session_id=cs_test_1")
     assert response.status_code == 200
@@ -167,6 +176,72 @@ async def test_success_page_shows_the_paid_intake(monkeypatch) -> None:
     assert "bis CHF 1&#39;200&#39;000" in response.text
     assert ">CHF 1<" in response.text
     assert "anna@beispiel.ch" in response.text
+    # First value on the page: four steps, the city named, refund promise.
+    timeline = response.text.split('data-testid="timeline"')[1].split("</ol>")[0]
+    assert timeline.count("<li>") == 4
+    assert "Innerhalb von 24 Stunden" in timeline and "Zug" in timeline
+    assert "vollen Betrag" in response.text
+    assert 'data-outcome="mailed"' in response.text
+
+
+@pytest.mark.asyncio
+async def test_success_page_mails_when_the_webhook_has_not_yet(monkeypatch) -> None:
+    # Stripe's webhook can arrive seconds to minutes after the redirect; the
+    # buyer must not wait for it. The page mails, and a later webhook is a no-op.
+    monkeypatch.setattr(settings, "stripe_secret_key", "k")
+    mail = AsyncMock()
+    with (
+        patch("zorbeck_app.main.retrieve_checkout_session", AsyncMock(return_value=PAID_SESSION)),
+        patch("zorbeck_app.main.send_mail", mail),
+    ):
+        async with client() as c:
+            first = await c.get("/danke?session_id=cs_test_1")
+            reload = await c.get("/danke?session_id=cs_test_1")
+        late_webhook = await main.handle_checkout_completed(PAID_SESSION, "http://test")
+    assert first.status_code == reload.status_code == 200
+    assert mail.await_count == 1
+    subject, body, to = mail.await_args.args
+    assert to == "anna@beispiel.ch" and "Was jetzt passiert" in body
+    assert 'data-outcome="already"' in reload.text
+    assert late_webhook.status_code == 200
+    assert b'"outcome":"already"' in late_webhook.body
+
+
+@pytest.mark.asyncio
+async def test_success_page_respects_the_flag_the_webhook_left_on_stripe(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "stripe_secret_key", "k")
+    marked = {**PAID_SESSION, "metadata": {**PAID_SESSION["metadata"], "confirmation_sent": "2026-09-08 webhook"}}
+    mail = AsyncMock()
+    with (
+        patch("zorbeck_app.main.retrieve_checkout_session", AsyncMock(return_value=marked)),
+        patch("zorbeck_app.main.send_mail", mail),
+    ):
+        async with client() as c:
+            response = await c.get("/danke?session_id=cs_test_1")
+    assert response.status_code == 200
+    mail.assert_not_awaited()
+    assert 'data-outcome="already"' in response.text
+    assert "unterwegs an" in response.text
+
+
+@pytest.mark.asyncio
+async def test_success_page_still_shows_the_first_value_when_the_mail_lane_is_down(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "stripe_secret_key", "k")
+    alert = AsyncMock(return_value=True)
+    with (
+        patch("zorbeck_app.main.retrieve_checkout_session", AsyncMock(return_value=PAID_SESSION)),
+        patch("zorbeck_app.main.send_mail", AsyncMock(side_effect=MailError("lane down"))),
+        patch("zorbeck_app.main.send_alert", alert),
+    ):
+        async with client() as c:
+            response = await c.get("/danke?session_id=cs_test_1")
+    assert response.status_code == 200
+    assert 'data-testid="timeline"' in response.text
+    assert 'data-outcome="failed"' in response.text
+    assert "folgt in wenigen Minuten" in response.text
+    assert alert.await_args.args[0] == "danke.mail"
+    # Nothing was recorded, so Stripe's webhook (retried on 503) still mails.
+    assert "cs_test_1" not in main.confirmed_sessions
 
 
 @pytest.mark.asyncio

@@ -6,7 +6,7 @@
   {% if state == "paid" %}
     <section class="hero">
       <h1 data-testid="success-title">{{ de.SUCCESS_TITLE }}</h1>
-      <p class="sub">Eine Bestätigung ist unterwegs an <strong data-testid="success-email">{{ intake.email }}</strong>.</p>
+      <p class="sub" data-testid="mail-note" data-outcome="{{ mail_outcome }}">{{ mail_note }} <strong data-testid="success-email">{{ intake.email }}</strong>.</p>
     </section>
     <section class="card" aria-labelledby="intake-title">
       <h2 id="intake-title">Ihre Angaben</h2>
@@ -15,6 +15,15 @@
         <dt>Budget</dt><dd data-testid="intake-budget">{{ intake.budget_label }}</dd>
         <dt>Bezahlt</dt><dd data-testid="intake-amount">{{ amount }}</dd>
       </dl>
+    </section>
+    <section class="card" aria-labelledby="next-title">
+      <h2 id="next-title">{{ de.SUCCESS_NEXT }}</h2>
+      <ol class="timeline" data-testid="timeline">
+        {% for when, what in timeline %}
+          <li><span class="when">{{ when }}</span><span class="what">{{ what }}</span></li>
+        {% endfor %}
+      </ol>
+      <p class="fine-print">Kein Report innerhalb von 24 Stunden? Dann erstatten wir den vollen Betrag: <a href="mailto:{{ legal.email }}">{{ legal.email }}</a>.</p>
     </section>
   {% elif state == "pending" %}
     <section class="hero">
