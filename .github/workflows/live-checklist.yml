@@ -1,0 +1,80 @@
+name: live-checklist
+
+# Every 4 hours: GET every URL in live-targets.json, write the per-target
+# JSON (with reasons) and the HTML board, post a bus SIGNAL on regression,
+# publish the board to GitHub Pages and keep the last result on the
+# `live-status` branch (the next run diffs against it).
+
+on:
+  schedule:
+    - cron: "17 */4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: live-checklist
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Configure GitHub Pages (board hosting; optional)
+        id: pages
+        uses: actions/configure-pages@v5
+        continue-on-error: true
+        with:
+          enablement: true
+
+      - name: Run the checklist
+        env:
+          BUS_URL: ${{ vars.BUS_URL }}
+          REPORT_URL: ${{ steps.pages.outputs.base_url || format('https://github.com/{0}/tree/live-status', github.repository) }}
+        run: >
+          node scripts/live-checklist.js
+          --out reports/live
+          --previous "https://raw.githubusercontent.com/${{ github.repository }}/live-status/latest.json"
+          --report-url "$REPORT_URL"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-checklist
+          path: reports/live/
+          retention-days: 30
+
+      - name: Keep the latest result on the live-status branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd reports/live
+          git init -q -b live-status
+          git config user.name "live-checklist"
+          git config user.email "live-checklist@users.noreply.github.com"
+          git add .
+          git commit -q -m "live-checklist $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" live-status
+
+      - name: Publish the board
+        if: steps.pages.outcome == 'success'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports/live/
+      - name: Deploy the board
+        id: deploy
+        if: steps.pages.outcome == 'success'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4

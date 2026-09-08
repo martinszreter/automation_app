@@ -1,0 +1,7 @@
+{
+  "$comment": "Targets for scripts/live-checklist.js. One entry per public product URL (custom domain first when it exists). `expect` says which checks must pass for this target; a check that is not expected is still run and reported, but does not count against the target. checkout is false on zorbeck.com because the landing page links to /x-autopilot/ (whose Start buttons only become checkout links per configured PRICE_ID_XA_*), not to a /checkout or Stripe URL; login is false because the landing page offers no sign-in.",
+  "targets": [
+    { "name": "zorbeck.com", "project": "automation_app", "url": "https://www.zorbeck.com", "expect": { "healthz": true, "imprint": true, "checkout": false, "login": false } },
+    { "name": "automationapp railway", "project": "automation_app", "url": "https://automationapp-production.up.railway.app", "expect": { "healthz": true, "imprint": false, "checkout": false, "login": false } }
+  ]
+}
