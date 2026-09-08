@@ -4,7 +4,9 @@ name: quality
 #   * Lighthouse mobile >= 90 on performance, accessibility, SEO and best
 #     practices, zero console errors, no layout shift — on the HQ views and
 #     the public doors;
-#   * Playwright stranger e2e on the same pages.
+#   * Playwright stranger e2e: board, NEXT/SOP click queue, ORIGICAST
+#     gate -> door -> CHF 1 test paid (against a Stripe stand-in, so CI never
+#     needs a Stripe key).
 on:
   push:
     branches: [main]
@@ -69,12 +71,28 @@ jobs:
             python3 boot/views_boot.py
           (cd srv && python3 -m http.server 8098 --bind 127.0.0.1 &)
 
+      - name: Start the app with the Stripe stand-in
+        run: |
+          python3 ci/stub_stripe.py 8766 &
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8000/healthz && break; sleep 1; done
+        env:
+          STRIPE_API_BASE: http://127.0.0.1:8766/v1
+          STRIPE_SECRET_KEY: sk_test_ci_stub
+          PUBLIC_BASE_URL: http://127.0.0.1:8000
+          SESSION_SECRET: ci-only-session-secret
+          ORIGICAST_LIVE: "0"
+
       - name: Lighthouse gate (mobile, >= 90, no CLS, no console errors)
         run: |
           python3 ci/lighthouse.py \
             http://127.0.0.1:8098/ptf-k4x9m2.html \
             http://127.0.0.1:8098/next-k4x9m2.html \
-            http://127.0.0.1:8098/sop-k4x9m2.html
+            http://127.0.0.1:8098/sop-k4x9m2.html \
+            http://127.0.0.1:8000/origicast/ \
+            http://127.0.0.1:8000/origicast/success \
+            http://127.0.0.1:8000/agb/ \
+            http://127.0.0.1:8000/datenschutz/
 
       - name: Stranger e2e (Playwright, mobile + desktop)
         working-directory: e2e

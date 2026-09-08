@@ -60,6 +60,26 @@ authorization step (`X_OAUTH_ONBOARDING_URL`, falling back to
 write fails the endpoint answers `503` so Stripe retries; if the variable is
 unset the order is only logged, and the plan row in Postgres is still written.
 
+## ORIGICAST door (21+)
+
+`/origicast/` is the age gate; the answer is kept in the signed session cookie
+(functional only, 14 days). `/origicast/door` sells one thing until the first
+season opens: the **CHF 1 test** (`ORIGICAST_TEST_AMOUNT_CENTS`, payment
+mode, `price_data`, so no Stripe Price id is needed). The Season / Hour /
+Keep offers and their routes exist only when `ORIGICAST_LIVE=1`. Every page
+is German (de-CH) from `app/templates/messages/origicast_de.py` and carries
+Impressum / AGB / Datenschutz (`/impressum/`, `/agb/`, `/datenschutz/`).
+
+A paid test reaches the unified webhook with `metadata.venture=origicast`
+and is mailed to HQ over `HQ_MAIL_WEBHOOK_URL` as the refund reminder; if
+HQ Mail is down the endpoint answers `503` so Stripe retries.
+
+Ops on every service: `GET /healthz` answers without the database (`/health`
+also checks Postgres), and every unhandled 5xx is posted as one JSON message
+to `ERROR_ALERT_WEBHOOK_URL` — the n8n workflow "Engine Error Alerts". CI
+runs the stranger flow gate → door → CHF 1 paid against `ci/stub_stripe.py`
+(`STRIPE_API_BASE` points the checkout at it), never against Stripe.
+
 ## Stripe webhook
 
 One endpoint serves both ventures: **`POST /stripe/webhook`**, signature-verified

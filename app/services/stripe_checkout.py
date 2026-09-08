@@ -48,10 +48,11 @@ def public_base_url(request_base: str, forwarded_proto: str | None, forwarded_ho
 async def stripe_request(method: str, path: str, data: dict[str, str] | None = None) -> dict[str, Any]:
     if not settings.stripe_secret_key.strip():
         raise StripeNotConfigured("STRIPE_SECRET_KEY is not set")
+    base = (settings.stripe_api_base or STRIPE_API).strip().rstrip("/")
     async with httpx.AsyncClient(timeout=20.0) as client:
         response = await client.request(
             method,
-            f"{STRIPE_API}{path}",
+            f"{base}{path}",
             data=data,
             auth=(settings.stripe_secret_key, ""),
         )

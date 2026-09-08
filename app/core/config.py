@@ -30,6 +30,9 @@ class Settings(BaseSettings):
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    # Where Stripe API calls go. Only CI overrides it, to point the checkout
+    # at ci/stub_stripe.py so the stranger e2e can pay without a Stripe key.
+    stripe_api_base: str = "https://api.stripe.com/v1"
     # List price on /x-autopilot/ is CHF 149 / month. Override to 100 for a CHF 1 smoke test.
     stripe_xautopilot_amount_cents: int = 14900
     stripe_xautopilot_mode: str = "payment"
@@ -67,6 +70,17 @@ class Settings(BaseSettings):
     # notifications (e.g. asking Marcin to reconnect Sheets access). Env-only:
     # a webhook URL is a write key, so it never enters the repo.
     hq_mail_webhook_url: str = ""
+
+    # /origicast — 21+ door. The three offers (Season / Hour / Keep) render
+    # only when ORIGICAST_LIVE is truthy; until then the door sells the CHF 1
+    # test and nothing else.
+    origicast_live: bool = False
+    origicast_test_amount_cents: int = 100
+
+    # Error alerts: every unhandled 5xx is posted as one JSON message to this
+    # n8n webhook (workflow "Engine Error Alerts"). Env-only, it is a write key.
+    error_alert_webhook_url: str = ""
+    service_name: str = "automation_app"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

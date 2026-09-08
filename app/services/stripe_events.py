@@ -24,14 +24,18 @@ from app.services.stripe_checkout import verify_stripe_signature
 
 VENTURE_XAUTOPILOT = "x-autopilot"
 VENTURE_APPS = "apps"
+VENTURE_ORIGICAST = "origicast"
 
-# What the two checkout builders write into metadata, plus the spellings a
+# What the checkout builders write into metadata, plus the spellings a
 # Stripe dashboard entry is likely to use for the same thing.
 _VENTURE_BY_METADATA: dict[str, str] = {
     "x-autopilot": VENTURE_XAUTOPILOT,
     "x_autopilot": VENTURE_XAUTOPILOT,
     "xautopilot": VENTURE_XAUTOPILOT,
     "apps": VENTURE_APPS,
+    # ORIGICAST has no Price ids (CHF 1 test uses price_data), so metadata
+    # is its only routing signal.
+    "origicast": VENTURE_ORIGICAST,
 }
 
 # Settings whose name starts with one of these prefixes holds a Price id that

@@ -29,11 +29,13 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import apps as apps_api
+from app.api import origicast as origicast_api
 from app.api import x_autopilot as xautopilot_api
 from app.db.session import get_db
 from app.services.stripe_checkout import StripeSignatureError
 from app.services.stripe_events import (
     VENTURE_APPS,
+    VENTURE_ORIGICAST,
     VENTURE_XAUTOPILOT,
     event_object,
     load_event,
@@ -68,10 +70,15 @@ async def dispatch_event(event: dict[str, Any], db: AsyncSession) -> Response:
     if event_type == CHECKOUT_COMPLETED:
         if venture == VENTURE_APPS:
             return await apps_api.handle_checkout_completed(obj)
+        if venture == VENTURE_ORIGICAST:
+            return await origicast_api.handle_checkout_completed(obj)
         return await xautopilot_api.handle_checkout_completed(obj, db)
 
     if venture == VENTURE_APPS:
         return await apps_api.handle_subscription_deleted(obj)
+    if venture == VENTURE_ORIGICAST:
+        # The CHF 1 test is a one-time payment; there is no subscription to end.
+        return JSONResponse({"received": True, "ignored": True})
     return await xautopilot_api.handle_subscription_deleted(obj)
 
 
@@ -89,4 +96,4 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
     return await dispatch_event(event, db)
 
 
-__all__ = ["router", "dispatch_event", "VENTURE_APPS", "VENTURE_XAUTOPILOT"]
+__all__ = ["router", "dispatch_event", "VENTURE_APPS", "VENTURE_ORIGICAST", "VENTURE_XAUTOPILOT"]

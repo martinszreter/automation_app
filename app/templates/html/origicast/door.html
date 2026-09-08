@@ -1,0 +1,32 @@
+{% extends "origicast/base.html" %}
+{% block title %}{{ t.DOOR_TITLE }}{% endblock %}
+{% block content %}
+<section class="hero" id="door">
+  <p class="kicker">{{ t.DOOR_KICKER }}</p>
+  <h1 class="display">{{ t.DOOR_HEADLINE }}</h1>
+  <p class="lead">{{ t.DOOR_LEAD }}</p>
+</section>
+
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+
+<section class="card" id="test" aria-labelledby="test-h">
+  <p class="kicker">{{ t.TEST_KICKER }}</p>
+  <h2 class="display" id="test-h">{{ t.TEST_HEADLINE }}</h2>
+  <p class="lead" style="font-size:16px">{{ t.TEST_LEAD }}</p>
+  <div class="price"><b class="display">{{ t.TEST_PRICE }}</b><small>{{ t.TEST_PRICE_NOTE }}</small></div>
+  <form method="post" action="/origicast/checkout">
+    <button class="btn" type="submit" id="pay-test">{{ t.TEST_BUTTON }}</button>
+  </form>
+</section>
+
+{% if offers_live %}
+<section id="offers" aria-labelledby="offers-h">
+  <p class="kicker" id="offers-h">{{ t.OFFERS_KICKER }}</p>
+  <div class="offers">
+    <a class="offer" id="offer-season" href="/origicast/season"><h3 class="display">{{ t.OFFER_SEASON }}</h3><p>{{ t.OFFER_SEASON_LEAD }}</p><span class="soon">{{ t.OFFER_SOON }}</span></a>
+    <a class="offer" id="offer-hour" href="/origicast/hour"><h3 class="display">{{ t.OFFER_HOUR }}</h3><p>{{ t.OFFER_HOUR_LEAD }}</p><span class="soon">{{ t.OFFER_SOON }}</span></a>
+    <a class="offer" id="offer-keep" href="/origicast/keep"><h3 class="display">{{ t.OFFER_KEEP }}</h3><p>{{ t.OFFER_KEEP_LEAD }}</p><span class="soon">{{ t.OFFER_SOON }}</span></a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

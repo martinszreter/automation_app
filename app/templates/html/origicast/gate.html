@@ -1,0 +1,14 @@
+{% extends "origicast/base.html" %}
+{% block title %}{{ t.GATE_TITLE }}{% endblock %}
+{% block content %}
+<section class="hero" id="gate">
+  <p class="kicker">{{ t.TAGLINE }}</p>
+  <h1 class="display">{{ t.GATE_HEADLINE }}</h1>
+  <p class="lead">{{ t.GATE_LEAD }}</p>
+  <form method="post" action="/origicast/gate" class="btn-row">
+    <button class="btn" type="submit" name="answer" value="yes" id="gate-yes">{{ t.GATE_YES }}</button>
+    <button class="btn ghost" type="submit" name="answer" value="no" id="gate-no">{{ t.GATE_NO }}</button>
+  </form>
+  <p class="note">{{ t.GATE_NOTE }}</p>
+</section>
+{% endblock %}

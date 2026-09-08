@@ -1,0 +1,11 @@
+{% extends "origicast/base.html" %}
+{% block title %}{{ t.SUCCESS_TITLE }}{% endblock %}
+{% block content %}
+<section class="hero" id="success">
+  <p class="kicker">{{ t.SUCCESS_KICKER }}</p>
+  <h1 class="display">{{ t.SUCCESS_HEADLINE }}</h1>
+  <p class="lead">{{ t.SUCCESS_LEAD }}</p>
+  {% if session_id %}<p class="ref" style="margin-top:20px">{{ t.SUCCESS_REFERENCE }}: <span id="reference">{{ session_id }}</span></p>{% endif %}
+  <div class="btn-row"><a class="btn ghost" href="/origicast/door">{{ t.SUCCESS_BACK }}</a></div>
+</section>
+{% endblock %}
