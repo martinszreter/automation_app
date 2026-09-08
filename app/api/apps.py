@@ -6,6 +6,8 @@ Flow:
     GET  /apps/checkout         -> Stripe Checkout (setup fee + subscription)
     GET  /apps/success          form: restaurant name, Swiss number, hours
     POST /apps/success          -> row in the n8n data table apps_orders
+    GET  /apps/demo             demo booking form (date, guests, contact)
+    POST /apps/demo             -> confirmation mail to the HQ inbox via HQ Mail
     POST /apps/stripe/webhook   checkout.session.completed -> same table
 
 The Stripe transport and the signature check are the shared helpers in
@@ -28,6 +30,8 @@ from app.services.apps_checkout import (
     AppsPricesNotConfigured,
     create_apps_checkout_session,
 )
+from app.services.apps_demo import demo_booking, demo_mail, today_in_zurich
+from app.services.hq_mail import HQMailError, HQMailNotConfigured, send_hq_mail
 from app.services.apps_orders import (
     AppsOrderError,
     AppsOrderNotConfigured,
@@ -168,6 +172,81 @@ async def apps_success_submit(
         )
 
     return _render("done.html", request=request, t=apps_de)
+
+
+def _demo_page(
+    request: Request,
+    *,
+    values: dict[str, str] | None = None,
+    error: str | None = None,
+    status_code: int = 200,
+) -> HTMLResponse:
+    response = _render(
+        "demo.html",
+        request=request,
+        t=apps_de,
+        values=values or {},
+        error=error,
+        min_date=today_in_zurich().isoformat(),
+    )
+    response.status_code = status_code
+    return response
+
+
+@router.get("/demo", response_class=HTMLResponse, response_model=None, include_in_schema=False)
+async def apps_demo(request: Request) -> HTMLResponse:
+    return _demo_page(request)
+
+
+@router.post("/demo", response_class=HTMLResponse, response_model=None, include_in_schema=False)
+async def apps_demo_submit(
+    request: Request,
+    restaurant_name: str = Form(""),
+    contact: str = Form(""),
+    booking_date: str = Form("", alias="date"),
+    booking_time: str = Form("", alias="time"),
+    guests: str = Form(""),
+    note: str = Form(""),
+    company_website: str = Form(""),
+) -> HTMLResponse:
+    values = {
+        "restaurant_name": restaurant_name,
+        "contact": contact,
+        "date": booking_date,
+        "time": booking_time,
+        "guests": guests,
+        "note": note,
+    }
+    if company_website.strip():
+        # Honeypot: only bots fill the hidden field. Thank them, send nothing.
+        return _render("demo_done.html", request=request, t=apps_de, booking=None)
+
+    try:
+        booking = demo_booking(restaurant_name, contact, booking_date, booking_time, guests, note)
+    except ValueError as exc:
+        reason = str(exc)
+        if reason.startswith("restaurant_name"):
+            error = apps_de.ERROR_RESTAURANT_REQUIRED
+        elif reason.startswith("contact"):
+            error = apps_de.DEMO_ERROR_CONTACT_REQUIRED
+        elif reason.startswith("date"):
+            error = apps_de.DEMO_ERROR_DATE_INVALID
+        else:
+            error = apps_de.DEMO_ERROR_GUESTS_INVALID
+        return _demo_page(request, values=values, error=error, status_code=422)
+
+    subject, body = demo_mail(booking)
+    try:
+        # HQ inbox only (the workflow's default recipient): the form never
+        # picks a recipient, so this page cannot be turned into a mail relay.
+        await send_hq_mail(subject, body)
+    except (HQMailNotConfigured, HQMailError) as exc:
+        # A demo request nobody receives is a lost lead — ask again rather
+        # than pretend it went through.
+        logger.warning("/apps demo booking could not be mailed: %s", exc)
+        return _demo_page(request, values=values, error=apps_de.DEMO_ERROR_SEND_FAILED, status_code=502)
+
+    return _render("demo_done.html", request=request, t=apps_de, booking=booking)
 
 
 async def handle_checkout_completed(session: dict[str, Any]) -> Response:

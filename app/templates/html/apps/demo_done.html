@@ -1,0 +1,15 @@
+{% extends "apps/base.html" %}
+{% block title %}{{ t.DEMO_DONE_TITLE }}{% endblock %}
+{% block header_meta %}<span class="pill">Demo gebucht</span>{% endblock %}
+{% block content %}
+<h1>{{ t.DEMO_DONE_HEADLINE }}</h1>
+<p class="sub">{{ t.DEMO_DONE_LEAD }}</p>
+{% if booking %}
+<div class="card">
+  <p><b>{{ booking.restaurant_name }}</b></p>
+  <p>{{ t.DEMO_FIELD_DATE }}: {{ booking.date }}{% if booking.time %} · {{ booking.time }}{% endif %} · {{ booking.guests }} {{ t.DEMO_GUESTS_WORD }}</p>
+  <p>{{ t.DEMO_FIELD_CONTACT }}: {{ booking.contact }}</p>
+</div>
+{% endif %}
+<p><a class="btn" href="/apps/">Zurück zur Übersicht</a></p>
+{% endblock %}

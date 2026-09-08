@@ -1,6 +1,7 @@
 """Tests for /apps — the Stripe door for the WhatsApp reservation setup."""
 
 import json
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -8,6 +9,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.core.config import settings
 from app.main import app
+from app.services.apps_demo import demo_booking, demo_mail
+from app.services.hq_mail import HQMailError, HQMailNotConfigured
 from app.services.apps_checkout import (
     AppsPricesNotConfigured,
     build_checkout_session_payload,
@@ -453,6 +456,135 @@ async def test_webhook_asks_stripe_to_retry_when_the_row_cannot_be_stored(monkey
     assert response.status_code == 503
 
 
+# --- CHF 1 test link + demo booking -----------------------------------------
+
+
+CHF1_TEST_LINK = "https://buy.stripe.com/6oU5kE8RD3DrgzG2Tx0x20f"
+FUTURE = (date.today() + timedelta(days=7)).isoformat()
+DEMO_FORM = {
+    "restaurant_name": "Beiz am See",
+    "contact": "wirt@beiz.ch",
+    "date": FUTURE,
+    "time": "15:30",
+    "guests": "4",
+    "note": "Terrasse",
+}
+
+
+@pytest.mark.asyncio
+async def test_landing_page_offers_the_chf1_test_link_and_the_demo() -> None:
+    async with _client() as client:
+        response = await client.get("/apps/")
+
+    assert CHF1_TEST_LINK in response.text
+    assert "CHF 1 Test" in response.text
+    assert "/apps/demo" in response.text
+
+
+def test_demo_booking_normalizes_and_validates() -> None:
+    booking = demo_booking("  Beiz am See ", " wirt@beiz.ch ", FUTURE, " 15:30 ", "4", "  Terrasse  ")
+    assert booking["restaurant_name"] == "Beiz am See"
+    assert booking["contact"] == "wirt@beiz.ch"
+    assert booking["date"] == FUTURE
+    assert booking["time"] == "15:30"
+    assert booking["guests"] == 4
+    assert booking["note"] == "Terrasse"
+    assert booking["created_at"]
+
+
+@pytest.mark.parametrize(
+    "restaurant, contact, day, guests, expected",
+    [
+        ("", "wirt@beiz.ch", FUTURE, "4", "restaurant_name"),
+        ("Beiz", "x", FUTURE, "4", "contact"),
+        ("Beiz", "wirt@beiz.ch", "2020-01-01", "4", "date"),
+        ("Beiz", "wirt@beiz.ch", "not-a-date", "4", "date"),
+        ("Beiz", "wirt@beiz.ch", FUTURE, "0", "guests"),
+        ("Beiz", "wirt@beiz.ch", FUTURE, "51", "guests"),
+        ("Beiz", "wirt@beiz.ch", FUTURE, "vier", "guests"),
+    ],
+)
+def test_demo_booking_rejects_bad_input(restaurant, contact, day, guests, expected) -> None:
+    with pytest.raises(ValueError, match=expected):
+        demo_booking(restaurant, contact, day, "", guests)
+
+
+def test_demo_mail_is_german_and_names_the_booking() -> None:
+    booking = demo_booking("Beiz am See", "079 938 03 72", FUTURE, "", "4")
+    subject, body = demo_mail(booking)
+    assert "Beiz am See" in subject and FUTURE in subject and "4 Personen" in subject
+    assert "079 938 03 72" in body
+    assert "Uhrzeit: —" in body
+
+
+@pytest.mark.asyncio
+async def test_demo_page_renders_the_booking_form() -> None:
+    async with _client() as client:
+        response = await client.get("/apps/demo")
+
+    assert response.status_code == 200
+    for name in ("restaurant_name", "contact", "date", "guests"):
+        assert f'name="{name}"' in response.text
+    assert "CHE-223.488.613" in response.text
+
+
+@pytest.mark.asyncio
+async def test_demo_booking_sends_the_confirmation_mail_through_hq_mail() -> None:
+    sent = AsyncMock()
+    with patch("app.api.apps.send_hq_mail", sent):
+        async with _client() as client:
+            response = await client.post("/apps/demo", data=DEMO_FORM)
+
+    assert response.status_code == 200
+    assert "Demo gebucht" in response.text
+    assert "Beiz am See" in response.text
+    subject, body = sent.await_args.args
+    assert "Beiz am See" in subject and FUTURE in subject
+    assert "wirt@beiz.ch" in body and "Terrasse" in body
+    # Only the HQ inbox is written to — the form never picks the recipient.
+    assert "to" not in sent.await_args.kwargs
+
+
+@pytest.mark.asyncio
+async def test_demo_booking_re_asks_in_german_for_a_past_date() -> None:
+    sent = AsyncMock()
+    with patch("app.api.apps.send_hq_mail", sent):
+        async with _client() as client:
+            response = await client.post("/apps/demo", data={**DEMO_FORM, "date": "2020-01-01"})
+
+    assert response.status_code == 422
+    assert "Datum ab heute" in response.text
+    # What was typed comes back, so nothing has to be retyped.
+    assert "Beiz am See" in response.text
+    sent.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_demo_booking_honeypot_swallows_bots() -> None:
+    sent = AsyncMock()
+    with patch("app.api.apps.send_hq_mail", sent):
+        async with _client() as client:
+            response = await client.post(
+                "/apps/demo", data={**DEMO_FORM, "company_website": "http://spam.example"}
+            )
+
+    assert response.status_code == 200
+    sent.assert_not_awaited()
+
+
+@pytest.mark.parametrize("failure", [HQMailError("down"), HQMailNotConfigured("unset")])
+@pytest.mark.asyncio
+async def test_demo_booking_asks_again_when_the_mail_cannot_be_sent(failure) -> None:
+    # A demo request nobody receives is a lost lead: never pretend it went through.
+    with patch("app.api.apps.send_hq_mail", AsyncMock(side_effect=failure)):
+        async with _client() as client:
+            response = await client.post("/apps/demo", data=DEMO_FORM)
+
+    assert response.status_code == 502
+    assert "nochmals" in response.text
+    assert "Beiz am See" in response.text
+
+
 # --- no secrets --------------------------------------------------------------
 
 
@@ -464,6 +596,7 @@ def test_no_endpoint_or_key_is_baked_into_the_apps_code() -> None:
         root / "app" / "api" / "apps.py",
         root / "app" / "services" / "apps_checkout.py",
         root / "app" / "services" / "apps_orders.py",
+        root / "app" / "services" / "apps_demo.py",
         root / "app" / "static" / "apps" / "index.html",
     ]
     for path in sources:
