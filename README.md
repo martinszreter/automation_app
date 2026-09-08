@@ -134,5 +134,21 @@ webhook accepts unauthenticated writes and this repo is public):
 | `SRV_DIR` | Optional, defaults to `/srv` |
 | `REPO_RAW_BASE` | Optional, raw base for `boot/` when pages are not on disk |
 
+* **composed** — `BOARD_HTML` → `ptf-k4x9m2.html`. The canon board is read
+  as above and carried over unchanged (its styles and body sit between
+  `canon:*` markers), wrapped in a repo-owned live layer: the `N/25` live
+  counter, one row per initiative (stage / next / owner / blocker) and the
+  last-updated stamp, all rendered from `boot/data/checklist.json`. The
+  checklist is also published as `checklist-k4x9m2.json`. If canon cannot be
+  read, the board the earlier boot step already wrote to `/srv` is used as
+  the canon source, so the live layer never blanks the board. External
+  font links in the canon head are dropped and logged (`boot5 WARN`): the
+  views use system fonts only.
+
 Adding a view is a pull request: append to `CANON_VIEWS` or `REPO_VIEWS` in
 `boot/views_boot.py`, and for a repo-backed view drop the page in `boot/pages/`.
+
+`.github/workflows/quality.yml` builds the views against `ci/stub_canon.py`
+(fixtures in `ci/fixtures/`, never the real canon) and gates them with
+Lighthouse mobile ≥ 90 (`ci/lighthouse.py`) and the Playwright suite in
+`e2e/`.

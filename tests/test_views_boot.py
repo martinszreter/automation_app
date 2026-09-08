@@ -64,7 +64,7 @@ def test_bus_view_is_registered_like_the_other_views() -> None:
     assert "bus-k4x9m2.html" in files
 
     canon_files = [filename for _, filename in views_boot.CANON_VIEWS]
-    assert canon_files == [
+    assert canon_files[:6] == [
         "trading-k4x9m2.html",
         "x-ops-k4x9m2.html",
         "grokywood-ops-k4x9m2.html",
@@ -72,6 +72,9 @@ def test_bus_view_is_registered_like_the_other_views() -> None:
         "next-k4x9m2.html",
         "init-chamdigital-k4x9m2.html",
     ]
+    # Every initiative SPEC view follows the same naming; none may collide.
+    assert all(name.startswith("init-") and name.endswith("-k4x9m2.html") for name in canon_files[6:])
+    assert len(canon_files) == len(set(canon_files))
 
 
 def test_bus_page_ships_with_a_placeholder_not_a_live_endpoint() -> None:

@@ -1,0 +1,13 @@
+{
+  "name": "startend-e2e",
+  "private": true,
+  "description": "Stranger e2e (Playwright) and Lighthouse gate for the STARTEND public pages and HQ views. Run from CI: .github/workflows/quality.yml",
+  "scripts": {
+    "test": "playwright test",
+    "lighthouse": "python3 ../ci/lighthouse.py"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "lighthouse": "12.2.1"
+  }
+}

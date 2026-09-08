@@ -1,0 +1,261 @@
+{
+  "_about": "Portfolio checklist behind hq.startend.ch. One row per initiative; `live` is true only when a stranger can reach the public page and pay the CHF 1 test. Edit by pull request — boot/views_boot.py renders it into the board, NEXT and SOP views at every boot. Governance (canon, decisions) stays in claude.ai; this file is operational state only.",
+  "target": 25,
+  "updated": "2026-09-08",
+  "stages": ["spec", "build", "sell", "live", "paused"],
+  "initiatives": [
+    {
+      "id": "apps",
+      "name": "3.5b · WhatsApp reservation (/apps)",
+      "stage": "live",
+      "live": true,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "First paying restaurant in Zug/Zurich via manual outreach",
+      "blocker": "",
+      "link": "https://www.startend.ch/apps/",
+      "marcin": {"action": "Send 5 ZRH restaurant mails (docs/ZRH_R_OUTREACH.md)", "link": "https://www.startend.ch/apps/demo"}
+    },
+    {
+      "id": "x-autopilot",
+      "name": "X Autopilot (/x-autopilot)",
+      "stage": "live",
+      "live": true,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Refund the CHF 1 test, keep tiers 149/330/990 payable",
+      "blocker": "",
+      "link": "https://www.startend.ch/x-autopilot/",
+      "marcin": {"action": "Confirm PRICE_ID_XA_* are set on Railway", "link": "https://www.startend.ch/x-autopilot/"}
+    },
+    {
+      "id": "liesnicht",
+      "name": "LIESNICHT (CH host tenant)",
+      "stage": "live",
+      "live": true,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Lighthouse ≥ 90 on landing, stranger e2e in CI",
+      "blocker": "",
+      "link": "https://liesnicht.ch/"
+    },
+    {
+      "id": "nieczytaj",
+      "name": "NIECZYTAJ (PL tenant)",
+      "stage": "sell",
+      "live": true,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "PL copy pass, CHF/PLN price check",
+      "blocker": "",
+      "link": "https://nieczytaj.pl/"
+    },
+    {
+      "id": "chamdigital",
+      "name": "4.1 · ChamDigital (Swiss websites, site-engine)",
+      "stage": "build",
+      "live": false,
+      "owner": "GPT_CURSOR",
+      "next": "Product-quality + checkout gate, then 20–50 Cham/Ennetsee previews",
+      "blocker": "Checkout gate not passed",
+      "link": ""
+    },
+    {
+      "id": "grokywood",
+      "name": "GROKYWOOD",
+      "stage": "build",
+      "live": false,
+      "owner": "GROK_MARKET",
+      "next": "Payable CHF 1 test on the landing page",
+      "blocker": "",
+      "link": "https://www.startend.ch/grokywood/"
+    },
+    {
+      "id": "leadmine",
+      "name": "LEADMINE",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Error alerts wired, first paid list",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "tradersland",
+      "name": "TRADERSLAND",
+      "stage": "spec",
+      "live": false,
+      "owner": "GPT_CURSOR",
+      "next": "Spec → door page",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "optimizeyourkid",
+      "name": "OPTIMIZEYOURKID",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Door page with CHF 1 test",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "wordblast",
+      "name": "WORDBLAST",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Store listing + paid test",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "zorbeck",
+      "name": "ZORBECK",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Railway deploy green, CHF 1 test",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "39thfloor",
+      "name": "39THFLOOR",
+      "stage": "spec",
+      "live": false,
+      "owner": "GPT_CURSOR",
+      "next": "Spec → door page",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "xcom",
+      "name": "XCOM",
+      "stage": "spec",
+      "live": false,
+      "owner": "GPT_CURSOR",
+      "next": "Spec → door page",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "aikompetenz",
+      "name": "AIKOMPETENZ",
+      "stage": "spec",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Spec → door page",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "origicast",
+      "name": "ORIGICAST (21+ door)",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Door with 21+ gate and CHF 1 test (W2-P3)",
+      "blocker": "Season/Hour/Keep hidden until ORIGICAST_LIVE=1",
+      "link": "https://www.startend.ch/origicast/",
+      "marcin": {"action": "Pay the ORIGICAST CHF 1 test, then refund it in Stripe", "link": "https://www.startend.ch/origicast/"}
+    },
+    {
+      "id": "trading",
+      "name": "Trading (paper only, tradebot)",
+      "stage": "build",
+      "live": false,
+      "owner": "GROK_MARKET",
+      "next": "Paper results on /trading-k4x9m2.html",
+      "blocker": "Paper only by rule — no capital",
+      "link": ""
+    },
+    {
+      "id": "unfairstart",
+      "name": "UNFAIRSTART",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Door page with CHF 1 test",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "workproof-ai",
+      "name": "WORKPROOF AI",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Door page with CHF 1 test",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "mobile-apps",
+      "name": "Mobile apps",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Ops view current, first store build",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "hq-board",
+      "name": "HQ board (hq.startend.ch)",
+      "stage": "live",
+      "live": true,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Mobile-first live layer, Lighthouse ≥ 90 in CI (W2-P1)",
+      "blocker": "",
+      "link": "https://hq.startend.ch/ptf-k4x9m2.html"
+    },
+    {
+      "id": "agent-bus",
+      "name": "Agent Bus V0",
+      "stage": "live",
+      "live": true,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Keep retention pruning green",
+      "blocker": "",
+      "link": "https://hq.startend.ch/bus-k4x9m2.html"
+    },
+    {
+      "id": "next-sop",
+      "name": "NEXT + SOP views",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Click queue, collapsible sections, search (W2-P2)",
+      "blocker": "",
+      "link": "https://hq.startend.ch/next-k4x9m2.html"
+    },
+    {
+      "id": "deploy-template",
+      "name": "Deploy template",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "One-command Railway deploy for new doors",
+      "blocker": "",
+      "link": ""
+    },
+    {
+      "id": "startend-site",
+      "name": "startend.ch (home + contact)",
+      "stage": "live",
+      "live": true,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Keep Impressum/AGB/Datenschutz on every page",
+      "blocker": "",
+      "link": "https://www.startend.ch/"
+    },
+    {
+      "id": "ops-alerts",
+      "name": "Ops: /healthz + error alerts (n8n)",
+      "stage": "build",
+      "live": false,
+      "owner": "CLAUDE_CLAUDECODE",
+      "next": "Every public service posts 5xx to the Engine Error Alerts workflow",
+      "blocker": "",
+      "link": ""
+    }
+  ]
+}
