@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import Any
 from urllib.parse import quote
 
@@ -28,6 +29,7 @@ from app.services.google_oauth import (
     LOGIN_SCOPES,
     SHEETS_SCOPES,
 )
+from app.services.hq_mail import HQMailError, HQMailNotConfigured, send_hq_mail
 from app.services.stripe_checkout import (
     StripeError,
     StripeNotConfigured,
@@ -63,6 +65,9 @@ router = APIRouter(prefix="/x-autopilot", tags=["x-autopilot"])
 _USER_KEY = "xa_user"
 _CHECKOUT_KEY = "xa_checkout_session_id"
 _SESSION_ID_MAX = 160
+# Don't re-send the Sheets reconnect request on every panel view.
+_SHEETS_RECONNECT_EMAIL_COOLDOWN = 6 * 3600
+_sheets_reconnect_email_sent_at = 0.0
 
 
 def _base_url(request: Request) -> str:
@@ -71,6 +76,31 @@ def _base_url(request: Request) -> str:
         request.headers.get("x-forwarded-proto"),
         request.headers.get("x-forwarded-host") or request.headers.get("host"),
     )
+
+
+async def _request_sheets_reconnect(request: Request) -> None:
+    """Ask Marcin (via HQ Mail) to reconnect Sheets when the refresh token is missing."""
+    global _sheets_reconnect_email_sent_at
+    now = time.time()
+    if now - _sheets_reconnect_email_sent_at < _SHEETS_RECONNECT_EMAIL_COOLDOWN:
+        return
+    key = settings.google_sheets_reconnect_key.strip()
+    if not key:
+        return
+    reconnect_url = f"{_base_url(request)}/x-autopilot/sheets/reconnect?key={key}"
+    body = (
+        "X Autopilot's Google Sheets access needs to be reconnected "
+        "(GOOGLE_SHEETS_REFRESH_TOKEN is missing or expired).\n\n"
+        f"Reconnect: {reconnect_url}\n\n"
+        "This grants read-only access to the configured spreadsheet and "
+        "shows a new refresh token to paste into Railway."
+    )
+    try:
+        await send_hq_mail("X Autopilot: Sheets reconnect needed", body)
+    except (HQMailNotConfigured, HQMailError) as exc:
+        logger.warning("Could not send Sheets reconnect email: %s", exc)
+        return
+    _sheets_reconnect_email_sent_at = now
 
 
 def _render(name: str, **context: Any) -> HTMLResponse:
@@ -381,6 +411,7 @@ async def panel(request: Request, db: AsyncSession = Depends(get_db)) -> Respons
             sheets = await google_oauth.read_sheet_values()
         except GoogleNotConfigured as exc:
             sheets_error = str(exc)
+            await _request_sheets_reconnect(request)
         except GoogleOAuthError as exc:
             sheets_error = str(exc)
 
