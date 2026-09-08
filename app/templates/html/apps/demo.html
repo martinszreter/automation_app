@@ -1,0 +1,61 @@
+{% extends "apps/base.html" %}
+{% block title %}{{ t.DEMO_TITLE }}{% endblock %}
+{% block header_meta %}<span class="pill">Demo</span>{% endblock %}
+{% block content %}
+<style>
+  input[type=date],input[type=time],input[type=number]{
+    width:100%;padding:13px 12px;border:1px solid var(--rule);border-radius:2px;background:#fff;
+    font-family:'Archivo',sans-serif;font-size:16px;color:var(--ink)
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  @media (max-width:560px){ .row{grid-template-columns:1fr} }
+  .hp{position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden}
+</style>
+<h1>{{ t.DEMO_HEADLINE }}</h1>
+<p class="sub">{{ t.DEMO_LEAD }}</p>
+
+{% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+
+<form class="card" method="post" action="/apps/demo">
+  <div class="field">
+    <label for="restaurant_name">{{ t.DEMO_FIELD_RESTAURANT }}</label>
+    <input type="text" id="restaurant_name" name="restaurant_name" required maxlength="160"
+           autocomplete="organization" value="{{ values.restaurant_name }}">
+  </div>
+
+  <div class="field">
+    <label for="contact">{{ t.DEMO_FIELD_CONTACT }}</label>
+    <input type="text" id="contact" name="contact" required maxlength="160"
+           autocomplete="email" value="{{ values.contact }}">
+    <p class="hint">{{ t.DEMO_FIELD_CONTACT_HINT }}</p>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label for="date">{{ t.DEMO_FIELD_DATE }}</label>
+      <input type="date" id="date" name="date" required min="{{ min_date }}" value="{{ values.date }}">
+    </div>
+    <div class="field">
+      <label for="time">{{ t.DEMO_FIELD_TIME }}</label>
+      <input type="time" id="time" name="time" value="{{ values.time }}">
+    </div>
+    <div class="field">
+      <label for="guests">{{ t.DEMO_FIELD_GUESTS }}</label>
+      <input type="number" id="guests" name="guests" required min="1" max="50" inputmode="numeric"
+             value="{{ values.guests }}">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="note">{{ t.DEMO_FIELD_NOTE }}</label>
+    <textarea id="note" name="note" maxlength="500">{{ values.note }}</textarea>
+  </div>
+
+  <div class="hp" aria-hidden="true">
+    <label for="company_website">Website</label>
+    <input type="text" id="company_website" name="company_website" tabindex="-1" autocomplete="off">
+  </div>
+
+  <button class="btn" type="submit">{{ t.DEMO_SUBMIT }}</button>
+</form>
+{% endblock %}
