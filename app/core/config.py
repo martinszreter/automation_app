@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     google_sheets_range: str = "Sheet1!A1:D20"
     google_sheets_reconnect_key: str = ""
 
+    # HQ Mail Lane — reusable outbound email webhook for internal HQ
+    # notifications (e.g. asking Marcin to reconnect Sheets access). Env-only:
+    # a webhook URL is a write key, so it never enters the repo.
+    hq_mail_webhook_url: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
