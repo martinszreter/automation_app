@@ -39,6 +39,19 @@ CANON_VIEWS: list[tuple[str, str]] = [
     ("MOBILE_OPS_HTML", "mobile-ops-k4x9m2.html"),
     ("NEXT_HTML", "next-k4x9m2.html"),
     ("INIT_CHAMDIGITAL_HTML", "init-chamdigital-k4x9m2.html"),
+    ("INIT_APPS_HTML", "init-apps-k4x9m2.html"),
+    ("INIT_GROKYWOOD_HTML", "init-grokywood-k4x9m2.html"),
+    ("INIT_LEADMINE_HTML", "init-leadmine-k4x9m2.html"),
+    ("INIT_XAUTOPILOT_HTML", "init-x-autopilot-k4x9m2.html"),
+    ("INIT_TRADERSLAND_HTML", "init-tradersland-k4x9m2.html"),
+    ("INIT_OPTIMIZEYOURKID_HTML", "init-optimizeyourkid-k4x9m2.html"),
+    ("INIT_WORDBLAST_HTML", "init-wordblast-k4x9m2.html"),
+    ("INIT_ZORBECK_HTML", "init-zorbeck-k4x9m2.html"),
+    ("INIT_LIESNICHT_HTML", "init-liesnicht-k4x9m2.html"),
+    ("INIT_NIECZYTAJ_HTML", "init-nieczytaj-k4x9m2.html"),
+    ("INIT_39THFLOOR_HTML", "init-39thfloor-k4x9m2.html"),
+    ("INIT_XCOM_HTML", "init-xcom-k4x9m2.html"),
+    ("INIT_AIKOMPETENZ_HTML", "init-aikompetenz-k4x9m2.html"),
 ]
 
 # Views whose HTML is static and therefore belongs in the repo rather than in
