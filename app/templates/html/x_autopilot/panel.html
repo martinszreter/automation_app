@@ -1,40 +1,97 @@
 {% extends "x_autopilot/base.html" %}
-{% block title %}Panel — X Autopilot{% endblock %}
+{% block title %}{{ t.PANEL_TITLE }}{% endblock %}
 {% block header_meta %}
-  {% if plan_active %}
-  <span class="pill pill-on">Plan active</span>
+  {% if plan_active and panel and panel.paused %}
+  <span class="pill pill-off" data-testid="plan-paused">{{ t.PILL_PAUSED }}</span>
+  {% elif plan_active %}
+  <span class="pill pill-on" data-testid="plan-active">{{ t.PILL_ACTIVE }}</span>
   {% else %}
-  <span class="pill pill-off">No active plan</span>
+  <span class="pill pill-off">{{ t.PILL_NONE }}</span>
   {% endif %}
 {% endblock %}
 {% block content %}
-<h1>X Autopilot panel</h1>
-<p class="sub">Signed in as <b>{{ user.email }}</b></p>
+<h1>X Autopilot</h1>
+<p class="sub">{{ t.SIGNED_IN_AS }} <b>{{ user.email }}</b></p>
 
 <div class="card">
   <ul class="facts">
-    <li><span class="k">Plan</span><span>{% if plan_active %}Active{% elif plan %}{{ plan.status.value }}{% else %}None{% endif %}</span></li>
-    <li><span class="k">Product</span><span>X Autopilot</span></li>
+    <li><span class="k">{{ t.FACT_PLAN }}</span><span>{% if plan_active and panel and panel.paused %}{{ t.STATUS_PAUSED }}{% elif plan_active %}{{ t.STATUS_ACTIVE }}{% elif plan %}{{ plan.status.value }}{% else %}{{ t.STATUS_NONE }}{% endif %}</span></li>
+    <li><span class="k">{{ t.FACT_PRODUCT }}</span><span>X Autopilot</span></li>
     {% if plan %}
-    <li><span class="k">Amount</span><span>{{ amount_label }} {{ plan.currency|upper }}</span></li>
-    <li><span class="k">Stripe email</span><span>{{ plan.stripe_email or plan.email }}</span></li>
+    <li><span class="k">{{ t.FACT_AMOUNT }}</span><span>{{ amount_label }} {{ plan.currency|upper }}</span></li>
+    <li><span class="k">{{ t.FACT_STRIPE_EMAIL }}</span><span>{{ plan.stripe_email or plan.email }}</span></li>
+    {% if panel and panel.agent %}
+    <li><span class="k">{{ t.FACT_AGENT }}</span><span>{{ panel.agent.handle or panel.agent.agent_name }}</span></li>
+    {% endif %}
+    <li><span class="k">{{ t.FACT_NEXT_INVOICE }}</span><span data-testid="next-invoice">{% if panel and panel.invoice %}{{ panel.invoice.currency }} {{ invoice_label }}{% if panel.invoice.due_at %} · {{ panel.invoice.due_at.strftime('%d.%m.%Y') }}{% endif %}{% elif plan.stripe_subscription_id %}{{ t.INVOICE_UNKNOWN }}{% else %}{{ t.INVOICE_NONE }}{% endif %}</span></li>
     {% endif %}
   </ul>
   {% if not plan_active %}
-  <p class="sub" style="margin:16px 0 0">No active plan on this Google account. Pay from the <a href="/x-autopilot/">pricing page</a> and come back — no contact needed.</p>
+  <p class="sub" style="margin:16px 0 0">{{ t.NO_PLAN }} <a href="/x-autopilot/">{{ t.PRICING_LINK }}</a></p>
   {% endif %}
   {% if plan_active and plan and plan.amount_cents <= 100 %}
   <form method="post" action="/x-autopilot/panel/refund" style="margin-top:18px">
-    <button class="btn btn-ghost" type="submit">Refund CHF 1 test payment</button>
+    <button class="btn btn-ghost" type="submit">{{ t.REFUND_BUTTON }}</button>
   </form>
   {% endif %}
 </div>
 
-{% if plan_active %}
+{% if plan_active and panel %}
+<div class="card" data-testid="calendar">
+  <h2 style="font-size:18px;margin-bottom:8px">{{ t.CALENDAR_TITLE }}</h2>
+  <p class="sub" style="margin-bottom:12px">{% if panel.paused %}{{ t.CALENDAR_PAUSED }}{% else %}{{ t.CALENDAR_HINT }}{% endif %}</p>
+  <table>
+    <tbody>
+      {% for day in panel.calendar %}
+      <tr>
+        <td><b>{{ day.label }}</b></td>
+        <td>
+          {% for slot in day.slots %}
+          <span class="pill {% if slot.status == 'paused' %}pill-off{% else %}pill-on{% endif %}" data-testid="scheduled-post" data-status="{{ slot.status }}">{{ slot.at_local.strftime('%H:%M') }} · {% if slot.status == 'paused' %}{{ t.SLOT_STATUS_PAUSED }}{% else %}{{ t.SLOT_STATUS_SCHEDULED }}{% endif %}</span>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if panel.paused %}
+  <form method="post" action="/x-autopilot/panel/resume" style="margin-top:16px">
+    <button class="btn" type="submit" data-testid="resume-button">{{ t.RESUME_BUTTON }}</button>
+  </form>
+  {% else %}
+  <form method="post" action="/x-autopilot/panel/pause" style="margin-top:16px">
+    <button class="btn btn-ghost" type="submit" data-testid="pause-button">{{ t.PAUSE_BUTTON }}</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card" data-testid="posts">
+  <h2 style="font-size:18px;margin-bottom:8px">{{ t.POSTS_TITLE }}</h2>
+  {% if panel.lane_error %}
+  <p class="sub">{{ t.LANE_UNAVAILABLE }}</p>
+  {% elif panel.posts %}
+  <table>
+    <thead><tr><th>{{ t.COL_DATE }}</th><th>{{ t.COL_POST }}</th><th>{{ t.COL_IMPRESSIONS }}</th><th>{{ t.COL_LIKES }}</th></tr></thead>
+    <tbody>
+      {% for post in panel.posts[:20] %}
+      <tr>
+        <td class="mono">{{ (post.posted_at or '')[:10] }}</td>
+        <td>{{ post.text }}</td>
+        <td class="mono">{{ post.impressions if post.impressions is not none else t.METRICS_PENDING }}</td>
+        <td class="mono">{{ post.likes if post.likes is not none else t.METRICS_PENDING }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="sub">{{ t.NO_POSTS }}</p>
+  {% endif %}
+</div>
+
 <div class="card">
-  <h2 style="font-size:18px;margin-bottom:8px">Google Sheets</h2>
+  <h2 style="font-size:18px;margin-bottom:8px">{{ t.SHEETS_TITLE }}</h2>
   {% if sheets %}
-  <p class="pill pill-on">Read ok · {{ sheets.row_count }} rows</p>
+  <p class="pill pill-on">{{ t.SHEETS_READ_OK }} · {{ sheets.row_count }} {{ t.SHEETS_ROWS }}</p>
   <table>
     <tbody>
       {% for row in sheets.rows %}
@@ -43,12 +100,12 @@
     </tbody>
   </table>
   {% else %}
-  <p>{{ sheets_error or "Sheets is not connected. Operator: set GOOGLE_SHEETS_REFRESH_TOKEN (env only) or open /x-autopilot/sheets/reconnect." }}</p>
+  <p>{{ t.SHEETS_NOT_CONNECTED }}</p>
   {% endif %}
 </div>
 {% endif %}
 
 <form method="post" action="/x-autopilot/auth/logout" style="margin-top:8px">
-  <button class="btn btn-ghost" type="submit">Sign out</button>
+  <button class="btn btn-ghost" type="submit">{{ t.SIGN_OUT }}</button>
 </form>
 {% endblock %}

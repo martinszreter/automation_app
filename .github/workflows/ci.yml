@@ -37,6 +37,69 @@ jobs:
       - run: ruff check app tests
       - run: python -m pytest -q
 
+  # Product journeys behind sign-in (panel, /apps demo + admin) against a real
+  # Postgres with migrations applied; the CI-only XA_E2E_KEY signs a test
+  # buyer in. Complements the bare-checkout stranger journey below.
+  e2e_products:
+    name: product e2e (Playwright + Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: startend_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PYTHONPATH: .
+      DATABASE_URL: postgresql+asyncpg://postgres:test@localhost:5432/startend_e2e
+      SESSION_SECRET: ci-only-session-secret
+      SESSION_HTTPS_ONLY: "false"
+      PUBLIC_BASE_URL: http://127.0.0.1:8000
+      XA_E2E_KEY: e2e-key
+      E2E_BASE_URL: http://127.0.0.1:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: alembic upgrade head
+      - name: Start the app
+        run: |
+          nohup uvicorn app.main:app --host 127.0.0.1 --port 8000 > uvicorn.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/health && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/health
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+        working-directory: e2e
+      - run: npx playwright install --with-deps chromium
+        working-directory: e2e
+      - run: npx playwright test
+        working-directory: e2e
+      - name: App log on failure
+        if: failure()
+        run: tail -n 200 uvicorn.log || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-products
+          path: e2e/playwright-report
+          retention-days: 7
+
   node:
     name: nieczytaj / liesnicht (Node)
     runs-on: ubuntu-latest

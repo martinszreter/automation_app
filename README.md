@@ -85,6 +85,32 @@ cures, get-rich promises, the customer's own terms), `wrong_language`,
 posted to that webhook. Among the survivors the pick is a soft score (length
 near 200, a concrete number, structure, few hashtags) — never a veto.
 
+## X Autopilot panel
+
+`/x-autopilot/panel` (Google Sign-In, German) shows the paid customer their
+plan, the **calendar of the next 7 days' scheduled posts**, the published posts
+with impressions / likes, the **next Stripe invoice**, and a **pause / resume**
+switch. The posts themselves live in n8n; the panel reads them through the
+panel lane — the n8n workflow *XA Panel Lane* — whose webhook URL is env-only:
+
+| Variable | Purpose |
+| --- | --- |
+| `N8N_XA_PANEL_URL` | Panel lane webhook. Actions: `profile` (agents row by customer email, credential columns never returned), `recent_posts` (post_log + post_metrics), `set_status` (pause/resume the agent) |
+| `XA_E2E_KEY` | CI only: `/x-autopilot/e2e/login?key=…&email=…` signs a synthetic paid buyer in so Playwright can drive the panel. Unset in production — the route is then 404 |
+
+Without the lane the panel still renders: the calendar falls back to one post
+a day at 09:00 Zurich, metrics show "not reachable", the plan keeps running.
+Pause writes `paused_at` on the plan **and** sets the agent's `status` to
+`paused` through the lane, so the engines stop; resume reverses both.
+
+**Weekly digest:** `POST /x-autopilot/digest/run` (header `X-Judge-Key`) mails
+every active plan its week — posts, impressions, likes, what is scheduled —
+through HQ Mail to the plan's e-mail. Schedule it from n8n (Schedule trigger →
+HTTP Request, e.g. Monday 08:00 Zurich); it is idempotent per run.
+
+**Stranger e2e (CI):** `e2e/` holds the Playwright checks; the `e2e` job applies
+migrations, starts uvicorn and runs them on every push and PR.
+
 ## Stripe webhook
 
 One endpoint serves both ventures: **`POST /stripe/webhook`**, signature-verified

@@ -1,0 +1,11 @@
+{
+  "name": "startend-e2e",
+  "private": true,
+  "description": "Stranger end-to-end checks (Playwright) for the public products",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0"
+  }
+}
