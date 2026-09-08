@@ -1,0 +1,16 @@
+{
+  "name": "zorbeck-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Stranger e2e (Playwright) and Lighthouse gate for the Zorbeck service.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "lighthouse": "node lighthouse.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "chrome-launcher": "1.2.1",
+    "lighthouse": "13.4.1"
+  }
+}

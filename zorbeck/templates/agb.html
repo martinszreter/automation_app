@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}AGB – Zorbeck{% endblock %}
+{% block description %}Allgemeine Geschäftsbedingungen für den Zorbeck Deal-Alarm der STARTEND GmbH.{% endblock %}
+{% block content %}
+  <section class="legal">
+    <h1>Allgemeine Geschäftsbedingungen</h1>
+    <p class="muted">Stand: 8. September 2026</p>
+
+    <h2>1. Anbieter</h2>
+    <p>{{ legal.company }}, {{ legal.street }}, {{ legal.city }}, Schweiz, UID {{ legal.uid }} («wir»). Kontakt: <a href="mailto:{{ legal.email }}">{{ legal.email }}</a>.</p>
+
+    <h2>2. Leistung</h2>
+    <p>Der Zorbeck Deal-Alarm umfasst für eine von Ihnen genannte Stadt und Ihr Budget: einen ersten Report mit Immobilien-Inseraten, deren Preis unter dem lokalen Durchschnitt liegt, innerhalb von 24 Stunden nach der Zahlung, sowie während 30 Tagen eine Meldung per E-Mail, sobald ein neues passendes Inserat erscheint. Die Leistung endet nach 30 Tagen automatisch und verlängert sich nicht.</p>
+    <p>Die Inserate stammen von öffentlichen Portalen. Wir prüfen weder die Objekte noch die Inserenten. Der Deal-Alarm ist ein Hinweis, keine Bewertung, keine Anlage- und keine Rechtsberatung.</p>
+
+    <h2>3. Preis und Zahlung</h2>
+    <p>Der Preis wird auf der Startseite in CHF angezeigt und einmalig fällig. Die Zahlung erfolgt über Stripe. Es entsteht kein Abonnement.</p>
+
+    <h2>4. Rückerstattung</h2>
+    <p>Erhalten Sie innerhalb von 24 Stunden nach der Zahlung keinen ersten Report, erstatten wir den vollen Betrag. Schreiben Sie dazu an <a href="mailto:{{ legal.email }}">{{ legal.email }}</a> mit der E-Mail-Adresse, die Sie bei der Bestellung angegeben haben.</p>
+
+    <h2>5. Haftung</h2>
+    <p>Wir haften nicht für Entscheidungen, die Sie aufgrund eines Reports oder einer Meldung treffen, und nicht für die Richtigkeit oder Verfügbarkeit fremder Inserate. Die Haftung für leichte Fahrlässigkeit ist ausgeschlossen, soweit gesetzlich zulässig.</p>
+
+    <h2>6. Anwendbares Recht</h2>
+    <p>Es gilt Schweizer Recht. Gerichtsstand ist Cham, Kanton Zug, soweit keine zwingende gesetzliche Regelung entgegensteht.</p>
+  </section>
+{% endblock %}

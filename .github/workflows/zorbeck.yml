@@ -1,0 +1,81 @@
+name: zorbeck
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "zorbeck/**"
+      - ".github/workflows/zorbeck.yml"
+  pull_request:
+    paths:
+      - "zorbeck/**"
+      - ".github/workflows/zorbeck.yml"
+
+jobs:
+  quality:
+    name: lint + pytest + stranger e2e + Lighthouse
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: zorbeck
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: zorbeck/requirements*.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: ruff check .
+      # Unit tests run WITHOUT the stub environment on purpose: they prove the
+      # service does nothing outbound by default.
+      - run: python -m pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: zorbeck/e2e/package-lock.json
+      - run: npm ci
+        working-directory: zorbeck/e2e
+      - run: npx playwright install --with-deps chromium
+        working-directory: zorbeck/e2e
+
+      - name: Stub environment for the stranger test
+        run: grep -v '^#' e2e/stub.env | grep '=' >> "$GITHUB_ENV"
+
+      - name: Start the service
+        run: |
+          nohup python -m uvicorn app:app --host 127.0.0.1 --port 8765 > uvicorn.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8765/healthz && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8765/healthz | grep -q '"stub":true'
+
+      - name: Stranger e2e (Playwright, mobile)
+        run: npx playwright test
+        working-directory: zorbeck/e2e
+        env:
+          CI: "1"
+
+      - name: Lighthouse gate (mobile >= 90, CLS 0, no console errors)
+        run: node lighthouse.mjs
+        working-directory: zorbeck/e2e
+
+      - name: Service log
+        if: always()
+        run: tail -n 200 uvicorn.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: zorbeck-e2e
+          path: |
+            zorbeck/e2e/playwright-report
+            zorbeck/e2e/test-results
+            zorbeck/e2e/lighthouse-results
+            zorbeck/uvicorn.log
+          if-no-files-found: ignore

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Zorbeck{% endblock %}</title>
+  <meta name="description" content="{% block description %}Zorbeck meldet Ihnen Immobilien-Inserate unter dem lokalen Durchschnittspreis. Eine Stadt, Ihr Budget, {{ price_label }} einmalig.{% endblock %}">
+  {% block robots %}{% endblock %}
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23B8371F'/%3E%3Cpath d='M18 18h28v8L30 38h16v8H18v-8l16-12H18z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <a class="brand" href="/">Zorbeck</a>
+      <span class="by">von STARTEND GmbH</span>
+    </header>
+
+    <main id="main">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <p>{{ legal.company }} · UID {{ legal.uid }} · {{ legal.street }} · {{ legal.city }} · <a href="mailto:{{ legal.email }}">{{ legal.email }}</a></p>
+      <p><a href="/impressum">Impressum</a> · <a href="/agb">AGB</a> · <a href="/datenschutz">Datenschutz</a> · Keine Cookies, kein Tracking.</p>
+    </footer>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

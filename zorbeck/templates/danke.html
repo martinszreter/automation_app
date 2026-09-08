@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Zorbeck – Zahlung{% endblock %}
+{% block description %}Bestätigung Ihres Zorbeck Deal-Alarms.{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  {% if state == "paid" %}
+    <section class="hero">
+      <h1 data-testid="success-title">{{ de.SUCCESS_TITLE }}</h1>
+      <p class="sub">Eine Bestätigung ist unterwegs an <strong data-testid="success-email">{{ intake.email }}</strong>.</p>
+    </section>
+    <section class="card" aria-labelledby="intake-title">
+      <h2 id="intake-title">Ihre Angaben</h2>
+      <dl class="facts">
+        <dt>Stadt</dt><dd data-testid="intake-city">{{ intake.city }}</dd>
+        <dt>Budget</dt><dd data-testid="intake-budget">{{ intake.budget_label }}</dd>
+        <dt>Bezahlt</dt><dd data-testid="intake-amount">{{ amount }}</dd>
+      </dl>
+    </section>
+  {% elif state == "pending" %}
+    <section class="hero">
+      <h1>Zahlung wird geprüft</h1>
+      <p class="sub" data-testid="pending">{{ de.SUCCESS_PENDING }}</p>
+    </section>
+  {% else %}
+    <section class="hero">
+      <h1>Zahlung nicht gefunden</h1>
+      <p class="sub" data-testid="unknown">{{ de.SUCCESS_UNKNOWN }}</p>
+      <p><a class="link" href="/">Zurück zur Startseite</a></p>
+    </section>
+  {% endif %}
+{% endblock %}
