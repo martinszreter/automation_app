@@ -25,11 +25,15 @@ safe to make public.
 
 from __future__ import annotations
 
+import datetime as _dt
+import html as _html
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
+from typing import Callable
 
 # canon key -> file served under /srv.
 CANON_VIEWS: list[tuple[str, str]] = [
@@ -66,8 +70,100 @@ PLACEHOLDERS: dict[str, str] = {
     "__BUS_STATE_URL__": "BUS_STATE_URL",
 }
 
+# Operational state rendered into the composed views below. Edited by pull
+# request; canon (strategy, decisions) is deliberately not in this repository.
+CHECKLIST_PATH = "data/checklist.json"
+CHECKLIST_FILE = "checklist-k4x9m2.json"
+CHECKLIST_TARGET = 25
+
+# Composed views: a canon-backed page wrapped in a repo-owned live layer. The
+# canon content is carried over byte for byte (styles and body) — only the
+# document shell around it is ours. If the canon read fails, the file the
+# earlier boot script already wrote to /srv is used as the canon source, so a
+# canon outage never blanks the board.
+#   canon key -> (file, composer)
+COMPOSED_VIEWS: list[tuple[str, str, str]] = [
+    ("BOARD_HTML", "ptf-k4x9m2.html", "board"),
+]
+
 DEFAULT_RAW_BASE = "https://raw.githubusercontent.com/martinszreter/automation_app/main/boot"
 TIMEOUT_SECONDS = 25
+
+CANON_STYLE_BEGIN = "<!-- canon:style begin -->"
+CANON_STYLE_END = "<!-- canon:style end -->"
+CANON_BODY_BEGIN = "<!-- canon:body begin -->"
+CANON_BODY_END = "<!-- canon:body end -->"
+
+FAVICON = (
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E"
+    "%3Cpath d='M16 0H64V48H48V64H0V16H16Z' fill='%23DA291C'/%3E"
+    "%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E"
+    "%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E"
+)
+
+# System fonts only: the quality bar forbids external fonts, and every byte
+# the page needs is in the file itself, so it renders in one round trip.
+LIVE_LAYER_CSS = """
+.lb{--lb-ink:#111114;--lb-grey:#6B6B72;--lb-line:#DCDCE2;--lb-wash:#F6F5F2;--lb-swiss:#DA291C;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  color:var(--lb-ink);background:#fff;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding:16px 16px 24px;border-bottom:2px solid var(--lb-ink);box-sizing:border-box}
+.lb *{box-sizing:border-box}
+.lb a{color:inherit}
+.lb-top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin:0 0 14px}
+.lb-title{margin:0;font-size:clamp(22px,5vw,34px);line-height:1;letter-spacing:.01em;text-transform:uppercase;font-weight:700}
+.lb-title span{color:var(--lb-swiss)}
+.lb-counter{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.lb-counter b{font-size:clamp(34px,9vw,56px);line-height:1;font-weight:700;letter-spacing:-.02em}
+.lb-counter small{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--lb-grey)}
+.lb-stamp{margin:0 0 16px;font-size:12px;color:var(--lb-grey)}
+.lb-stamp b{color:var(--lb-ink);font-weight:600}
+.lb-head{display:none}
+.lb-rows{list-style:none;margin:0;padding:0;border-top:2px solid var(--lb-ink)}
+.lb-row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--lb-line);align-items:start}
+.lb-row.is-live{background:linear-gradient(90deg,#FDF3F2,transparent 45%)}
+.lb-row>div{min-width:0;font-size:14px;overflow-wrap:anywhere}
+.lb-row>div::before{content:attr(data-l) " ";font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--lb-grey);margin-right:6px}
+.lb-row>[data-l="Initiative"]::before,.lb-row>[data-l="Stage"]::before,.lb-row>[data-l="Next"]::before{content:none}
+.lb-row>[data-l="Next"]{grid-column:1 / -1;color:#2C2C33}
+.lb-row>[data-l="Owner"]{grid-column:1 / -1;font-size:12px}
+.lb-row>[data-l="Blocker"]{grid-column:1 / -1;font-size:12px}
+.lb-row>[data-l="Blocker"] .lb-none{display:none}
+.lb-row>[data-l="Blocker"]:has(.lb-none)::before{content:none}
+.lb-name{font-weight:600;font-size:15px}
+.lb-stage{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--lb-ink);margin-top:2px}
+.lb-stage.live{background:var(--lb-swiss);border-color:var(--lb-swiss);color:#fff}
+.lb-stage.sell{background:var(--lb-ink);color:#fff}
+.lb-stage.spec,.lb-stage.paused{border-color:var(--lb-line);color:var(--lb-grey)}
+.lb-blocker{color:#B3261E;font-weight:600}
+.lb-none{color:var(--lb-grey)}
+.lb-owner{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+@media (min-width:760px){
+  .lb{padding:24px 28px 28px}
+  .lb-head,.lb-row{grid-template-columns:minmax(180px,1.4fr) 80px 2fr 130px 1.2fr}
+  .lb-head{display:grid;gap:16px;padding:8px 0;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--lb-grey)}
+  .lb-row>div::before{content:none}
+  .lb-row>[data-l="Next"],.lb-row>[data-l="Owner"],.lb-row>[data-l="Blocker"]{grid-column:auto;font-size:14px}
+  .lb-row>[data-l="Blocker"] .lb-none{display:inline}
+}
+"""
+
+LIVE_LAYER_SCRIPT = """
+(function(){
+  'use strict';
+  // Same-origin only: the JSON is written next to this page at boot.
+  if (!window.fetch) return;
+  fetch('__CHECKLIST_FILE__', {cache:'no-store'}).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(c){
+      if (!c || !Array.isArray(c.initiatives)) return;
+      var live = c.initiatives.filter(function(i){ return i && i.live === true; }).length;
+      var el = document.getElementById('lb-live');
+      if (el) el.textContent = live + '/' + (c.target || __TARGET__);
+      var st = document.getElementById('lb-updated');
+      if (st && c.updated) st.textContent = String(c.updated);
+    }).catch(function(){});
+})();
+"""
 
 
 def log(message: str) -> None:
@@ -139,6 +235,236 @@ def write_view(srv_dir: str, filename: str, html: str) -> int:
     return len(html.encode("utf-8"))
 
 
+# --- checklist -----------------------------------------------------------------
+
+STAGES = ("spec", "build", "sell", "live", "paused")
+OWNERS = ("MARCIN", "CLAUDE_CLAUDECODE", "GPT_CURSOR", "GROK_MARKET")
+
+
+def load_checklist(text: str) -> dict:
+    """Parse and validate the checklist JSON. Strict on purpose: a malformed
+    row would otherwise render as a blank card and nobody would notice."""
+    data = json.loads(text)
+    if not isinstance(data, dict) or not isinstance(data.get("initiatives"), list):
+        raise ValueError("checklist must be an object with an `initiatives` list")
+    seen: set[str] = set()
+    for index, row in enumerate(data["initiatives"]):
+        if not isinstance(row, dict):
+            raise ValueError(f"checklist row {index} is not an object")
+        for field in ("id", "name", "stage", "next", "owner"):
+            if not str(row.get(field) or "").strip():
+                raise ValueError(f"checklist row {index} is missing `{field}`")
+        if row["id"] in seen:
+            raise ValueError(f"checklist id {row['id']!r} appears twice")
+        seen.add(row["id"])
+        if row["stage"] not in STAGES:
+            raise ValueError(f"checklist row {row['id']!r} has unknown stage {row['stage']!r}")
+        if row["owner"] not in OWNERS:
+            raise ValueError(f"checklist row {row['id']!r} has unknown owner {row['owner']!r}")
+        if not isinstance(row.get("live", False), bool):
+            raise ValueError(f"checklist row {row['id']!r}: `live` must be true or false")
+        row.setdefault("blocker", "")
+        row.setdefault("link", "")
+    data.setdefault("target", CHECKLIST_TARGET)
+    data.setdefault("updated", "")
+    return data
+
+
+def live_count(checklist: dict) -> int:
+    return sum(1 for row in checklist["initiatives"] if row.get("live") is True)
+
+
+def click_queue(checklist: dict) -> list[dict]:
+    """Rows that wait on one click from Marcin: an explicit `marcin` action,
+    or a row he owns. The NEXT and SOP views put these at the top."""
+    queue: list[dict] = []
+    for row in checklist["initiatives"]:
+        action = row.get("marcin")
+        if isinstance(action, dict) and str(action.get("action") or "").strip():
+            queue.append(
+                {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "action": str(action["action"]).strip(),
+                    "link": str(action.get("link") or row.get("link") or "").strip(),
+                }
+            )
+        elif row.get("owner") == "MARCIN":
+            queue.append(
+                {"id": row["id"], "name": row["name"], "action": row["next"], "link": row.get("link", "")}
+            )
+    return queue
+
+
+# --- composing a canon page into a repo-owned shell -----------------------------
+
+_STYLE_RE = re.compile(r"<style\b[^>]*>.*?</style>", re.S | re.I)
+_LINK_RE = re.compile(r"<link\b[^>]*>", re.I)
+_BODY_RE = re.compile(r"<body\b[^>]*>(.*)</body>", re.S | re.I)
+_HEAD_RE = re.compile(r"<head\b[^>]*>(.*?)</head>", re.S | re.I)
+_TITLE_RE = re.compile(r"<title\b[^>]*>(.*?)</title>", re.S | re.I)
+
+
+def split_canon(html: str) -> tuple[str, str, list[str]]:
+    """Return (style_html, body_inner, dropped_external_links).
+
+    Accepts either a raw canon page or a page this script composed earlier
+    (the on-disk fallback), thanks to the canon:* markers. The canon's own
+    ``<style>`` blocks and body are returned verbatim; only external
+    stylesheet/preconnect links are dropped, and reported, because the
+    quality bar forbids external fonts.
+    """
+    if CANON_BODY_BEGIN in html and CANON_BODY_END in html:
+        body = html.split(CANON_BODY_BEGIN, 1)[1].split(CANON_BODY_END, 1)[0]
+        style = ""
+        if CANON_STYLE_BEGIN in html and CANON_STYLE_END in html:
+            style = html.split(CANON_STYLE_BEGIN, 1)[1].split(CANON_STYLE_END, 1)[0].strip("\n")
+        return style, body, []
+
+    head_match = _HEAD_RE.search(html)
+    body_match = _BODY_RE.search(html)
+    head = head_match.group(1) if head_match else (html[: body_match.start()] if body_match else "")
+    body = body_match.group(1) if body_match else html
+
+    styles = _STYLE_RE.findall(head)
+    dropped = [
+        link
+        for link in _LINK_RE.findall(head)
+        if re.search(r"rel=[\"']?(stylesheet|preconnect|preload)", link, re.I)
+    ]
+    return "\n".join(styles), body, dropped
+
+
+def canon_title(html: str, default: str) -> str:
+    match = _TITLE_RE.search(html)
+    return _html.unescape(match.group(1)).strip() if match and match.group(1).strip() else default
+
+
+def esc(value: object) -> str:
+    return _html.escape(str("" if value is None else value), quote=True)
+
+
+def _link(text: str, href: str, css: str = "") -> str:
+    if href:
+        return f'<a href="{esc(href)}" class="{css}">{esc(text)}</a>'
+    return f'<span class="{css}">{esc(text)}</span>'
+
+
+def render_rows(checklist: dict) -> str:
+    """Per-initiative rows: name, stage, next, owner, blocker. One <li> each;
+    the CSS turns them into cards on a phone and a grid on a desktop."""
+    parts = [
+        '<div class="lb-head" aria-hidden="true"><div>Initiative</div><div>Stage</div>'
+        '<div>Next</div><div>Owner</div><div>Blocker</div></div>',
+        '<ul class="lb-rows">',
+    ]
+    for row in checklist["initiatives"]:
+        stage = row["stage"]
+        blocker = str(row.get("blocker") or "").strip()
+        live = " is-live" if row.get("live") is True else ""
+        parts.append(
+            f'<li class="lb-row{live}" id="i-{esc(row["id"])}">'
+            f'<div data-l="Initiative">{_link(row["name"], row.get("link", ""), "lb-name")}</div>'
+            f'<div data-l="Stage"><span class="lb-stage {esc(stage)}">{esc(stage)}</span></div>'
+            f'<div data-l="Next">{esc(row["next"])}</div>'
+            f'<div data-l="Owner"><span class="lb-owner">{esc(row["owner"])}</span></div>'
+            f'<div data-l="Blocker">'
+            + (f'<span class="lb-blocker">{esc(blocker)}</span>' if blocker else '<span class="lb-none">—</span>')
+            + "</div></li>"
+        )
+    parts.append("</ul>")
+    return "".join(parts)
+
+
+def utc_now_stamp(now: _dt.datetime | None = None) -> str:
+    now = now or _dt.datetime.now(_dt.timezone.utc)
+    return now.strftime("%Y-%m-%d %H:%MZ")
+
+
+def compose_document(
+    *,
+    title: str,
+    description: str,
+    layer_css: str,
+    layer_html: str,
+    layer_script: str,
+    canon_style: str,
+    canon_body: str,
+    lang: str = "en",
+) -> str:
+    """The one document shell every composed view uses.
+
+    No robots noindex on purpose: the Lighthouse SEO gate (>= 90) fails a page
+    that blocks indexing, and the contract makes that gate the acceptance
+    criterion. The views stay unlinked and under their k4x9m2 suffix.
+    """
+    return (
+        "<!DOCTYPE html>\n"
+        f'<html lang="{lang}">\n<head>\n'
+        '<meta charset="utf-8">\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        f'<meta name="description" content="{esc(description)}">\n'
+        f"<title>{esc(title)}</title>\n"
+        f'<link rel="icon" href="{FAVICON}">\n'
+        f"<style>{layer_css}</style>\n"
+        f"{CANON_STYLE_BEGIN}\n{canon_style}\n{CANON_STYLE_END}\n"
+        "</head>\n<body>\n"
+        f"{layer_html}\n"
+        f"{CANON_BODY_BEGIN}{canon_body}{CANON_BODY_END}\n"
+        f"<script>{layer_script}</script>\n"
+        "</body>\n</html>\n"
+    )
+
+
+def compose_board(canon_html: str, checklist: dict, *, built_at: str | None = None) -> str:
+    """ptf-k4x9m2: live layer (counter, rows, stamp) above the canon board."""
+    canon_style, canon_body, _dropped = split_canon(canon_html)
+    live = live_count(checklist)
+    target = int(checklist.get("target") or CHECKLIST_TARGET)
+    updated = str(checklist.get("updated") or "—")
+    built = built_at or utc_now_stamp()
+
+    layer = (
+        '<section class="lb" id="live" aria-labelledby="lb-title">'
+        '<div class="lb-top">'
+        '<h1 class="lb-title" id="lb-title">Portfolio <span>Live</span></h1>'
+        f'<div class="lb-counter" aria-label="Initiatives live"><b id="lb-live">{live}/{target}</b><small>live</small></div>'
+        "</div>"
+        f'<p class="lb-stamp">Checklist updated <b id="lb-updated">{esc(updated)}</b> · board built <b>{esc(built)}</b> · '
+        f'<a href="{CHECKLIST_FILE}">checklist JSON</a></p>'
+        f"{render_rows(checklist)}"
+        "</section>"
+    )
+    script = LIVE_LAYER_SCRIPT.replace("__CHECKLIST_FILE__", CHECKLIST_FILE).replace("__TARGET__", str(target))
+    return compose_document(
+        title=canon_title(canon_html, "STARTEND — Portfolio"),
+        description=f"STARTEND portfolio board: {live} of {target} initiatives live, stage, next step, owner and blocker per initiative.",
+        layer_css=LIVE_LAYER_CSS,
+        layer_html=layer,
+        layer_script=script,
+        canon_style=canon_style,
+        canon_body=canon_body,
+    )
+
+
+COMPOSERS: dict[str, Callable[[str, dict], str]] = {
+    "board": compose_board,
+}
+
+
+def read_canon_or_disk(canon_url: str, key: str, srv_path: str) -> tuple[str, str]:
+    """Canon first; the file an earlier boot step wrote is the fallback."""
+    if canon_url:
+        try:
+            return canon_read(canon_url, key), "canon"
+        except (OSError, ValueError, urllib.error.URLError, json.JSONDecodeError) as error:
+            log(f"boot5 WARN {key} canon read failed, trying disk: {error}")
+    if os.path.isfile(srv_path):
+        with open(srv_path, encoding="utf-8") as handle:
+            return handle.read(), "disk"
+    raise ValueError(f"no canon content for {key} (canon unreachable and {srv_path} absent)")
+
+
 def main() -> int:
     srv_dir = os.environ.get("SRV_DIR", "/srv")
     os.makedirs(srv_dir, exist_ok=True)
@@ -152,16 +478,41 @@ def main() -> int:
             failures += 1
             log(f"boot5 FAIL {key} {filename} {error}")
 
+    checklist: dict | None = None
+    try:
+        checklist = load_checklist(read_repo_page(CHECKLIST_PATH))
+        size = write_view(srv_dir, CHECKLIST_FILE, json.dumps(checklist, ensure_ascii=False, indent=1))
+        log(f"boot5 ok CHECKLIST_JSON {CHECKLIST_FILE} {size}")
+    except (OSError, ValueError, urllib.error.URLError) as error:
+        failures += 1
+        log(f"boot5 FAIL CHECKLIST_JSON {CHECKLIST_FILE} {error}")
+
     canon_url = (os.environ.get("CANON_RW_URL") or "").strip()
     if not canon_url:
         log(f"boot5 FAIL canon-views {len(CANON_VIEWS)} CANON_RW_URL is not set")
-        return 1
+        failures += 1
+    else:
+        for key, filename in CANON_VIEWS:
+            try:
+                html = canon_read(canon_url, key)
+                log(f"boot5 ok {key} {filename} {write_view(srv_dir, filename, html)}")
+            except (OSError, ValueError, urllib.error.URLError, json.JSONDecodeError) as error:
+                failures += 1
+                log(f"boot5 FAIL {key} {filename} {error}")
 
-    for key, filename in CANON_VIEWS:
+    for key, filename, composer in COMPOSED_VIEWS:
+        if checklist is None:
+            log(f"boot5 FAIL {key} {filename} checklist unavailable")
+            failures += 1
+            continue
         try:
-            html = canon_read(canon_url, key)
-            log(f"boot5 ok {key} {filename} {write_view(srv_dir, filename, html)}")
-        except (OSError, ValueError, urllib.error.URLError, json.JSONDecodeError) as error:
+            canon_html, source = read_canon_or_disk(canon_url, key, os.path.join(srv_dir, filename))
+            _style, _body, dropped = split_canon(canon_html)
+            for link in dropped:
+                log(f"boot5 WARN {key} dropped external link {link[:120]}")
+            html = COMPOSERS[composer](canon_html, checklist)
+            log(f"boot5 ok {key} {filename} {write_view(srv_dir, filename, html)} source={source}")
+        except (OSError, ValueError) as error:
             failures += 1
             log(f"boot5 FAIL {key} {filename} {error}")
 
