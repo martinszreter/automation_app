@@ -44,7 +44,18 @@ test('stranger: land → understand the offer in 10 s → pay CHF 1 → first va
   await expect(cta).toBeVisible();
   await expect(cta).toContainText('CHF 1');
   expect(await page.getByRole('button').count()).toBe(1);
+  expect(await page.getByTestId('offer').count()).toBe(1);
+  await expect(page.getByTestId('price')).toContainText('CHF 1');
+  await expect(page.getByTestId('price')).toContainText('einmalig');
+  expect(await page.getByTestId('includes').locator('li').count()).toBe(3);
   expect(Date.now() - started).toBeLessThan(10_000);
+
+  // Five questions, five answers, further down.
+  const faq = page.getByTestId('faq');
+  expect(await faq.locator('dt').count()).toBe(5);
+  expect(await faq.locator('dd').count()).toBe(5);
+  await expect(faq).toContainText('Was kostet es');
+  await expect(faq).toContainText('CHF 1');
   await expectImprint(page);
 
   // Intake.
@@ -54,7 +65,7 @@ test('stranger: land → understand the offer in 10 s → pay CHF 1 → first va
   await page.fill('#budget_max', "1'200'000");
   await cta.click();
 
-  // Pay CHF 1 on the (stub) Stripe Checkout page.
+  // CTA → CHF 1 test paid: the Checkout Session carries exactly the price shown.
   await expect(page).toHaveURL(/\/_stub\/checkout\//);
   await expect(page.getByTestId('stub-amount')).toContainText('CHF 1');
   await expect(page.getByTestId('stub-email')).toHaveText(email);
@@ -73,6 +84,11 @@ test('stranger: land → understand the offer in 10 s → pay CHF 1 → first va
   const deliveries = await (await request.get('/_stub/webhooks')).json();
   expect(deliveries).toHaveLength(1);
   expect(deliveries[0].status).toBe(200);
+  const sessionId = new URL(page.url()).searchParams.get('session_id')!;
+  const session = await (await request.get(`/_stub/v1/checkout/sessions/${sessionId}`)).json();
+  expect(session.payment_status).toBe('paid');
+  expect(session.amount_total).toBe(100);
+  expect(session.currency).toBe('chf');
 
   await expect
     .poll(async () => (await (await request.get('/_stub/mail/outbox')).json()).length, { timeout: 20_000 })

@@ -3,15 +3,24 @@
 {% block content %}
   <section class="hero">
     <h1>Inserate unter dem Durchschnitt. Für Ihre Stadt, in Ihrem Budget.</h1>
-    <p class="sub">Zorbeck vergleicht neue Immobilien-Inserate mit dem lokalen Durchschnittspreis und meldet Ihnen die günstigen per E-Mail. Eine Stadt, 30 Tage, einmalig {{ price_label }}.</p>
+    <p class="sub">Zorbeck vergleicht neue Immobilien-Inserate mit dem Durchschnittspreis der Stadt und meldet Ihnen die günstigen per E-Mail. Eine Stadt, 30 Tage, einmalig {{ price_label }}.</p>
   </section>
 
   {% if cancelled %}
     <p class="notice" role="status">Die Zahlung wurde abgebrochen. Ihre Angaben können Sie unten erneut eingeben.</p>
   {% endif %}
 
-  <section class="offer" aria-labelledby="offer-title">
-    <h2 id="offer-title">Deal-Alarm starten</h2>
+  <section class="offer" aria-labelledby="offer-title" data-testid="offer">
+    <div class="offer-head">
+      <h2 id="offer-title">Deal-Alarm für eine Stadt</h2>
+      <p class="price" data-testid="price"><span class="price-amount">{{ price_label }}</span> <span class="price-note">einmalig, kein Abo</span></p>
+    </div>
+    <ul class="includes" data-testid="includes">
+      <li><strong>Innerhalb von 24 Stunden:</strong> der erste Report mit Inseraten, die unter dem Durchschnitt liegen und in Ihr Budget passen.</li>
+      <li><strong>30 Tage lang:</strong> eine E-Mail, sobald ein neues Inserat unter dem Durchschnitt erscheint.</li>
+      <li><strong>Danach:</strong> endet automatisch. Keine Verlängerung, keine Kündigung nötig.</li>
+    </ul>
+
     <form id="intake-form" action="/checkout" method="post" novalidate>
       {% if error %}
         <p class="form-error" role="alert" data-testid="form-error">{{ error }}</p>
@@ -35,7 +44,27 @@
       </div>
 
       <button type="submit" class="cta" data-testid="cta">Deal-Alarm starten · {{ price_label }}</button>
-      <p class="fine-print">Einmalig {{ price_label }}, kein Abo. Zahlung über Stripe (Karte, TWINT). Preis in CHF.</p>
+      <p class="fine-print">Zahlung über Stripe (Karte, TWINT). Preis in CHF. Kein Konto nötig.</p>
     </form>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title" data-testid="faq">
+    <h2 id="faq-title">Fünf Fragen, fünf Antworten</h2>
+    <dl>
+      <dt>Was genau bekomme ich?</dt>
+      <dd>Einen Report mit den aktuellen Inseraten in Ihrer Stadt, deren Preis pro Quadratmeter unter dem Durchschnitt der Stadt liegt und die in Ihr Budget passen. Danach 30 Tage lang eine E-Mail, sobald ein neues solches Inserat erscheint.</dd>
+
+      <dt>Woher stammen die Inserate, und was heisst «unter dem Durchschnitt»?</dt>
+      <dd>Von öffentlichen Schweizer Immobilienportalen. Als Durchschnitt gilt der Quadratmeterpreis aller Inserate der Stadt aus den letzten 90 Tagen. Ein Inserat gilt als Deal, wenn es darunter liegt. Wir prüfen weder Objekt noch Anbieter; der Report ist ein Hinweis, keine Bewertung.</dd>
+
+      <dt>Wie schnell kommt der erste Report?</dt>
+      <dd>Innerhalb von 24 Stunden nach der Zahlung, per E-Mail an die Adresse, die Sie oben angeben. Die Bestätigung Ihrer Angaben erhalten Sie sofort.</dd>
+
+      <dt>Was kostet es, und gibt es ein Abo?</dt>
+      <dd>Einmalig {{ price_label }}. Kein Abo, keine automatische Verlängerung. Nach 30 Tagen endet der Alarm von selbst. Sie können ihn jederzeit für eine weitere Stadt oder einen weiteren Monat neu starten.</dd>
+
+      <dt>Was, wenn kein Report kommt?</dt>
+      <dd>Dann erstatten wir den vollen Betrag. Schreiben Sie an <a href="mailto:{{ legal.email }}">{{ legal.email }}</a> mit der E-Mail-Adresse Ihrer Bestellung. Die Bedingungen stehen in den <a href="/agb">AGB</a>.</dd>
+    </dl>
   </section>
 {% endblock %}

@@ -101,6 +101,63 @@ h2 {
   margin-bottom: 0.75rem;
 }
 
+.offer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.price {
+  margin-bottom: 0.75rem;
+}
+
+.price-amount {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.price-note {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.includes {
+  list-style: none;
+  border-top: 1px solid var(--rule);
+  margin-bottom: 1rem;
+}
+
+.includes li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-soft);
+}
+
+.includes strong {
+  color: var(--ink);
+}
+
+.faq {
+  margin-top: 2.5rem;
+}
+
+.faq dt {
+  font-weight: 700;
+  margin-top: 1.1rem;
+}
+
+.faq dd {
+  margin-top: 0.25rem;
+  color: var(--ink-soft);
+}
+
+.faq a {
+  color: var(--ink);
+}
+
 form {
   display: flex;
   flex-direction: column;
