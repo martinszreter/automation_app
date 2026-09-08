@@ -6,7 +6,7 @@ Endpointy: `GET /` (strona główna), `GET /{city}` (warszawa, krakow, wroclaw, 
 
 Env vary (wszystkie opcjonalne, ustawiane w Railway): `PUSH_TOKEN`, `REFRESH_MIN`, `STRIPE_BANER7`, `STRIPE_BANER30`, `STRIPE_BOX7`, `STRIPE_BOX30`, `STRIPE_KAF7`, `STRIPE_KAF30`.
 
-Deploy: Railway project **startend** / service **nieczytaj** — w ustawieniach serwisu Root Directory musi być ustawione na `nieczytaj`, start: `node server.js`. Build/start/healthcheck dla tego katalogu pinuje `railway.json` (RAILPACK, `node server.js`, `/health`) — bez niego Railway bierze `railway.toml` z korzenia repo i próbuje zbudować pythonowy `Dockerfile`, co kończy się `requirements.txt: not found`.
+Deploy: Railway project **startend** / service **nieczytaj** — w ustawieniach serwisu Root Directory musi być ustawione na `nieczytaj`, start: `node server.js`. Katalog jest samowystarczalny dla Railway: własny `Dockerfile` (node:22-slim, `node server.js`, port 8080) plus `railway.json` (RAILPACK, `/health`). `railway.toml` w korzeniu repo celowo nie ma sekcji `[build]` — wcześniej jego `dockerfilePath = "Dockerfile"` wymuszał pythonowy `Dockerfile` z korzenia na serwisach z Root Directory `nieczytaj`, co kończyło się `requirements.txt: not found`. Uwaga: Railway wycofuje `railway.json`/`railway.toml` (twardy koniec 2026-12-01) na rzecz `.railway/railway.ts`.
 
 ## LIESNICHT (tenant DE)
 

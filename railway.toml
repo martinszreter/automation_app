@@ -1,5 +1,6 @@
-[build]
-dockerfilePath = "Dockerfile"
+# No [build] section on purpose: Railway auto-detects the Dockerfile in each
+# service's root directory. Naming it here forced the repo-root Python
+# Dockerfile onto services rooted in subdirectories (nieczytaj/, liesnicht).
 
 [deploy]
 healthcheckPath = "/health"
