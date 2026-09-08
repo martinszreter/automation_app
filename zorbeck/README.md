@@ -103,7 +103,8 @@ Runs on every push and PR that touches `zorbeck/`:
    must reach the alert handler.
 4. **Lighthouse gate** (mobile): performance, accessibility, best practices and
    SEO each ≥ 90, CLS = 0 and no console errors on `/`, `/impressum`, `/agb`,
-   `/datenschutz`.
+   `/datenschutz` — median of 3 runs per page (a single run on a cold CI
+   runner swings by 20+ points without any change to the page).
 
 Locally:
 

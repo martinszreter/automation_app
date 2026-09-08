@@ -38,6 +38,8 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Zorbeck", docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+# The stylesheet is small and inlined into every page (read once at start).
+CSS = (BASE_DIR / "static" / "style.css").read_text(encoding="utf-8")
 
 if settings.stub:
     app.include_router(stub.router)
@@ -68,6 +70,7 @@ def base_url_for(request: Request) -> str:
 
 def render(request: Request, name: str, status_code: int = 200, **context: Any) -> HTMLResponse:
     context.setdefault("legal", LEGAL)
+    context.setdefault("css", CSS)
     context.setdefault("price_label", chf(settings.price_cents))
     context.setdefault("de", de)
     return templates.TemplateResponse(request, name, context, status_code=status_code)
