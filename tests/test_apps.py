@@ -1,15 +1,19 @@
 """Tests for /apps — the Stripe door for the WhatsApp reservation setup."""
 
 import json
-from datetime import date, timedelta
-from unittest.mock import AsyncMock, patch
+from datetime import date, datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
+from app.db.models import AppsBooking
+from app.db.session import get_db
 from app.main import app
 from app.services.apps_demo import demo_booking, demo_mail
+from app.services.google_oauth import dumps_state
 from app.services.hq_mail import HQMailError, HQMailNotConfigured
 from app.services.apps_checkout import (
     AppsPricesNotConfigured,
@@ -44,7 +48,25 @@ COMPLETED_SESSION = {
 }
 
 
-def _client() -> AsyncClient:
+def _mock_db(rows: list | None = None) -> AsyncMock:
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = rows or []
+    session = AsyncMock()
+    session.execute = AsyncMock(return_value=result)
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    session.rollback = AsyncMock()
+    return session
+
+
+def _client(db: AsyncMock | None = None) -> AsyncClient:
+    db = db or _mock_db()
+
+    async def override_get_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_get_db
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
 
@@ -587,17 +609,157 @@ async def test_demo_booking_honeypot_swallows_bots() -> None:
     sent.assert_not_awaited()
 
 
+@pytest.mark.asyncio
+async def test_demo_booking_is_stored_for_the_admin_list() -> None:
+    db = _mock_db()
+    with patch("app.api.apps.send_hq_mail", AsyncMock()):
+        async with _client(db) as client:
+            response = await client.post("/apps/demo", data=DEMO_FORM)
+
+    assert response.status_code == 200
+    stored = db.add.call_args.args[0]
+    assert isinstance(stored, AppsBooking)
+    assert stored.kind == "demo" and stored.restaurant_name == "Beiz am See"
+    assert stored.guests == 4 and stored.booking_date.isoformat() == FUTURE and stored.booking_time == "15:30"
+    db.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_demo_booking_confirms_when_stored_even_if_the_mail_fails() -> None:
+    # Stored for /apps/admin, so the lead is not lost — no need to make the prospect retry.
+    with patch("app.api.apps.send_hq_mail", AsyncMock(side_effect=HQMailError("down"))):
+        async with _client(_mock_db()) as client:
+            response = await client.post("/apps/demo", data=DEMO_FORM)
+
+    assert response.status_code == 200
+    assert "Demo gebucht" in response.text
+
+
 @pytest.mark.parametrize("failure", [HQMailError("down"), HQMailNotConfigured("unset")])
 @pytest.mark.asyncio
-async def test_demo_booking_asks_again_when_the_mail_cannot_be_sent(failure) -> None:
-    # A demo request nobody receives is a lost lead: never pretend it went through.
+async def test_demo_booking_asks_again_when_neither_stored_nor_mailed(failure) -> None:
+    # A demo request nobody receives and nobody can see is a lost lead: never pretend it went through.
+    db = _mock_db()
+    db.commit = AsyncMock(side_effect=SQLAlchemyError("db down"))
     with patch("app.api.apps.send_hq_mail", AsyncMock(side_effect=failure)):
-        async with _client() as client:
+        async with _client(db) as client:
             response = await client.post("/apps/demo", data=DEMO_FORM)
 
     assert response.status_code == 502
     assert "nochmals" in response.text
     assert "Beiz am See" in response.text
+
+
+@pytest.mark.asyncio
+async def test_success_details_are_stored_locally_too() -> None:
+    db = _mock_db()
+    with patch("app.api.apps.post_order_row", AsyncMock()):
+        async with _client(db) as client:
+            response = await client.post(
+                "/apps/success",
+                data={
+                    "session_id": "cs_test_apps_1",
+                    "restaurant_name": "Beiz am See",
+                    "phone": "079 938 03 72",
+                    "opening_hours": "Di–Sa 18:00–23:00",
+                },
+            )
+
+    assert response.status_code == 200
+    stored = db.add.call_args.args[0]
+    assert stored.kind == "setup" and stored.phone == "+41799380372" and stored.session_id == "cs_test_apps_1"
+
+
+# --- admin ---------------------------------------------------------------------
+
+
+def _booking(**overrides) -> AppsBooking:
+    fields = dict(
+        kind="demo",
+        status="new",
+        restaurant_name="Beiz am See",
+        contact="wirt@beiz.ch",
+        booking_date=date(2026, 9, 20),
+        booking_time="15:30",
+        guests=4,
+        created_at=datetime(2026, 9, 8, 10, 0, tzinfo=timezone.utc),
+    )
+    fields.update(overrides)
+    return AppsBooking(**fields)
+
+
+@pytest.mark.asyncio
+async def test_admin_requires_google_sign_in() -> None:
+    async with _client() as client:
+        anonymous = await client.get("/apps/admin")
+        login = await client.get("/apps/admin/login")
+
+    assert anonymous.status_code == 303 and anonymous.headers["location"] == "/apps/admin/login"
+    assert login.status_code == 200 and "/apps/admin/auth/google" in login.text
+    assert "CHE-223.488.613" in login.text
+
+
+@pytest.mark.asyncio
+async def test_admin_google_auth_uses_the_shared_callback(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "google_oauth_client_id", "google-client")
+    async with _client() as client:
+        response = await client.get("/apps/admin/auth/google", follow_redirects=False)
+
+    assert response.status_code == 302
+    location = response.headers["location"]
+    assert location.startswith("https://accounts.google.com/o/oauth2/v2/auth")
+    assert "x-autopilot%2Fauth%2Fgoogle%2Fcallback" in location
+
+
+@pytest.mark.asyncio
+async def test_google_callback_with_apps_admin_purpose_lands_in_admin(monkeypatch) -> None:
+    monkeypatch.setattr("app.api.x_autopilot.google_oauth.exchange_code", AsyncMock(return_value={"access_token": "ya29.token"}))
+    monkeypatch.setattr(
+        "app.api.x_autopilot.google_oauth.fetch_userinfo",
+        AsyncMock(return_value={"email": "boss@startend.ch", "name": "Boss", "sub": "1"}),
+    )
+    state = dumps_state({"purpose": "apps_admin", "checkout": ""})
+    async with _client() as client:
+        response = await client.get("/x-autopilot/auth/google/callback", params={"code": "c", "state": state})
+
+    assert response.status_code == 303 and response.headers["location"] == "/apps/admin"
+
+
+@pytest.mark.asyncio
+async def test_admin_lists_bookings_for_an_allowlisted_google_user(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "admin_emails", "Boss@startend.ch, other@example.com")
+    monkeypatch.setattr(settings, "xa_e2e_key", "e2e-key")
+    rows = [_booking(), _booking(kind="setup", restaurant_name="Beiz am Fluss", phone="+41799380372", opening_hours="Mo–Fr 11–14")]
+    async with _client(_mock_db(rows)) as client:
+        login = await client.get("/apps/e2e/login", params={"key": "e2e-key", "email": "boss@startend.ch"})
+        page = await client.get("/apps/admin")
+
+    assert login.status_code == 303 and login.headers["location"] == "/apps/admin"
+    assert page.status_code == 200
+    assert page.text.count('data-testid="booking-row"') == 2
+    assert "Beiz am See" in page.text and "20.09.2026" in page.text and "4 Personen" in page.text
+    assert "Beiz am Fluss" in page.text and "+41799380372" in page.text
+    assert "ß" not in page.text
+
+
+@pytest.mark.asyncio
+async def test_admin_forbids_other_google_users(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "admin_emails", "boss@startend.ch")
+    monkeypatch.setattr(settings, "xa_e2e_key", "e2e-key")
+    async with _client() as client:
+        await client.get("/apps/e2e/login", params={"key": "e2e-key", "email": "stranger@example.com"})
+        page = await client.get("/apps/admin")
+
+    assert page.status_code == 403
+    assert "keinen Zugriff" in page.text
+
+
+@pytest.mark.asyncio
+async def test_apps_e2e_login_is_404_without_the_key(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "xa_e2e_key", "")
+    async with _client() as client:
+        response = await client.get("/apps/e2e/login", params={"key": "x", "email": "a@b.ch"})
+    assert response.status_code == 404
 
 
 # --- no secrets --------------------------------------------------------------
@@ -612,6 +774,7 @@ def test_no_endpoint_or_key_is_baked_into_the_apps_code() -> None:
         root / "app" / "services" / "apps_checkout.py",
         root / "app" / "services" / "apps_orders.py",
         root / "app" / "services" / "apps_demo.py",
+        root / "app" / "services" / "apps_bookings.py",
         root / "app" / "static" / "apps" / "index.html",
     ]
     for path in sources:

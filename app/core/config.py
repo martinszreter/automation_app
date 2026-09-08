@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     price_id_apps_monthly: str = ""
     # n8n data table webhook that stores the apps_orders rows.
     n8n_apps_order_url: str = ""
+    # /apps/admin: comma-separated Google e-mails allowed to see the bookings.
+    admin_emails: str = ""
 
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""

@@ -1,0 +1,15 @@
+{% extends "apps/base.html" %}
+{% block title %}{{ t.ADMIN_TITLE }}{% endblock %}
+{% block header_meta %}<span class="pill">Admin</span>{% endblock %}
+{% block content %}
+<h1>{{ t.ADMIN_HEADLINE }}</h1>
+{% if forbidden %}
+<div class="err" role="alert" data-testid="admin-forbidden">{{ t.ADMIN_FORBIDDEN }} ({{ user.email }})</div>
+<form method="post" action="/x-autopilot/auth/logout">
+  <button class="btn" type="submit">{{ t.ADMIN_SIGN_OUT }}</button>
+</form>
+{% else %}
+<p class="sub">{{ t.ADMIN_LEAD }}</p>
+<p><a class="btn" href="/apps/admin/auth/google" data-testid="admin-google">{{ t.ADMIN_SIGN_IN }}</a></p>
+{% endif %}
+{% endblock %}

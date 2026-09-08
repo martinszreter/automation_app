@@ -93,6 +93,12 @@ const ready = new Promise((resolve, reject) => {
     const health = await req('localhost:' + PORT, '/health');
     const h = JSON.parse(health.body);
     assert(health.status === 200 && h.price.baner7 === 149 && h.price.kaf7 === 119 && h.price.box7 === 89, 'DE /health locked prices');
+
+    const sitemap = await req('localhost:' + PORT, '/sitemap.xml');
+    assert(sitemap.status === 200 && /liesnicht\.ch\//.test(sitemap.body) && !/nieczytaj/.test(sitemap.body), 'DE /sitemap.xml on the pinned tenant');
+    const rss = await req('localhost:' + PORT, '/rss.xml');
+    assert(rss.status === 200 && /<language>de-CH<\/language>/.test(rss.body), 'DE /rss.xml on the pinned tenant');
+    assert(/<link rel="canonical" href="https:\/\/www\.liesnicht\.ch\/">/.test(home.body), 'DE canonical on the pinned tenant');
   } catch (e) {
     fails.push(String(e));
     console.log('FAIL', e);
