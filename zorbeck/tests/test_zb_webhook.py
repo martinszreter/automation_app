@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from zorbeck_app import main
 from zorbeck_app.config import settings
 from zorbeck_app.mail import MailError, MailNotConfigured
 from zorbeck_app.main import app
@@ -48,6 +49,9 @@ def configured(monkeypatch):
     monkeypatch.setattr(settings, "stripe_webhook_secret", SECRET)
     monkeypatch.setattr(settings, "signup_webhook_url", "")
     monkeypatch.setattr(settings, "alert_webhook_url", "")
+    main.confirmed_sessions.clear()
+    with patch("zorbeck_app.main.mark_confirmation_sent", AsyncMock()):
+        yield
 
 
 # --- signature -------------------------------------------------------------------
@@ -98,13 +102,14 @@ async def test_completed_checkout_mails_the_buyer_and_stores_the_lead(monkeypatc
     with patch("zorbeck_app.main.send_mail", mail), patch("httpx.AsyncClient.post", lead):
         response = await post(event(SESSION))
     assert response.status_code == 200
-    assert response.json() == {"received": True, "mailed": True}
+    assert response.json() == {"received": True, "mailed": True, "outcome": "mailed"}
 
     subject, body, to = mail.await_args.args
     assert to == "anna@beispiel.ch"
     assert "Zug" in subject
     assert "CHF 1" in body and "bis CHF 1'200'000" in body
     assert "http://test/impressum" in body
+    assert "Was jetzt passiert" in body and "Innerhalb von 24 Stunden" in body
 
     row = lead.await_args.kwargs["json"]
     assert row["status"] == "paid"
@@ -134,8 +139,41 @@ async def test_unconfigured_mail_is_alerted_but_acknowledged() -> None:
     ):
         response = await post(event(SESSION))
     assert response.status_code == 200
-    assert response.json() == {"received": True, "mailed": False}
+    assert response.json() == {"received": True, "mailed": False, "outcome": "unconfigured"}
     assert "HQ_MAIL_WEBHOOK_URL" in alert.await_args.args[1]
+
+
+@pytest.mark.asyncio
+async def test_a_retried_webhook_never_mails_twice() -> None:
+    mail = AsyncMock()
+    with patch("zorbeck_app.main.send_mail", mail):
+        first = await post(event(SESSION))
+        second = await post(event(SESSION))
+    assert first.json()["outcome"] == "mailed"
+    assert second.json() == {"received": True, "mailed": False, "outcome": "already"}
+    assert mail.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_a_session_marked_on_stripe_is_not_mailed_again() -> None:
+    # Another process (the success page, or this one before a redeploy) already
+    # mailed: the flag on the Checkout Session says so.
+    marked = {**SESSION, "metadata": {**SESSION["metadata"], "confirmation_sent": "2026-09-08T10:00:00+00:00 danke"}}
+    mail = AsyncMock()
+    with patch("zorbeck_app.main.send_mail", mail):
+        response = await post(event(marked))
+    assert response.json()["outcome"] == "already"
+    mail.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_mailing_marks_the_session_on_stripe() -> None:
+    mark = AsyncMock()
+    with patch("zorbeck_app.main.send_mail", AsyncMock()), patch("zorbeck_app.main.mark_confirmation_sent", mark):
+        await post(event(SESSION))
+    session_id, stamp = mark.await_args.args
+    assert session_id == "cs_test_1"
+    assert stamp.endswith(" webhook")
 
 
 @pytest.mark.asyncio

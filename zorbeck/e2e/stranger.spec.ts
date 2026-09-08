@@ -17,6 +17,16 @@ function watchConsole(page: Page): string[] {
   return errors;
 }
 
+async function expectTimeline(page: Page, city: string): Promise<void> {
+  const timeline = page.getByTestId('timeline');
+  await expect(timeline).toBeVisible();
+  expect(await timeline.locator('li').count()).toBe(4);
+  await expect(timeline).toContainText('Sofort');
+  await expect(timeline).toContainText('Innerhalb von 24 Stunden');
+  await expect(timeline).toContainText('30 Tage lang');
+  await expect(timeline).toContainText(city);
+}
+
 async function expectImprint(page: Page): Promise<void> {
   const footer = page.locator('footer');
   for (const fragment of IMPRINT) await expect(footer).toContainText(fragment);
@@ -69,15 +79,18 @@ test('stranger: land → understand the offer in 10 s → pay CHF 1 → first va
   await expect(page).toHaveURL(/\/_stub\/checkout\//);
   await expect(page.getByTestId('stub-amount')).toContainText('CHF 1');
   await expect(page.getByTestId('stub-email')).toHaveText(email);
+  const paidAt = Date.now();
   await page.getByTestId('stub-pay').click();
 
-  // First value: the paid intake is confirmed on the success page.
+  // First value: the paid intake is confirmed on the success page, with the
+  // timeline of what happens next — no human anywhere in it.
   await expect(page).toHaveURL(/\/danke\?session_id=cs_test_stub_/);
   await expect(page.getByTestId('success-title')).toBeVisible();
   await expect(page.getByTestId('success-email')).toHaveText(email);
   await expect(page.getByTestId('intake-city')).toHaveText('Zug');
   await expect(page.getByTestId('intake-budget')).toContainText("1'200'000");
   await expect(page.getByTestId('intake-amount')).toHaveText('CHF 1');
+  await expectTimeline(page, 'Zug');
   await expectImprint(page);
 
   // E-mail received: the webhook (signed, verified) mailed the confirmation.
@@ -101,12 +114,62 @@ test('stranger: land → understand the offer in 10 s → pay CHF 1 → first va
   expect(mail!.subject).toContain('Zug');
   expect(mail!.body).toContain('CHF 1');
   expect(mail!.body).toContain("bis CHF 1'200'000");
+  expect(mail!.body).toContain('Was jetzt passiert');
+  expect(mail!.body).toContain('Innerhalb von 24 Stunden');
   expect(mail!.body).not.toContain('ß');
+  // Within 2 minutes of paying — in practice within seconds.
+  expect(Date.now() - paidAt).toBeLessThan(120_000);
+  expect(outbox).toHaveLength(1);
 
   // The lead reached the sink twice: checkout started, then paid.
   const leads: Array<{ status: string; email: string }> = await (await request.get('/_stub/leads')).json();
   expect(leads.map((l) => l.status)).toEqual(['checkout_started', 'paid']);
 
+  expect(errors).toEqual([]);
+});
+
+test('first value within 2 minutes even when Stripe delivers the webhook late — and never twice', async ({
+  page,
+  request,
+}) => {
+  const errors = watchConsole(page);
+  // Stripe's webhook is asynchronous; simulate it arriving after the buyer
+  // already reached the success page.
+  await request.post('/_stub/config', { data: { deliver_webhook: false } });
+
+  const email = `late+${Date.now()}@example.ch`;
+  await page.goto('/');
+  await page.fill('#email', email);
+  await page.fill('#city', 'Basel');
+  await page.getByTestId('cta').click();
+  await expect(page).toHaveURL(/\/_stub\/checkout\//);
+  const paidAt = Date.now();
+  await page.getByTestId('stub-pay').click();
+
+  // No webhook so far …
+  expect(await (await request.get('/_stub/webhooks')).json()).toEqual([]);
+  // … yet the buyer has the first value on the page and in the inbox.
+  await expect(page).toHaveURL(/\/danke\?session_id=/);
+  await expect(page.getByTestId('success-title')).toBeVisible();
+  await expect(page.getByTestId('mail-note')).toHaveAttribute('data-outcome', 'mailed');
+  await expectTimeline(page, 'Basel');
+  const outbox = await (await request.get('/_stub/mail/outbox')).json();
+  expect(outbox).toHaveLength(1);
+  expect(outbox[0].to).toBe(email);
+  expect(Date.now() - paidAt).toBeLessThan(120_000);
+
+  // A reload does not mail again.
+  await page.reload();
+  await expect(page.getByTestId('mail-note')).toHaveAttribute('data-outcome', 'already');
+
+  // The late webhook arrives: accepted, but no second mail.
+  const sessionId = new URL(page.url()).searchParams.get('session_id')!;
+  const delivery = await (await request.post(`/_stub/checkout/${sessionId}/deliver-webhook`)).json();
+  expect(delivery.status).toBe(200);
+  expect(await (await request.get('/_stub/mail/outbox')).json()).toHaveLength(1);
+  // The Checkout Session carries the flag, so even another instance would not mail.
+  const session = await (await request.get(`/_stub/v1/checkout/sessions/${sessionId}`)).json();
+  expect(session.metadata.confirmation_sent).toContain('danke');
   expect(errors).toEqual([]);
 });
 

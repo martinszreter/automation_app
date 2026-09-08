@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl
@@ -17,7 +18,14 @@ from fastapi.templating import Jinja2Templates
 from zorbeck_app import stub
 from zorbeck_app.alerts import send_alert
 from zorbeck_app.config import settings
-from zorbeck_app.intake import Intake, IntakeError, confirmation_mail, intake_from_session, parse_intake
+from zorbeck_app.intake import (
+    Intake,
+    IntakeError,
+    confirmation_mail,
+    intake_from_session,
+    parse_intake,
+    timeline_for,
+)
 from zorbeck_app.mail import MailError, MailNotConfigured, send_mail
 from zorbeck_app.messages import de
 from zorbeck_app.money import chf
@@ -25,7 +33,9 @@ from zorbeck_app.stripe_api import (
     StripeError,
     StripeNotConfigured,
     StripeSignatureError,
+    confirmation_sent,
     create_checkout_session,
+    mark_confirmation_sent,
     retrieve_checkout_session,
     session_is_paid,
     verify_stripe_signature,
@@ -45,6 +55,12 @@ if settings.stub:
     app.include_router(stub.router)
 
 CHECKOUT_COMPLETED = "checkout.session.completed"
+
+# Sessions this process already confirmed. The first value goes out from
+# whichever arrives first — Stripe's webhook or the buyer on /danke — and
+# never twice: this set catches the second caller in the same process, the
+# metadata flag on the Checkout Session catches it across processes.
+confirmed_sessions: set[str] = set()
 
 LEGAL = {
     "company": "STARTEND GmbH",
@@ -211,7 +227,56 @@ async def danke(request: Request) -> HTMLResponse:
         return render(request, "danke.html", status_code=202, state="pending", intake=None, amount=None)
     intake = intake_from_session(session)
     amount = chf(int(session.get("amount_total") or settings.price_cents))
-    return render(request, "danke.html", state="paid", intake=intake, amount=amount, session_id=session_id)
+
+    # First value, now: the page never waits for Stripe's webhook. If the
+    # webhook has not mailed the buyer yet, the page does.
+    try:
+        outcome = await deliver_first_value(session, base_url_for(request), source="danke")
+    except MailError as exc:
+        outcome = "failed"
+        await send_alert("danke.mail", "confirmation mail failed on the success page", description=str(exc), exc=exc)
+    mail_note = de.SUCCESS_MAIL_LATER if outcome == "failed" else de.SUCCESS_MAILED
+    return render(
+        request,
+        "danke.html",
+        state="paid",
+        intake=intake,
+        amount=amount,
+        session_id=session_id,
+        timeline=timeline_for(intake.city),
+        mail_note=mail_note,
+        mail_outcome=outcome,
+    )
+
+
+# --- first value ------------------------------------------------------------------
+
+
+async def deliver_first_value(session: dict[str, Any], base_url: str, *, source: str) -> str:
+    """Mail the confirmation + timeline once per Checkout Session.
+
+    Returns ``"mailed"``, ``"already"`` (someone else was first) or
+    ``"unconfigured"`` (no mail lane: alerted, nothing to retry). Raises
+    ``MailError`` when the lane failed, so the caller decides whether to ask
+    Stripe for a retry (webhook) or to show a note (success page).
+    """
+    session_id = str(session.get("id") or "")
+    if session_id in confirmed_sessions or confirmation_sent(session):
+        return "already"
+    intake = intake_from_session(session)
+    amount_cents = int(session.get("amount_total") or settings.price_cents)
+    subject, body = confirmation_mail(intake, amount_cents, base_url)
+    try:
+        await send_mail(subject, body, intake.email)
+    except MailNotConfigured:
+        logger.error("HQ_MAIL_WEBHOOK_URL not set; confirmation for %s only logged (%s)", intake.email, source)
+        await send_alert(f"{source}.mail", "HQ_MAIL_WEBHOOK_URL not set — buyer got no confirmation")
+        return "unconfigured"
+    confirmed_sessions.add(session_id)
+    stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    await mark_confirmation_sent(session_id, f"{stamp} {source}")
+    logger.info("first value delivered for %s via %s", session_id[:40], source)
+    return "mailed"
 
 
 # --- Stripe webhook --------------------------------------------------------------
@@ -223,18 +288,13 @@ async def handle_checkout_completed(session: dict[str, Any], base_url: str) -> R
     intake = intake_from_session(session)
     amount_cents = int(session.get("amount_total") or settings.price_cents)
     await post_lead(intake, status="paid", session_id=str(session.get("id") or ""), amount_cents=amount_cents)
-    subject, body = confirmation_mail(intake, amount_cents, base_url)
     try:
-        await send_mail(subject, body, intake.email)
-    except MailNotConfigured:
-        logger.error("HQ_MAIL_WEBHOOK_URL not set; confirmation for %s only logged", intake.email)
-        await send_alert("webhook.mail", "HQ_MAIL_WEBHOOK_URL not set — buyer got no confirmation")
-        return JSONResponse({"received": True, "mailed": False})
+        outcome = await deliver_first_value(session, base_url, source="webhook")
     except MailError as exc:
         await send_alert("webhook.mail", "confirmation mail failed", description=str(exc), exc=exc)
         # 503 makes Stripe retry the event, so the buyer still gets the mail.
         return JSONResponse({"received": False, "error": "mail"}, status_code=503)
-    return JSONResponse({"received": True, "mailed": True})
+    return JSONResponse({"received": True, "mailed": outcome == "mailed", "outcome": outcome})
 
 
 @app.post("/stripe/webhook", include_in_schema=False)

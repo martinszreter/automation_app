@@ -2,7 +2,14 @@
 
 import pytest
 
-from zorbeck_app.intake import Intake, IntakeError, confirmation_mail, intake_from_session, parse_intake
+from zorbeck_app.intake import (
+    Intake,
+    IntakeError,
+    confirmation_mail,
+    intake_from_session,
+    parse_intake,
+    timeline_for,
+)
 from zorbeck_app.money import chf, chf_plain
 
 
@@ -76,3 +83,17 @@ def test_confirmation_mail_is_german_and_names_the_intake() -> None:
     assert "https://zorbeck.example/impressum" in body
     assert "ß" not in subject + body
     assert "Sie" in body
+    # The first value: the timeline, with the city filled in, in the mail too.
+    assert "Was jetzt passiert" in body
+    for when, what in timeline_for("Zug"):
+        assert f"- {when}: {what}" in body
+
+
+def test_timeline_has_four_steps_with_the_city_and_no_human_in_it() -> None:
+    steps = timeline_for("Basel")
+    assert [when for when, _ in steps] == ["Sofort", "Innerhalb von 24 Stunden", "30 Tage lang", "Danach"]
+    assert sum("Basel" in what for _, what in steps) == 2
+    joined = " ".join(what for _, what in steps)
+    for human in ("melden uns", "Rückruf", "Termin", "Berater"):
+        assert human not in joined
+    assert "ß" not in joined

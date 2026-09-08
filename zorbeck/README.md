@@ -73,6 +73,27 @@ on a missing mail lane).
    from Stripe and shows the confirmed intake. Unpaid → «Zahlung wird geprüft»
    (202); unknown → soft 404 with the contact address.
 
+### First value (within 2 minutes, no human)
+
+What the buyer gets, and from where:
+
+- **On the success page**: the confirmed intake (city, budget, amount) and
+  «Was jetzt passiert» — four steps: now (this confirmation), within 24 hours
+  (first report), 30 days (alerts), then (ends by itself) — plus the refund
+  promise.
+- **By e-mail**: the same confirmation and timeline, through the HQ Mail Lane.
+
+The mail goes out from **whichever arrives first**: Stripe's
+`checkout.session.completed` webhook or the buyer landing on `/danke`. The
+success page never waits for the webhook (Stripe delivers it asynchronously,
+sometimes minutes later). It is sent **once**: the process remembers the
+session, and `metadata[confirmation_sent]` is written onto the Checkout
+Session so a retry, a reload or another instance does not mail again. If the
+mail lane is down the page still shows the timeline, says the mail follows,
+raises an alert and leaves the flag unset — Stripe's retried webhook (503)
+then sends it. Both paths are in the stranger e2e, including the
+«webhook late, mailed once» case.
+
 ### CHF 1 test (real Stripe, test mode)
 
 Set `ZORBECK_PRICE_CENTS=100` on the service, redeploy, buy with Stripe's test
@@ -103,7 +124,7 @@ Runs on every push and PR that touches `zorbeck/`:
    must reach the alert handler.
 4. **Lighthouse gate** (mobile): performance, accessibility, best practices and
    SEO each ≥ 90, CLS = 0 and no console errors on `/`, `/impressum`, `/agb`,
-   `/datenschutz` — median of 3 runs per page (a single run on a cold CI
+   `/datenschutz` and a paid `/danke` — median of 3 runs per page (a single run on a cold CI
    runner swings by 20+ points without any change to the page).
 
 Locally:

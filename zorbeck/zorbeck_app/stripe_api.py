@@ -91,6 +91,24 @@ async def retrieve_checkout_session(session_id: str) -> dict[str, Any]:
     return await stripe_request("GET", f"/checkout/sessions/{session_id}")
 
 
+CONFIRMATION_KEY = "confirmation_sent"
+
+
+def confirmation_sent(session: dict[str, Any]) -> bool:
+    metadata = session.get("metadata") or {}
+    return bool(isinstance(metadata, dict) and str(metadata.get(CONFIRMATION_KEY) or "").strip())
+
+
+async def mark_confirmation_sent(session_id: str, stamp: str) -> None:
+    """Record on the Checkout Session that the buyer was mailed, so a second
+    process (Stripe retry after a redeploy, the success page on another
+    instance) does not mail twice. Best effort: a failure is logged, never raised."""
+    try:
+        await stripe_request("POST", f"/checkout/sessions/{session_id}", {f"metadata[{CONFIRMATION_KEY}]": stamp})
+    except (StripeNotConfigured, StripeError) as exc:
+        logger.warning("could not mark %s as confirmed on Stripe: %s", session_id[:40], exc)
+
+
 def session_email(session: dict[str, Any]) -> str:
     details = session.get("customer_details") or {}
     return str(details.get("email") or session.get("customer_email") or "").strip().lower()

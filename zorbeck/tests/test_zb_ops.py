@@ -100,6 +100,28 @@ def test_settings_read_the_chf1_test_price(monkeypatch) -> None:
     assert fresh.stripe_api_base == "http://127.0.0.1:8765/_stub/v1"
 
 
+# --- confirmation flag on Stripe ------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_marking_a_session_posts_metadata_and_never_raises(monkeypatch) -> None:
+    from zorbeck_app.stripe_api import StripeError, confirmation_sent, mark_confirmation_sent
+
+    request = AsyncMock(return_value={"id": "cs_1"})
+    with patch("zorbeck_app.stripe_api.stripe_request", request):
+        await mark_confirmation_sent("cs_1", "2026-09-08T10:00:00+00:00 webhook")
+    method, path, data = request.await_args.args
+    assert (method, path) == ("POST", "/checkout/sessions/cs_1")
+    assert data == {"metadata[confirmation_sent]": "2026-09-08T10:00:00+00:00 webhook"}
+
+    with patch("zorbeck_app.stripe_api.stripe_request", AsyncMock(side_effect=StripeError("500"))):
+        await mark_confirmation_sent("cs_1", "x")  # logged, not raised
+
+    assert confirmation_sent({"metadata": {"confirmation_sent": "x"}}) is True
+    assert confirmation_sent({"metadata": {"confirmation_sent": ""}}) is False
+    assert confirmation_sent({}) is False
+
+
 # --- stub helpers --------------------------------------------------------------------
 
 

@@ -22,6 +22,10 @@ ERROR_SERVER ="Da ist etwas schiefgelaufen. Wir wurden benachrichtigt. Bitte ver
 # --- success page -----------------------------------------------------------
 
 SUCCESS_TITLE = "Zahlung erhalten. Ihr Deal-Alarm ist eingerichtet."
+SUCCESS_NEXT = "Was jetzt passiert"
+# Both end with the buyer's e-mail address, rendered by the template.
+SUCCESS_MAILED = "Diese Bestätigung mit den Schritten unten ist unterwegs an"
+SUCCESS_MAIL_LATER = "Ihre Angaben sind gespeichert. Die Bestätigung per E-Mail folgt in wenigen Minuten an"
 SUCCESS_PENDING = "Ihre Zahlung ist noch nicht bestätigt. Laden Sie diese Seite in einer Minute nochmals."
 SUCCESS_UNKNOWN = "Wir konnten diese Zahlung nicht finden. Falls Sie bezahlt haben, schreiben Sie an info@startend.ch."
 
@@ -38,6 +42,9 @@ Ihre Angaben
 - Budget: {budget}
 - E-Mail: {email}
 
+Was jetzt passiert
+{timeline}
+
 Stimmt etwas nicht? Antworten Sie einfach auf diese E-Mail.
 
 Freundliche Grüsse
@@ -50,3 +57,12 @@ BUDGET_UNLIMITED = "ohne Obergrenze"
 BUDGET_FROM = "ab {min}"
 BUDGET_TO = "bis {max}"
 BUDGET_RANGE = "{min} bis {max}"
+
+# The first value: what happens next, step by step, with no human in the
+# loop. Shown on the success page and in the mail. {city} is filled in.
+TIMELINE: tuple[tuple[str, str], ...] = (
+    ("Sofort", "Diese Bestätigung mit Ihren Angaben, auf dieser Seite und per E-Mail."),
+    ("Innerhalb von 24 Stunden", "Der erste Report: Inserate in {city}, die unter dem Durchschnitt liegen und in Ihr Budget passen."),
+    ("30 Tage lang", "Eine E-Mail, sobald ein neues Inserat in {city} unter dem Durchschnitt erscheint."),
+    ("Danach", "Der Alarm endet von selbst. Keine Verlängerung, nichts zu kündigen."),
+)
