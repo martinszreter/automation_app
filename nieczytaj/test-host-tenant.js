@@ -81,6 +81,8 @@ const ready = new Promise((resolve, reject) => {
     assert(/490/.test(plAds.body) && /390/.test(plAds.body) && /290/.test(plAds.body), 'PL prices 490/390/290');
     assert(/1490/.test(plAds.body), 'PL 30d 1490');
     assert(!/CHF 149/.test(plAds.body), 'PL /reklama no DE locked CHF 149');
+    assert(plAds.body.includes('https://buy.stripe.com/6oU5kE8RD3DrgzG2Tx0x20f'), 'PL /reklama CHF1 Stripe test link');
+    assert(/Test CHF 1/.test(plAds.body), 'PL /reklama CHF 1 label');
 
     const imp = await req('www.liesnicht.ch', '/impressum');
     const ds = await req('www.liesnicht.ch', '/datenschutz');
