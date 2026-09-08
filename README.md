@@ -255,6 +255,12 @@ plugin, `DATABASE_URL`. Minimum for a live instance:
   `GOOGLE_SHEETS_RECONNECT_KEY`.
 - Internal notifications: `HQ_MAIL_WEBHOOK_URL`; contact form mail (optional):
   `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `CONTACT_TO`.
+- Error alerts: `ERROR_ALERT_WEBHOOK_URL` — the n8n *Engine Error Alerts*
+  webhook; every unhandled exception is POSTed there once.
+- X Autopilot engines and panel: `XAUTOPILOT_JUDGE_KEY`, `N8N_XA_PANEL_URL`,
+  optional `N8N_XA_VETO_LOG_URL`, `ANTHROPIC_API_KEY`.
+- `/apps/admin`: `ADMIN_EMAILS` (comma-separated Google accounts).
+- CI only, never in production: `XA_E2E_KEY` (enables the e2e sign-in routes).
 - GitHub Actions variable (not Railway): `BUS_URL` — the agent bus intake the
   live checklist posts regressions to.
 
@@ -306,7 +312,19 @@ plus subscription, returning to `/apps/success`.
   `e2e` — the Playwright stranger journey (`npm run e2e`) on a bare checkout
   with dummy env: landing heading within 10 s, X Autopilot checkout entry
   point present, imprint page, `/healthz`, zero console errors, layout shift
-  < 0.1. It never pays and needs no secret.
+  < 0.1. It never pays and needs no secret. `e2e_products` — the journeys
+  behind sign-in (`e2e/tests/*.spec.ts`) against a real Postgres with
+  migrations applied: a paid test user sees 7 scheduled posts on the panel and
+  can pause, the `/apps` WhatsApp demo completes and the booking shows up in
+  `/apps/admin`; then Lighthouse (mobile) on `/`, `/x-autopilot/` and `/apps/`
+  must score ≥ 90 in every category (`e2e/lighthouse-check.mjs`).
+- **Error alerts**: `app/core/alerts.py` reports every unhandled exception
+  to `ERROR_ALERT_WEBHOOK_URL` (n8n *Engine Error Alerts*) with path, method
+  and a bounded stack, and answers the visitor with a plain German 500. A dead
+  webhook is logged, never raised.
+- **Per-venture handover** (URLs, env vars, refunds, lanes, Railway services,
+  known gaps): `docs/HANDOVER.md`. Self-review of the sales surfaces:
+  `docs/REVIEW_2026-09-08_sales.md`.
 - **Live** (`.github/workflows/live-checklist.yml`, every 4 h and on demand):
   `scripts/live-checklist.js` GETs every URL in `live-targets.json`
   (HTTPS, `/healthz`, imprint, checkout, login), writes `reports/live/` (board
