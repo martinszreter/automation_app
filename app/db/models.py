@@ -75,6 +75,10 @@ class XAutopilotPlan(Base):
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="chf")
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Panel pause/resume: set while the customer has paused posting.
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The n8n agents-table row this customer posts through, learned from the lane.
+    agent_name: Mapped[str | None] = mapped_column(String(120))
 
 
 class ContactRequest(Base):
