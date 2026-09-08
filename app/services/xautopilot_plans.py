@@ -9,18 +9,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import PlanStatus, XAutopilotPlan
-from app.services.stripe_checkout import session_email
+from app.services.stripe_checkout import refund_payment_intent, session_email, session_is_paid
+from app.services.stripe_events import identifier
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _payment_intent_id(session: dict[str, Any]) -> str | None:
-    value = session.get("payment_intent")
-    if isinstance(value, dict):
-        return value.get("id")
-    return value
 
 
 async def upsert_plan_from_checkout(
@@ -29,7 +23,14 @@ async def upsert_plan_from_checkout(
     *,
     access_email: str | None = None,
 ) -> XAutopilotPlan:
-    checkout_id = session["id"]
+    """Create or refresh the plan row for one Checkout Session.
+
+    Raises ``ValueError`` when the session carries neither an id nor an email,
+    which the webhook turns into a 422 rather than a 500.
+    """
+    checkout_id = identifier(session.get("id"))
+    if not checkout_id:
+        raise ValueError("checkout session has no id")
     stripe_email = session_email(session)
     email = (access_email or stripe_email).strip().lower()
     if not email:
@@ -39,16 +40,12 @@ async def upsert_plan_from_checkout(
         select(XAutopilotPlan).where(XAutopilotPlan.stripe_checkout_session_id == checkout_id)
     )
     plan = result.scalar_one_or_none()
-    paid = session.get("payment_status") == "paid" or session.get("status") == "complete"
-    status = PlanStatus.ACTIVE if paid else PlanStatus.PENDING
+    status = PlanStatus.ACTIVE if session_is_paid(session) else PlanStatus.PENDING
     amount = int(session.get("amount_total") or 0)
-    currency = (session.get("currency") or "chf").lower()
-    customer = session.get("customer")
-    if isinstance(customer, dict):
-        customer = customer.get("id")
-    subscription = session.get("subscription")
-    if isinstance(subscription, dict):
-        subscription = subscription.get("id")
+    currency = str(session.get("currency") or "chf").lower()
+    customer = identifier(session.get("customer")) or None
+    subscription = identifier(session.get("subscription")) or None
+    payment_intent = identifier(session.get("payment_intent")) or None
 
     if plan is None:
         plan = XAutopilotPlan(
@@ -57,7 +54,7 @@ async def upsert_plan_from_checkout(
             status=status,
             stripe_checkout_session_id=checkout_id,
             stripe_customer_id=customer,
-            stripe_payment_intent_id=_payment_intent_id(session),
+            stripe_payment_intent_id=payment_intent,
             stripe_subscription_id=subscription,
             amount_cents=amount,
             currency=currency,
@@ -69,7 +66,7 @@ async def upsert_plan_from_checkout(
         if stripe_email:
             plan.stripe_email = stripe_email
         plan.stripe_customer_id = customer or plan.stripe_customer_id
-        plan.stripe_payment_intent_id = _payment_intent_id(session) or plan.stripe_payment_intent_id
+        plan.stripe_payment_intent_id = payment_intent or plan.stripe_payment_intent_id
         plan.stripe_subscription_id = subscription or plan.stripe_subscription_id
         if amount:
             plan.amount_cents = amount
@@ -85,29 +82,19 @@ async def upsert_plan_from_checkout(
 
 
 async def get_active_plan_for_email(db: AsyncSession, email: str) -> XAutopilotPlan | None:
+    """The newest active plan whose access email or Stripe email is ``email``."""
     needle = email.strip().lower()
-    result = await db.execute(
-        select(XAutopilotPlan)
-        .where(
-            func.lower(XAutopilotPlan.email) == needle,
-            XAutopilotPlan.status == PlanStatus.ACTIVE,
+    for column in (XAutopilotPlan.email, XAutopilotPlan.stripe_email):
+        result = await db.execute(
+            select(XAutopilotPlan)
+            .where(func.lower(column) == needle, XAutopilotPlan.status == PlanStatus.ACTIVE)
+            .order_by(XAutopilotPlan.created_at.desc())
+            .limit(1)
         )
-        .order_by(XAutopilotPlan.created_at.desc())
-        .limit(1)
-    )
-    plan = result.scalar_one_or_none()
-    if plan is not None:
-        return plan
-    result = await db.execute(
-        select(XAutopilotPlan)
-        .where(
-            func.lower(XAutopilotPlan.stripe_email) == needle,
-            XAutopilotPlan.status == PlanStatus.ACTIVE,
-        )
-        .order_by(XAutopilotPlan.created_at.desc())
-        .limit(1)
-    )
-    return result.scalar_one_or_none()
+        plan = result.scalar_one_or_none()
+        if plan is not None:
+            return plan
+    return None
 
 
 async def get_plan_by_checkout_id(db: AsyncSession, checkout_id: str) -> XAutopilotPlan | None:
@@ -131,8 +118,6 @@ async def mark_plan_refunded(db: AsyncSession, payment_intent_id: str) -> XAutop
 
 
 async def refund_plan(db: AsyncSession, plan: XAutopilotPlan) -> XAutopilotPlan:
-    from app.services.stripe_checkout import refund_payment_intent
-
     if not plan.stripe_payment_intent_id:
         raise ValueError("plan has no payment intent")
     await refund_payment_intent(plan.stripe_payment_intent_id)

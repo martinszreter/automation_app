@@ -52,6 +52,15 @@ class TestPartySizeChange:
         assert result.intent == Intent.CHANGE_PARTY_SIZE
         assert result.party_size == 12
 
+    def test_zero_is_not_a_table(self, parser: RuleBasedParser) -> None:
+        result = parser.parse("0")
+        assert result.intent == Intent.UNKNOWN
+        assert result.party_size is None
+
+    def test_a_phone_number_is_not_a_party_size(self, parser: RuleBasedParser) -> None:
+        result = parser.parse("0791234567")
+        assert result.intent == Intent.UNKNOWN
+
 
 class TestUnknown:
     def test_random_text(self, parser: RuleBasedParser) -> None:

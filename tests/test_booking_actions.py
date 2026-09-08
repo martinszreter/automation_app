@@ -67,6 +67,19 @@ async def test_change_party_size() -> None:
 
 
 @pytest.mark.asyncio
+async def test_party_size_change_without_a_number_is_not_applied() -> None:
+    db = AsyncMock()
+    adapter = MockWhatsAppAdapter()
+    booking = _make_booking(BookingStatus.CONFIRMED, party_size=4)
+
+    await apply_action(db, booking, ParsedMessage(intent=Intent.CHANGE_PARTY_SIZE), adapter)
+
+    # NOT NULL on bookings.party_size: never write None, answer as "not understood".
+    assert booking.party_size == 4
+    assert "nicht verstanden" in adapter.sent[0].body
+
+
+@pytest.mark.asyncio
 async def test_already_confirmed() -> None:
     db = AsyncMock()
     adapter = MockWhatsAppAdapter()

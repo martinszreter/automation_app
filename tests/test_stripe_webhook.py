@@ -16,7 +16,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import settings
-from app.db.models import PlanStatus
+from app.db.models import PlanStatus, XAutopilotPlan
 from app.db.session import get_db
 from app.main import app
 from app.services import apps_orders, xautopilot_orders
@@ -195,6 +195,23 @@ async def test_body_that_is_not_json_is_rejected() -> None:
     assert response.status_code == 400
 
 
+@pytest.mark.asyncio
+async def test_the_older_endpoints_reject_a_non_object_body_the_same_way() -> None:
+    # A JSON array is valid JSON but not an event: 400, never a 500 from .get().
+    payload = b"[1, 2, 3]"
+    async with _client() as client:
+        responses = [
+            await client.post(
+                path,
+                content=payload,
+                headers={"stripe-signature": sign_webhook_payload(payload, SECRET)},
+            )
+            for path in ("/apps/stripe/webhook", "/x-autopilot/stripe/webhook", "/stripe/webhook")
+        ]
+
+    assert [response.status_code for response in responses] == [400, 400, 400]
+
+
 # --- checkout.session.completed ----------------------------------------------
 
 
@@ -321,6 +338,80 @@ async def test_cancellation_that_cannot_be_stored_asks_stripe_to_retry(
         response = await _post(client, _event(XA_SUBSCRIPTION, "customer.subscription.deleted"))
 
     assert response.status_code == 503
+
+
+# --- checkout.session.async_payment_succeeded --------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_bank_transfer_activates_the_plan_when_the_payment_lands(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """checkout.session.completed arrives unpaid for a bank transfer; the plan
+    goes active only on async_payment_succeeded, which this endpoint must
+    therefore dispatch like a completed session."""
+    monkeypatch.setattr("app.api.x_autopilot.post_order_row", AsyncMock())
+    db = _mock_db()
+    paid_later = {**XA_SESSION, "payment_status": "paid"}
+
+    async with _client(db) as client:
+        response = await _post(client, _event(paid_later, "checkout.session.async_payment_succeeded"))
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "active"
+    assert db.add.call_args.args[0].status == PlanStatus.ACTIVE
+
+
+@pytest.mark.asyncio
+async def test_an_apps_bank_transfer_rewrites_the_paid_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent = AsyncMock()
+    monkeypatch.setattr("app.api.apps.post_order_row", sent)
+
+    async with _client() as client:
+        response = await _post(client, _event(APPS_SESSION, "checkout.session.async_payment_succeeded"))
+
+    assert response.status_code == 200
+    # Keyed by session id, so this overwrites the "unpaid" row from the first event.
+    assert sent.await_args.args[0]["payment_status"] == "paid"
+
+
+# --- refunds -----------------------------------------------------------------
+
+
+def _plan() -> XAutopilotPlan:
+    return XAutopilotPlan(
+        email="buyer@example.com",
+        status=PlanStatus.ACTIVE,
+        stripe_checkout_session_id="cs_unified_xa",
+        stripe_payment_intent_id="pi_xa",
+        amount_cents=100,
+        currency="chf",
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_refund_marks_the_plan_refunded_on_the_shared_endpoint() -> None:
+    plan = _plan()
+    db = _mock_db()
+    db.execute.return_value.scalar_one_or_none.return_value = plan
+    charge = {"id": "ch_xa", "payment_intent": "pi_xa", "refunded": True}
+
+    async with _client(db) as client:
+        response = await _post(client, _event(charge, "charge.refunded"))
+
+    assert response.status_code == 200
+    assert response.json() == {"received": True, "status": "refunded", "plan": True}
+    assert plan.status == PlanStatus.REFUNDED
+
+
+@pytest.mark.asyncio
+async def test_a_refund_for_an_unknown_payment_is_acknowledged() -> None:
+    # No plan for this payment intent (an /apps refund, say): nothing to mark.
+    async with _client() as client:
+        response = await _post(client, _event({"payment_intent": {"id": "pi_apps"}}, "refund.created"))
+
+    assert response.status_code == 200
+    assert response.json() == {"received": True, "status": "refunded", "plan": False}
 
 
 # --- everything else ---------------------------------------------------------

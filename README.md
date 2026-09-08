@@ -63,8 +63,10 @@ unset the order is only logged, and the plan row in Postgres is still written.
 ## Stripe webhook
 
 One endpoint serves both ventures: **`POST /stripe/webhook`**, signature-verified
-with `STRIPE_WEBHOOK_SECRET`. It dispatches `checkout.session.completed` and
-`customer.subscription.deleted` to the venture the event belongs to, decided by
+with `STRIPE_WEBHOOK_SECRET`. It dispatches `checkout.session.completed`,
+`checkout.session.async_payment_succeeded` (a bank transfer that pays after the
+session completed) and `customer.subscription.deleted` to the venture the event
+belongs to, decided by
 
 1. the line item Price ids — `PRICE_ID_XA_*` → x-autopilot, `PRICE_ID_APPS_*` →
    apps, so a new tier routes itself the day its Price id reaches the
@@ -73,8 +75,10 @@ with `STRIPE_WEBHOOK_SECRET`. It dispatches `checkout.session.completed` and
    items Stripe did not expand.
 
 An event that matches neither is acknowledged with `200` and stored nowhere —
-guessing would write an order row into the wrong table. A request without a
-valid signature is `400`.
+guessing would write an order row into the wrong table. `charge.refunded` and
+`refund.created` need no venture: the x-autopilot plan whose payment intent was
+refunded is marked refunded, and a refund for /apps simply finds no plan. A
+request without a valid signature is `400`.
 
 The older `/apps/stripe/webhook` and `/x-autopilot/stripe/webhook` still work and
 call the same handlers, so an endpoint already configured against either URL

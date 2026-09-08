@@ -10,11 +10,18 @@ The two older endpoints (``/apps/stripe/webhook`` and
 ``/x-autopilot/stripe/webhook``) keep working and call the very same handlers,
 so an endpoint still configured in Stripe against either URL behaves as before.
 
-Two event types are dispatched:
+Four kinds of event are dispatched:
 
-* ``checkout.session.completed``    -> the paid order row (and, for
+* ``checkout.session.completed``                -> the paid order row (and, for
   x-autopilot, the plan row in Postgres);
-* ``customer.subscription.deleted`` -> the cancellation row.
+* ``checkout.session.async_payment_succeeded``  -> the same handlers. A bank
+  transfer completes the session first and pays later; the plan only turns
+  active, and the order row only says ``paid``, on this second event;
+* ``customer.subscription.deleted``             -> the cancellation row;
+* ``charge.refunded`` / ``refund.created``      -> the x-autopilot plan whose
+  payment intent was refunded is marked refunded. A Charge carries no venture
+  metadata, so this is routed by the payment intent lookup itself: a refund
+  for /apps simply finds no plan.
 
 Anything else is acknowledged with 200 so Stripe stops retrying it.
 """
@@ -36,17 +43,22 @@ from app.services.stripe_events import (
     VENTURE_APPS,
     VENTURE_XAUTOPILOT,
     event_object,
+    identifier,
     load_event,
     venture_for_object,
 )
+from app.services.xautopilot_plans import mark_plan_refunded
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["stripe"])
 
 CHECKOUT_COMPLETED = "checkout.session.completed"
+CHECKOUT_ASYNC_PAID = "checkout.session.async_payment_succeeded"
 SUBSCRIPTION_DELETED = "customer.subscription.deleted"
-HANDLED_EVENTS = frozenset({CHECKOUT_COMPLETED, SUBSCRIPTION_DELETED})
+CHECKOUT_EVENTS = frozenset({CHECKOUT_COMPLETED, CHECKOUT_ASYNC_PAID})
+REFUND_EVENTS = frozenset({"charge.refunded", "refund.created"})
+HANDLED_EVENTS = CHECKOUT_EVENTS | {SUBSCRIPTION_DELETED} | REFUND_EVENTS
 
 
 async def dispatch_event(event: dict[str, Any], db: AsyncSession) -> Response:
@@ -56,6 +68,14 @@ async def dispatch_event(event: dict[str, Any], db: AsyncSession) -> Response:
         return JSONResponse({"received": True, "ignored": True})
 
     obj = event_object(event)
+
+    if event_type in REFUND_EVENTS:
+        payment_intent = identifier(obj.get("payment_intent"))
+        if not payment_intent:
+            return JSONResponse({"received": True, "ignored": True})
+        plan = await mark_plan_refunded(db, payment_intent)
+        return JSONResponse({"received": True, "status": "refunded", "plan": plan is not None})
+
     venture = venture_for_object(obj)
     if venture is None:
         # Neither the Price ids nor the metadata name a venture: acknowledge,
@@ -65,7 +85,7 @@ async def dispatch_event(event: dict[str, Any], db: AsyncSession) -> Response:
         )
         return JSONResponse({"received": True, "ignored": True})
 
-    if event_type == CHECKOUT_COMPLETED:
+    if event_type in CHECKOUT_EVENTS:
         if venture == VENTURE_APPS:
             return await apps_api.handle_checkout_completed(obj)
         return await xautopilot_api.handle_checkout_completed(obj, db)

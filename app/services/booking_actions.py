@@ -57,7 +57,7 @@ async def apply_action(
             booking.status = BookingStatus.CANCELLED
             reply = de.BOOKING_CANCELLED.format(**bv)
 
-    elif parsed.intent == Intent.CHANGE_PARTY_SIZE:
+    elif parsed.intent == Intent.CHANGE_PARTY_SIZE and parsed.party_size:
         booking.party_size = parsed.party_size
         bv["party_size"] = parsed.party_size
         reply = de.PARTY_SIZE_CHANGED.format(**bv)

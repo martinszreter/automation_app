@@ -20,17 +20,13 @@ class InboundMessage(BaseModel):
 @router.post("/inbound")
 async def receive_message(msg: InboundMessage, db: AsyncSession = Depends(get_db)) -> dict:
     """Receive an inbound WhatsApp message, parse it, and apply the action."""
-    parser = get_message_parser()
-    parsed = parser.parse(msg.body)
+    parsed = get_message_parser().parse(msg.body)
+    adapter = get_whatsapp_adapter()
 
     booking = await find_active_booking(db, msg.from_phone)
     if not booking:
-        adapter = get_whatsapp_adapter()
-        await adapter.send_message(
-            OutgoingMessage(to_phone=msg.from_phone, body=de.NO_ACTIVE_BOOKING)
-        )
+        await adapter.send_message(OutgoingMessage(to_phone=msg.from_phone, body=de.NO_ACTIVE_BOOKING))
         return {"status": "no_booking", "intent": parsed.intent.value}
 
-    adapter = get_whatsapp_adapter()
     reply = await apply_action(db, booking, parsed, adapter)
     return {"status": "processed", "intent": parsed.intent.value, "reply": reply}

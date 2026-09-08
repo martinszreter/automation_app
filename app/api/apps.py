@@ -14,7 +14,6 @@ The Stripe transport and the signature check are the shared helpers in
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -22,7 +21,7 @@ from typing import Any
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 
-from app.core.config import settings
+from app.core.templating import render
 from app.services.apps_checkout import (
     APPS_PRODUCT,
     AppsPricesNotConfigured,
@@ -31,6 +30,7 @@ from app.services.apps_checkout import (
 from app.services.apps_orders import (
     AppsOrderError,
     AppsOrderNotConfigured,
+    DetailsInvalid,
     cancellation_row_from_subscription,
     details_row,
     paid_row_from_session,
@@ -41,8 +41,8 @@ from app.services.stripe_checkout import (
     StripeNotConfigured,
     StripeSignatureError,
     public_base_url,
-    verify_stripe_signature,
 )
+from app.services.stripe_events import event_object, load_event
 from app.templates.messages import apps_de
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,13 @@ router = APIRouter(prefix="/apps", tags=["apps"])
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 _SESSION_ID_MAX = 160
 
+# Which German message the success form shows for each field details_row refuses.
+_FIELD_ERRORS = {
+    "restaurant_name": apps_de.ERROR_RESTAURANT_REQUIRED,
+    "opening_hours": apps_de.ERROR_OPENING_HOURS_REQUIRED,
+    "phone": apps_de.ERROR_PHONE_INVALID,
+}
+
 
 def _base_url(request: Request) -> str:
     return public_base_url(
@@ -59,13 +66,6 @@ def _base_url(request: Request) -> str:
         request.headers.get("x-forwarded-proto"),
         request.headers.get("x-forwarded-host") or request.headers.get("host"),
     )
-
-
-def _render(name: str, **context: Any) -> HTMLResponse:
-    from app.main import templates
-
-    request: Request = context.pop("request")
-    return templates.TemplateResponse(request=request, name=f"apps/{name}", context=context)
 
 
 def _success_page(
@@ -78,9 +78,10 @@ def _success_page(
     error: str | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
-    response = _render(
-        "success.html",
-        request=request,
+    return render(
+        request,
+        "apps/success.html",
+        status_code=status_code,
         t=apps_de,
         session_id=session_id[:_SESSION_ID_MAX],
         restaurant_name=restaurant_name,
@@ -88,8 +89,6 @@ def _success_page(
         opening_hours=opening_hours,
         error=error,
     )
-    response.status_code = status_code
-    return response
 
 
 @router.api_route("", methods=["GET", "HEAD"], include_in_schema=False)
@@ -128,16 +127,7 @@ async def apps_success_submit(
     phone: str = Form(""),
     opening_hours: str = Form(""),
 ) -> HTMLResponse:
-    try:
-        row = details_row(session_id, restaurant_name, phone, opening_hours)
-    except ValueError as exc:
-        reason = str(exc)
-        if reason.startswith("restaurant_name"):
-            error = apps_de.ERROR_RESTAURANT_REQUIRED
-        elif reason.startswith("opening_hours"):
-            error = apps_de.ERROR_OPENING_HOURS_REQUIRED
-        else:
-            error = apps_de.ERROR_PHONE_INVALID
+    def ask_again(error: str, status_code: int) -> HTMLResponse:
         return _success_page(
             request,
             session_id,
@@ -145,8 +135,13 @@ async def apps_success_submit(
             phone=phone,
             opening_hours=opening_hours,
             error=error,
-            status_code=422,
+            status_code=status_code,
         )
+
+    try:
+        row = details_row(session_id, restaurant_name, phone, opening_hours)
+    except DetailsInvalid as exc:
+        return ask_again(_FIELD_ERRORS.get(exc.field, apps_de.ERROR_PHONE_INVALID), 422)
 
     try:
         await post_order_row(row)
@@ -157,17 +152,9 @@ async def apps_success_submit(
         # The row is configured to go somewhere and did not get there — ask
         # again rather than silently losing what the restaurant typed.
         logger.warning("/apps details could not be stored: %s", exc)
-        return _success_page(
-            request,
-            session_id,
-            restaurant_name=restaurant_name,
-            phone=phone,
-            opening_hours=opening_hours,
-            error=apps_de.ERROR_SAVE_FAILED,
-            status_code=502,
-        )
+        return ask_again(apps_de.ERROR_SAVE_FAILED, 502)
 
-    return _render("done.html", request=request, t=apps_de)
+    return render(request, "apps/done.html", t=apps_de)
 
 
 async def handle_checkout_completed(session: dict[str, Any]) -> Response:
@@ -216,21 +203,21 @@ async def handle_subscription_deleted(subscription: dict[str, Any]) -> Response:
 
 @router.post("/stripe/webhook", include_in_schema=False)
 async def apps_stripe_webhook(request: Request) -> Response:
+    """The older per-product endpoint. Still served for a Stripe dashboard entry
+    that points here; the unified ``/stripe/webhook`` is the one to register."""
     payload = await request.body()
-    header = request.headers.get("stripe-signature", "")
     try:
-        verify_stripe_signature(payload, header, settings.stripe_webhook_secret)
-        event = json.loads(payload.decode("utf-8"))
+        event = load_event(payload, request.headers.get("stripe-signature", ""))
     except StripeSignatureError as exc:
         logger.warning("/apps Stripe webhook signature rejected: %s", exc)
         raise HTTPException(status_code=400, detail="invalid signature") from exc
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=400, detail="invalid payload") from exc
 
     if event.get("type") != "checkout.session.completed":
         return JSONResponse({"received": True})
 
-    session = (event.get("data") or {}).get("object") or {}
+    session = event_object(event)
     metadata = session.get("metadata") or {}
     if metadata.get("product") != APPS_PRODUCT:
         # The same endpoint may receive events for the other products.

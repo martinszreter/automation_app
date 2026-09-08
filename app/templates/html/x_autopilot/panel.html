@@ -16,7 +16,7 @@
     <li><span class="k">Plan</span><span>{% if plan_active %}Active{% elif plan %}{{ plan.status.value }}{% else %}None{% endif %}</span></li>
     <li><span class="k">Product</span><span>X Autopilot</span></li>
     {% if plan %}
-    <li><span class="k">Amount</span><span>{{ amount_label }} {{ plan.currency|upper }}</span></li>
+    <li><span class="k">Amount</span><span>{{ amount_label }}</span></li>
     <li><span class="k">Stripe email</span><span>{{ plan.stripe_email or plan.email }}</span></li>
     {% endif %}
   </ul>

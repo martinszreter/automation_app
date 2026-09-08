@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -20,6 +21,16 @@ from app.services.xautopilot_tiers import render_tier_buttons
 router = APIRouter(tags=["public"])
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+# A landing page directory name: letters, digits, dashes, underscores. Anything
+# else (".." above all) never reaches the filesystem.
+_PAGE_SLUG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
+# Column widths of contact_requests: clamp here so an oversized submission is a
+# truncated row, not a 500 from the database.
+_NAME_MAX = 255
+_EMAIL_MAX = 320
+_INTEREST_MAX = 50
 
 
 @router.get("/", response_class=FileResponse, include_in_schema=False)
@@ -45,7 +56,6 @@ async def favicon() -> Response:
         media_type="image/svg+xml",
         headers={"Cache-Control": "public, max-age=31536000, immutable"},
     )
-
 
 
 # --- /x-autopilot/ traffic counter -------------------------------------------
@@ -95,9 +105,8 @@ def _xa_count(bucket_name: str, utm_source: str | None = None, utm_campaign: str
     bucket["days"][day] = bucket["days"].get(day, 0) + 1
     _xa_tally(bucket["utm_source"], _xa_utm(utm_source))
     _xa_tally(bucket["utm_campaign"], _xa_utm(utm_campaign))
-    days = sorted(bucket["days"])
-    while len(days) > _XA_DAYS_KEPT:
-        del bucket["days"][days.pop(0)]
+    for stale in sorted(bucket["days"])[:-_XA_DAYS_KEPT]:
+        del bucket["days"][stale]
 
 
 @router.api_route("/x-autopilot", methods=["GET", "HEAD"], include_in_schema=False)
@@ -176,19 +185,27 @@ async def contact(
     # Honeypot: real users never fill the hidden "website" field — drop silently.
     if not website.strip():
         contact_request = ContactRequest(
-            name=name,
-            company=company or None,
-            email=email,
-            interest=interest or None,
+            name=name.strip()[:_NAME_MAX],
+            company=company.strip()[:_NAME_MAX] or None,
+            email=email.strip()[:_EMAIL_MAX],
+            interest=interest.strip()[:_INTEREST_MAX] or None,
             message=message,
             call_requested=bool(call_requested),
         )
         db.add(contact_request)
         await db.commit()
         await send_contact_notification(contact_request)
-        if interest == _XA_TEARDOWN_INTEREST:
+        if contact_request.interest == _XA_TEARDOWN_INTEREST:
             _xa_count("emails")
     return FileResponse(_STATIC_DIR / "thanks.html", media_type="text/html")
+
+
+def _landing_index(page: str) -> Path | None:
+    """The index.html of a first-level directory under static/, or None."""
+    if not _PAGE_SLUG.match(page):
+        return None
+    index = _STATIC_DIR / page / "index.html"
+    return index if index.is_file() else None
 
 
 # CANON_GENERIC_LANDING — the Railway start command (HOME_PY env var) injects a
@@ -198,14 +215,14 @@ async def contact(
 # first-level directories under static/ are reachable.
 @router.api_route("/{page}", methods=["GET", "HEAD"], include_in_schema=False)
 async def generic_landing_no_slash(page: str) -> RedirectResponse:
-    if (_STATIC_DIR / page / "index.html").is_file():
-        return RedirectResponse(url=f"/{page}/", status_code=301)
-    raise HTTPException(status_code=404)
+    if _landing_index(page) is None:
+        raise HTTPException(status_code=404)
+    return RedirectResponse(url=f"/{page}/", status_code=301)
 
 
 @router.get("/{page}/", response_class=FileResponse, include_in_schema=False)
 async def generic_landing(page: str) -> FileResponse:
-    index = _STATIC_DIR / page / "index.html"
-    if index.is_file():
-        return FileResponse(index, media_type="text/html")
-    raise HTTPException(status_code=404)
+    index = _landing_index(page)
+    if index is None:
+        raise HTTPException(status_code=404)
+    return FileResponse(index, media_type="text/html")

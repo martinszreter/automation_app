@@ -129,6 +129,55 @@ async def test_generic_landing_serves_canon_page_dirs(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_generic_landing_never_leaves_the_static_directory(tmp_path, monkeypatch):
+    from app.api.public import _landing_index
+
+    # A parent directory with its own index.html must stay unreachable, even
+    # though "{page}" cannot contain a slash: ".." is the one segment that climbs.
+    (tmp_path / "index.html").write_text("<html>outside</html>")
+    (tmp_path / "static").mkdir()
+    (tmp_path / "static" / ".hidden").mkdir()
+    (tmp_path / "static" / ".hidden" / "index.html").write_text("<html>dotdir</html>")
+    monkeypatch.setattr("app.api.public._STATIC_DIR", tmp_path / "static")
+
+    assert _landing_index("..") is None
+    assert _landing_index(".hidden") is None
+    assert _landing_index("agents") is None  # simply absent
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        encoded = await client.get("/%2e%2e/", follow_redirects=False)
+        dotdir = await client.get("/.hidden/", follow_redirects=False)
+
+    assert encoded.status_code == 404
+    assert dotdir.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_contact_clamps_fields_to_their_column_widths():
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+
+    with patch("app.api.public.send_contact_notification", new_callable=AsyncMock):
+        async with _client_with_mock_db(mock_session) as client:
+            response = await client.post(
+                "/contact",
+                data={
+                    "name": "  " + "A" * 400,
+                    "email": "anna@example.com",
+                    "interest": "x" * 80,
+                    "message": "Hello",
+                    "website": "",
+                },
+            )
+
+    assert response.status_code == 200
+    stored = mock_session.add.call_args.args[0]
+    assert len(stored.name) == 255
+    assert len(stored.interest) == 50
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
 async def test_favicon_serves_svg_with_long_cache():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/favicon.ico")
