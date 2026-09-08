@@ -1,0 +1,58 @@
+{% extends "apps/base.html" %}
+{% block title %}{{ t.ADMIN_TITLE }}{% endblock %}
+{% block header_meta %}<span class="pill">Admin · {{ user.email }}</span>{% endblock %}
+{% block content %}
+<style>
+  table{width:100%;border-collapse:collapse;font-size:14px;background:#fff;border:1px solid var(--rule);border-radius:2px}
+  th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);padding:10px 12px;border-bottom:1px solid var(--rule)}
+  td{padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+  .kind{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600}
+  .kind.demo{color:var(--green)} .kind.setup{color:var(--red)}
+  .tablewrap{overflow-x:auto}
+</style>
+<h1>{{ t.ADMIN_HEADLINE }}</h1>
+<p class="sub">{{ t.ADMIN_LEAD }}</p>
+
+<div class="card" data-testid="bookings">
+  {% if bookings %}
+  <div class="tablewrap">
+  <table>
+    <thead>
+      <tr>
+        <th>{{ t.ADMIN_COL_WHEN }}</th>
+        <th>{{ t.ADMIN_COL_KIND }}</th>
+        <th>{{ t.ADMIN_COL_RESTAURANT }}</th>
+        <th>{{ t.ADMIN_COL_CONTACT }}</th>
+        <th>{{ t.ADMIN_COL_DETAILS }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bookings %}
+      <tr data-testid="booking-row" data-kind="{{ b.kind }}">
+        <td class="mono">{{ b.created_at.strftime('%d.%m.%Y %H:%M') if b.created_at else '—' }}</td>
+        <td><span class="kind {{ b.kind }}">{% if b.kind == 'demo' %}{{ t.ADMIN_KIND_DEMO }}{% else %}{{ t.ADMIN_KIND_SETUP }}{% endif %}</span></td>
+        <td><b>{{ b.restaurant_name }}</b></td>
+        <td>{% if b.contact %}{{ b.contact }}{% endif %}{% if b.phone %}{% if b.contact %}<br>{% endif %}<span class="mono">{{ b.phone }}</span>{% endif %}{% if not b.contact and not b.phone %}—{% endif %}</td>
+        <td>
+          {% if b.kind == 'demo' %}
+            {{ b.booking_date.strftime('%d.%m.%Y') if b.booking_date else '—' }}{% if b.booking_time %} · {{ b.booking_time }}{% endif %}{% if b.guests %} · {{ b.guests }} {{ t.ADMIN_GUESTS }}{% endif %}
+            {% if b.note %}<br><span class="sub">{{ b.note }}</span>{% endif %}
+          {% else %}
+            {{ b.opening_hours or '—' }}
+            {% if b.session_id %}<br><span class="ref">{{ b.session_id }}</span>{% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="sub">{{ t.ADMIN_EMPTY }}</p>
+  {% endif %}
+</div>
+
+<form method="post" action="/x-autopilot/auth/logout" style="margin-top:8px">
+  <button class="btn" type="submit" style="background:transparent;color:var(--ink);border-color:var(--rule)">{{ t.ADMIN_SIGN_OUT }}</button>
+</form>
+{% endblock %}

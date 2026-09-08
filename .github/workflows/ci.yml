@@ -64,6 +64,7 @@ jobs:
       SESSION_HTTPS_ONLY: "false"
       PUBLIC_BASE_URL: http://127.0.0.1:8000
       XA_E2E_KEY: e2e-key
+      ADMIN_EMAILS: e2e-admin@example.com
       E2E_BASE_URL: http://127.0.0.1:8000
     steps:
       - uses: actions/checkout@v4

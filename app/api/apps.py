@@ -16,21 +16,27 @@ The Stripe transport and the signature check are the shared helpers in
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.db.session import get_db
+from app.services import google_oauth
+from app.services.apps_bookings import add_demo_booking, add_setup_details, list_bookings
 from app.services.apps_checkout import (
     APPS_PRODUCT,
     AppsPricesNotConfigured,
     create_apps_checkout_session,
 )
 from app.services.apps_demo import demo_booking, demo_mail, today_in_zurich
+from app.services.google_oauth import LOGIN_SCOPES, GoogleNotConfigured
 from app.services.hq_mail import HQMailError, HQMailNotConfigured, send_hq_mail
 from app.services.apps_orders import (
     AppsOrderError,
@@ -131,6 +137,7 @@ async def apps_success_submit(
     restaurant_name: str = Form(""),
     phone: str = Form(""),
     opening_hours: str = Form(""),
+    db: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
     try:
         row = details_row(session_id, restaurant_name, phone, opening_hours)
@@ -151,6 +158,9 @@ async def apps_success_submit(
             error=error,
             status_code=422,
         )
+
+    # Local copy for /apps/admin; the n8n row below stays the commercial ledger.
+    await add_setup_details(db, row)
 
     try:
         await post_order_row(row)
@@ -208,6 +218,7 @@ async def apps_demo_submit(
     guests: str = Form(""),
     note: str = Form(""),
     company_website: str = Form(""),
+    db: AsyncSession = Depends(get_db),
 ) -> HTMLResponse:
     values = {
         "restaurant_name": restaurant_name,
@@ -235,18 +246,80 @@ async def apps_demo_submit(
             error = apps_de.DEMO_ERROR_GUESTS_INVALID
         return _demo_page(request, values=values, error=error, status_code=422)
 
+    stored = await add_demo_booking(db, booking)
     subject, body = demo_mail(booking)
     try:
         # HQ inbox only (the workflow's default recipient): the form never
         # picks a recipient, so this page cannot be turned into a mail relay.
         await send_hq_mail(subject, body)
     except (HQMailNotConfigured, HQMailError) as exc:
-        # A demo request nobody receives is a lost lead — ask again rather
-        # than pretend it went through.
         logger.warning("/apps demo booking could not be mailed: %s", exc)
-        return _demo_page(request, values=values, error=apps_de.DEMO_ERROR_SEND_FAILED, status_code=502)
+        if stored is None:
+            # Neither stored for /apps/admin nor mailed: a lost lead — ask
+            # again rather than pretend it went through.
+            return _demo_page(request, values=values, error=apps_de.DEMO_ERROR_SEND_FAILED, status_code=502)
 
     return _render("demo_done.html", request=request, t=apps_de, booking=booking)
+
+
+# --- admin: the operator's list of bookings (Google Sign-In, allow-listed) ---
+
+_USER_KEY = "xa_user"  # the Google session user set by /x-autopilot/auth/google/callback
+
+
+def _admin_emails() -> set[str]:
+    return {email.strip().lower() for email in settings.admin_emails.split(",") if email.strip()}
+
+
+def _session_user(request: Request) -> dict[str, Any] | None:
+    user = request.session.get(_USER_KEY)
+    if isinstance(user, dict) and user.get("email"):
+        return user
+    return None
+
+
+@router.get("/admin", response_class=HTMLResponse, response_model=None, include_in_schema=False)
+async def apps_admin(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    user = _session_user(request)
+    if user is None:
+        return RedirectResponse(url="/apps/admin/login", status_code=303)
+    if str(user["email"]).lower() not in _admin_emails():
+        response = _render("admin_login.html", request=request, t=apps_de, forbidden=True, user=user)
+        response.status_code = 403
+        return response
+    bookings = await list_bookings(db)
+    return _render("admin.html", request=request, t=apps_de, user=user, bookings=bookings)
+
+
+@router.get("/admin/login", response_class=HTMLResponse, response_model=None, include_in_schema=False)
+async def apps_admin_login(request: Request) -> HTMLResponse:
+    return _render("admin_login.html", request=request, t=apps_de, forbidden=False, user=None)
+
+
+@router.get("/admin/auth/google", include_in_schema=False)
+async def apps_admin_auth_google(request: Request) -> RedirectResponse:
+    # Same OAuth client and registered callback as X Autopilot; the callback
+    # sends purpose=apps_admin back to /apps/admin, so no second redirect URI.
+    redirect_uri = f"{_base_url(request)}/x-autopilot/auth/google/callback"
+    try:
+        state = google_oauth.dumps_state({"purpose": "apps_admin", "checkout": ""})
+        url = google_oauth.authorization_url(redirect_uri=redirect_uri, state=state, scopes=LOGIN_SCOPES)
+    except GoogleNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return RedirectResponse(url=url, status_code=302)
+
+
+@router.get("/e2e/login", include_in_schema=False)
+async def apps_e2e_login(request: Request, key: str = Query(""), email: str = Query("")) -> RedirectResponse:
+    """CI only (XA_E2E_KEY set): sign a Google user in without Google, then /apps/admin decides."""
+    expected = settings.xa_e2e_key.strip()
+    if not expected or not key or not hmac.compare_digest(key, expected):
+        raise HTTPException(status_code=404)
+    clean = email.strip().lower()
+    if "@" not in clean:
+        raise HTTPException(status_code=422, detail="email required")
+    request.session[_USER_KEY] = {"email": clean, "name": "E2E Admin", "picture": "", "sub": "e2e"}
+    return RedirectResponse(url="/apps/admin", status_code=303)
 
 
 async def handle_checkout_completed(session: dict[str, Any]) -> Response:

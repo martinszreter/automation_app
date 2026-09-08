@@ -400,6 +400,9 @@ async def auth_google_callback(
         "picture": info.get("picture") or "",
         "sub": info.get("sub") or "",
     }
+    if purpose == "apps_admin":
+        # /apps/admin shares this OAuth client and callback; it checks the allow-list itself.
+        return RedirectResponse(url="/apps/admin", status_code=303)
     checkout_id = payload.get("checkout") or request.session.get(_CHECKOUT_KEY)
     if checkout_id:
         try:
