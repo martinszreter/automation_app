@@ -69,6 +69,7 @@ jobs:
           mkdir -p srv
           SRV_DIR=srv CANON_RW_URL=http://127.0.0.1:8765/ BUS_STATE_URL=http://127.0.0.1:8765/bus \
             python3 boot/views_boot.py
+          BUS_STATE_URL=http://127.0.0.1:8765/bus python3 scripts/publish_verify.py --srv srv
           (cd srv && python3 -m http.server 8098 --bind 127.0.0.1 &)
 
       - name: Start the app with the Stripe stand-in

@@ -60,6 +60,19 @@ authorization step (`X_OAUTH_ONBOARDING_URL`, falling back to
 write fails the endpoint answers `503` so Stripe retries; if the variable is
 unset the order is only logged, and the plan row in Postgres is still written.
 
+## HANDOVER
+
+Everything an operator needs is in [`docs/HANDOVER.md`](docs/HANDOVER.md):
+services and URLs, every environment variable and what it decides, how a
+stranger buys on each door, how to refund, how to know it is healthy. The
+short version:
+
+- **Health:** `GET /healthz` (process) and `GET /health` (process + Postgres).
+- **Alerts:** every unhandled 5xx → `ERROR_ALERT_WEBHOOK_URL` (n8n "Engine Error Alerts").
+- **Publish check:** `python3 scripts/publish_verify.py --live https://hq.startend.ch` → `PASS`.
+- **Refund:** Stripe → Payments → the payment → Refund. CHF 1 tests within one working day.
+- **Runbooks:** https://hq.startend.ch/sop-k4x9m2.html (from `boot/data/sop.json`).
+
 ## ORIGICAST door (21+)
 
 `/origicast/` is the age gate; the answer is kept in the signed session cookie

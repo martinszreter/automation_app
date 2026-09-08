@@ -1,6 +1,6 @@
 # German (de-CH) customer-facing text for /origicast — the 21+ door.
 # All customer-facing text lives here — never hard-code messages inline.
-# de-CH: ss instead of ß, CHF 1'390 style thousands, "Sie".
+# de-CH: double-s instead of the eszett, CHF 1'390 apostrophe thousands, "Sie".
 
 BRAND = "ORIGICAST"
 TAGLINE = "Für Erwachsene. Ab 21."
