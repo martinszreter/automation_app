@@ -31,6 +31,36 @@ async def test_landing_sells_one_offer_with_one_cta() -> None:
 
 
 @pytest.mark.asyncio
+async def test_landing_states_the_offer_once_with_five_faq_answers() -> None:
+    async with client() as c:
+        text = (await c.get("/")).text
+    # One offer block, one price, one CTA — nothing competes with the form.
+    assert text.count('data-testid="offer"') == 1
+    assert text.count('data-testid="price"') == 1
+    assert text.count("<button") == 1
+    assert text.count("<form") == 1
+    # The three parts of the offer are stated before the form.
+    for part in ("24 Stunden", "30 Tage", "endet automatisch"):
+        assert part in text
+    # Exactly five questions, each with an answer.
+    faq = text.split('data-testid="faq"')[1]
+    assert faq.count("<dt>") == 5
+    assert faq.count("<dd>") == 5
+    for question in (
+        "Was genau bekomme ich?",
+        "Woher stammen die Inserate",
+        "Wie schnell kommt der erste Report?",
+        "Was kostet es, und gibt es ein Abo?",
+        "Was, wenn kein Report kommt?",
+    ):
+        assert question in faq, question
+    # The FAQ names the same price as the offer, and the refund promise.
+    assert "Einmalig CHF 49" in faq
+    assert "vollen Betrag" in faq
+    assert 'href="/agb"' in faq
+
+
+@pytest.mark.asyncio
 async def test_landing_price_comes_from_the_environment(monkeypatch) -> None:
     monkeypatch.setattr(settings, "price_cents", 100)
     async with client() as c:
@@ -89,8 +119,11 @@ async def test_copy_is_de_ch_and_formal(path: str) -> None:
     assert "ß" not in text, "de-CH writes ss, never ß"
     assert not re.search(r"\bCHF\s\d{1,3},\d{3}", text), "thousands use an apostrophe: CHF 1'390"
     assert not re.search(r"\b(Du|Dein|Deine|Dir|Dich)\b", text), "guests are addressed as Sie"
-    for claim in ("besser als", "günstiger als", "schneller als", "Marktführer", "Nr. 1"):
+    for claim in ("besser als", "günstiger als", "schneller als", "Marktführer", "Nr. 1", "Konkurrenz", "Mitbewerber"):
         assert claim not in text, f"no comparative claims: {claim}"
+    for buzzword in ("KI-gestützt", "revolutionär", "disruptiv", "Game-Changer", "smart", "innovativ"):
+        assert buzzword.lower() not in text.lower(), f"plain words only: {buzzword}"
+    assert "Szreter" not in text and "Gründer" not in text, "never the founder's background"
     if path != "/impressum":  # the imprint names the company, not the reader
         assert "Sie" in text or "Ihr" in text
 
