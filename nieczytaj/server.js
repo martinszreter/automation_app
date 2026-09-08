@@ -445,13 +445,16 @@ const PRICE_DE_LOCKED = Object.freeze({
   baner7: 149, baner30: 449, kaf7: 119, kaf30: 299, box7: 89, box30: 199,
 });
 const STRIPE_CHF1 = 'https://buy.stripe.com/6oU5kE8RD3DrgzG2Tx0x20f';
+// TENANT=liesnicht pins the DE tenant for every request (the liesnicht
+// Railway service, local boots); otherwise the Host header decides.
+const TENANT_PIN = String(process.env.TENANT || '').toLowerCase();
 function requestHost(req) {
   const h = (req && req.headers) || {};
   return String(h.host || h['x-forwarded-host'] || h[':authority'] || '').toLowerCase().split(',')[0].split(':')[0];
 }
 function tenantFromHost(host) {
   const raw = String(host || '').toLowerCase();
-  if (raw.includes('liesnicht')) {
+  if (raw.includes('liesnicht') || TENANT_PIN === 'liesnicht') {
     const ch = raw.includes('.ch');
     return {
       id: 'de', lang: 'de', brand: 'LIESNICHT',
@@ -728,11 +731,15 @@ function ncGeo(){
 // ------------------------- /reklama -------------------------
 function buyLink(pkg, label, price, t) {
   t = t || tenantFromHost('');
+  // STRIPE_BANER7 / STRIPE_BANER30 / STRIPE_KAF7 / STRIPE_KAF30 / STRIPE_BOX7 /
+  // STRIPE_BOX30 — each Railway service (nieczytaj, liesnicht) sets its own
+  // Payment Links; unset falls back to a mailto reservation.
+  const env = process.env['STRIPE_' + pkg.toUpperCase()];
   if (t.id === 'de') {
+    if (env) return `<a class="buy" href="${esc(env)}" target="_blank" rel="noopener">Bestellen · CHF ${price}</a>`;
     const href = `mailto:info@startend.ch?subject=${encodeURIComponent('Werbung LIESNICHT — ' + label)}&body=${encodeURIComponent('Guten Tag,\n\nich möchte reservieren: ' + label + ' (CHF ' + price + ' netto).\n\nFirma:\nUID/MWST:\nMotiv (Bild/Video):\nZiel-Link:\nKampagnenstart:\n\n')}`;
     return `<a class="buy" href="${esc(href)}">Bestellen · CHF ${price}</a>`;
   }
-  const env = process.env['STRIPE_' + pkg.toUpperCase()];
   const href = env || `mailto:info@startend.ch?subject=${encodeURIComponent('Reklama nieczytaj.pl — ' + label)}&body=${encodeURIComponent('Dzień dobry,\n\nchcę zarezerwować: ' + label + ' (' + price + ' zł netto).\n\nFirma:\nNIP:\nMateriał (obraz/wideo):\nLink docelowy:\nStart kampanii:\n\n')}`;
   return `<a class="buy" href="${esc(href)}"${env ? ' target="_blank" rel="noopener"' : ''}>Zamów · ${price} zł</a>`;
 }
@@ -780,6 +787,7 @@ footer a{color:var(--mut)}
 </header>
 <h1>Reklama, której nikt nie przewija</h1>
 <p class="lede"><b>Obraz albo wideo</b> — w miejscu, w którym czytelnik i tak patrzy: między gorącymi newsami dnia. Bez pop-upów, bez autoodtwarzania z dźwiękiem, bez śledzenia użytkowników. Rezerwacja w minutę, materiał publikujemy tego samego dnia.</p>
+<div class="note"><b>Test CHF 1:</b> sprawdź link płatności — <a class="buy" href="${esc(STRIPE_CHF1)}" target="_blank" rel="noopener" style="margin-top:10px">Test · CHF 1</a></div>
 
 <h2>Formaty</h2>
 <div class="fmt">

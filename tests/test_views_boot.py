@@ -71,7 +71,24 @@ def test_bus_view_is_registered_like_the_other_views() -> None:
         "mobile-ops-k4x9m2.html",
         "next-k4x9m2.html",
         "init-chamdigital-k4x9m2.html",
+        # The 13 initiative SPEC views registered by HQ_CLAUDE.
+        "init-apps-k4x9m2.html",
+        "init-grokywood-k4x9m2.html",
+        "init-leadmine-k4x9m2.html",
+        "init-x-autopilot-k4x9m2.html",
+        "init-tradersland-k4x9m2.html",
+        "init-optimizeyourkid-k4x9m2.html",
+        "init-wordblast-k4x9m2.html",
+        "init-zorbeck-k4x9m2.html",
+        "init-liesnicht-k4x9m2.html",
+        "init-nieczytaj-k4x9m2.html",
+        "init-39thfloor-k4x9m2.html",
+        "init-xcom-k4x9m2.html",
+        "init-aikompetenz-k4x9m2.html",
     ]
+    # Every canon key is unique, and every file lands under the same suffix.
+    assert len({key for key, _ in views_boot.CANON_VIEWS}) == len(views_boot.CANON_VIEWS)
+    assert all(filename.endswith("-k4x9m2.html") for filename in canon_files)
 
 
 def test_bus_page_ships_with_a_placeholder_not_a_live_endpoint() -> None:
