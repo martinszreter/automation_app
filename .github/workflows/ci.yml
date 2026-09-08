@@ -91,6 +91,17 @@ jobs:
         working-directory: e2e
       - run: npx playwright test
         working-directory: e2e
+      - name: Lighthouse (mobile) on the sales pages
+        working-directory: e2e
+        run: |
+          export CHROME_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          for path in / /x-autopilot/ /apps/; do
+            name="$(echo "$path" | tr -c 'a-z0-9' '_')"
+            npx --yes lighthouse@12 "http://127.0.0.1:8000${path}" \
+              --output json --output-path "lh-${name}.json" --quiet \
+              --chrome-flags="--headless=new --no-sandbox --disable-gpu"
+            node lighthouse-check.mjs "lh-${name}.json" 0.9
+          done
       - name: App log on failure
         if: failure()
         run: tail -n 200 uvicorn.log || true

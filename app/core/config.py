@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     # notifications (e.g. asking Marcin to reconnect Sheets access). Env-only:
     # a webhook URL is a write key, so it never enters the repo.
     hq_mail_webhook_url: str = ""
+    # Engine Error Alerts (n8n): every unhandled exception is POSTed here as
+    # {app, workflow, node, message, description, stack, url, mode}. Env-only.
+    error_alert_webhook_url: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
