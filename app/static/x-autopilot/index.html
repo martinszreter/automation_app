@@ -8,7 +8,8 @@
 <meta name="description" content="322 posts in 30 days. Zero human touch. Your account, your keys, our engine. CHF 149 per month.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"></noscript>
 <style>
   :root{
     --paper:#EEF0EC;
@@ -129,15 +130,15 @@
            tier whose PRICE_ID_XA_* is set (app/services/xautopilot_tiers.py). -->
       <div class="price">
         <div class="price-tag mono">CHF 149<small> / month</small><small class="scope">3 posts per day</small></div>
-        <button class="btn btn-off" type="button" id="startBtn149" data-tier="149" data-missing-env="PRICE_ID_XA_149" disabled>Start</button>
+        <button class="btn btn-off" type="button" id="startBtn149" data-tier="149" data-missing-env="PRICE_ID_XA_149" disabled>Start CHF 149</button>
       </div>
       <div class="price">
         <div class="price-tag mono">CHF 330<small> / month</small><small class="scope">5 posts per day</small></div>
-        <button class="btn btn-off" type="button" id="startBtn330" data-tier="330" data-missing-env="PRICE_ID_XA_330" disabled>Start</button>
+        <button class="btn btn-off" type="button" id="startBtn330" data-tier="330" data-missing-env="PRICE_ID_XA_330" disabled>Start CHF 330</button>
       </div>
       <div class="price">
         <div class="price-tag mono">CHF 990<small> / month</small><small class="scope">Custom rhythm</small></div>
-        <button class="btn btn-off" type="button" id="startBtn990" data-tier="990" data-missing-env="PRICE_ID_XA_990" disabled>Start</button>
+        <button class="btn btn-off" type="button" id="startBtn990" data-tier="990" data-missing-env="PRICE_ID_XA_990" disabled>Start CHF 990</button>
       </div>
     </div>
   </section>

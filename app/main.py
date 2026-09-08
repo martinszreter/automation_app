@@ -11,9 +11,11 @@ from app.api.public import router as public_router
 from app.api.stripe_webhook import router as stripe_webhook_router
 from app.api.webhook import router as webhook_router
 from app.api.x_autopilot import router as x_autopilot_router
+from app.core.alerts import install_error_alerts
 from app.core.config import settings
 
 app = FastAPI(title="STARTEND", version="0.2.0")
+install_error_alerts(app)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret,

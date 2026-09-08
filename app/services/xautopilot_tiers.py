@@ -139,14 +139,14 @@ def disabled_button_html(tier: Tier) -> str:
     """The state the static file ships in: no link, and it says why."""
     return (
         f'<button class="btn btn-off" type="button" id="startBtn{tier.slug}" '
-        f'data-tier="{tier.slug}" data-missing-env="{tier.env_var}" disabled>Start</button>'
+        f'data-tier="{tier.slug}" data-missing-env="{tier.env_var}" disabled>Start CHF {tier.slug}</button>'
     )
 
 
 def link_button_html(tier: Tier) -> str:
     return (
         f'<a class="btn" id="startBtn{tier.slug}" data-tier="{tier.slug}" '
-        f'href="{tier.checkout_path}">Start</a>'
+        f'href="{tier.checkout_path}">Start CHF {tier.slug}</a>'
     )
 
 
