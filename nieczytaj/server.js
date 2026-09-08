@@ -579,6 +579,8 @@ function page(cityDef, t) {
   const ogDesc = de
     ? `Nicht alles lesen. KI überwacht ${feedN} DACH-Dienste und rangiert Themen, über die alle sprechen.`
     : `Nie czytaj wszystkiego. AI monitoruje ${feedN} polskich serwisów i ranguje tematy, o których mówią wszyscy.`;
+  const site = siteFor(t);
+  const canonical = site + (cityDef ? '/' + cityDef.slug : '/');
   return `<!DOCTYPE html><html lang="${t.lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="refresh" content="600">
@@ -586,6 +588,15 @@ function page(cityDef, t) {
 <meta name="description" content="${esc(desc)}">
 <meta property="og:title" content="${esc(ogTitle)}">
 <meta property="og:description" content="${esc(ogDesc)}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${esc(canonical)}">
+<meta property="og:site_name" content="${esc(t.brand)}">
+<meta property="og:locale" content="${de ? 'de_CH' : 'pl_PL'}">
+<meta name="twitter:card" content="summary">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#fbfbfa">
+<link rel="canonical" href="${esc(canonical)}">
+<link rel="alternate" type="application/rss+xml" title="${esc(t.brand)} RSS" href="${esc(site)}/rss.xml">
 <style>
 :root{--paper:#fbfbfa;--ink:#141414;--mut:#6f6a64;--acc:#c8102e;--line:#e7e5e1;--aibg:#f3f0ea}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.4 -apple-system,'Segoe UI',Roboto,Arial,sans-serif}
@@ -1105,6 +1116,60 @@ function sendHtml(res, status, html, maxAge) {
   res.writeHead(status, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=' + (maxAge || 120) });
   return res.end(html);
 }
+
+// ------------------------- SEO: canonical host, sitemap, RSS -------------------------
+function siteFor(t) { return t && t.id === 'de' ? 'https://www.liesnicht.ch' : 'https://www.nieczytaj.pl'; }
+function xesc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+function sitemapXml(t) {
+  const site = siteFor(t);
+  const de = t.id === 'de';
+  const mod = new Date(state.lastRefresh || Date.now()).toISOString();
+  const urls = [{ loc: site + '/', freq: 'hourly', pri: '1.0', mod }];
+  if (de) {
+    urls.push({ loc: site + '/werbung', freq: 'weekly', pri: '0.6' });
+    urls.push({ loc: site + '/impressum', freq: 'monthly', pri: '0.2' });
+    urls.push({ loc: site + '/datenschutz', freq: 'monthly', pri: '0.2' });
+  } else {
+    CITIES.forEach(c => urls.push({ loc: site + '/' + c.slug, freq: 'hourly', pri: '0.8', mod }));
+    urls.push({ loc: site + '/reklama', freq: 'weekly', pri: '0.6' });
+    urls.push({ loc: site + '/regulamin', freq: 'monthly', pri: '0.2' });
+  }
+  const rows = urls.map(u => `  <url><loc>${xesc(u.loc)}</loc>${u.mod ? `<lastmod>${u.mod}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.pri}</priority></url>`);
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + rows.join('\n') + '\n</urlset>\n';
+}
+function rssXml(t) {
+  const site = siteFor(t);
+  const de = t.id === 'de';
+  const edition = de ? state.de : state;
+  const clusters = (edition.clusters || []).slice(0, 30);
+  const title = de ? `${t.brand} — heisse Nachrichten, gewählt von KI` : 'NIECZYTAJ.PL — gorące wiadomości wybrane przez AI';
+  const desc = de ? 'Nicht alles lesen. KI wählt die Nachrichten, über die alle sprechen.' : 'Nie czytaj wszystkiego. AI wybiera wiadomości, o których mówią wszyscy.';
+  const items = clusters.map(c => {
+    const lead = c.lead || (c.items && c.items[0]) || {};
+    const summary = state.summaries.get(c.key);
+    const body = (summary && summary.text) || lead.desc || '';
+    const srcLabel = de ? `${c.srcCount} Quellen` : `${c.srcCount} źródeł`;
+    return '    <item>\n' +
+      `      <title>${xesc(lead.title || '')}</title>\n` +
+      `      <link>${xesc(lead.link || site)}</link>\n` +
+      `      <guid isPermaLink="false">${xesc(c.key || lead.link || '')}</guid>\n` +
+      `      <pubDate>${new Date(c.newest || Date.now()).toUTCString()}</pubDate>\n` +
+      `      <category>${xesc(c.cat || '')}</category>\n` +
+      `      <description>${xesc(body + (c.srcCount ? ' (' + srcLabel + ')' : ''))}</description>\n` +
+      '    </item>';
+  });
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n  <channel>\n' +
+    `    <title>${xesc(title)}</title>\n` +
+    `    <link>${site}/</link>\n` +
+    `    <description>${xesc(desc)}</description>\n` +
+    `    <language>${de ? 'de-CH' : 'pl-PL'}</language>\n` +
+    `    <lastBuildDate>${new Date(state.lastRefresh || Date.now()).toUTCString()}</lastBuildDate>\n` +
+    `    <atom:link href="${site}/rss.xml" rel="self" type="application/rss+xml"/>\n` +
+    items.join('\n') + (items.length ? '\n' : '') +
+    '  </channel>\n</rss>\n';
+}
 const server = http.createServer((req, res) => {
   const url = (req.url || '/').split('?')[0];
   const t = tenantFromHost(requestHost(req));
@@ -1188,7 +1253,15 @@ const server = http.createServer((req, res) => {
         } catch (e) { res.writeHead(400); res.end('bad json'); }
       });
     }
-    if (url === '/robots.txt') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('User-agent: *\nAllow: /\n'); }
+    if (url === '/sitemap.xml') {
+      res.writeHead(200, { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' });
+      return res.end(sitemapXml(t));
+    }
+    if (url === '/rss.xml' || url === '/rss' || url === '/feed') {
+      res.writeHead(200, { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'public, max-age=300' });
+      return res.end(rssXml(t));
+    }
+    if (url === '/robots.txt') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('User-agent: *\nAllow: /\nSitemap: ' + siteFor(t) + '/sitemap.xml\n'); }
     if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
     res.writeHead(302, { location: '/' });
     res.end();
