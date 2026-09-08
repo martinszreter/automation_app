@@ -100,6 +100,20 @@ const ready = new Promise((resolve, reject) => {
     assert(plJ.price.baner7 === 490 && plJ.price.kaf7 === 390 && plJ.price.box7 === 290, 'PL health 490/390/290');
     assert((deJ.feeds || []).some(f => f.id === 'tagesschau'), 'DE health lists DACH feeds');
     assert((plJ.feeds || []).some(f => f.id === 'onet') && !(plJ.feeds || []).some(f => f.id === 'tagesschau'), 'PL health still Polish feeds');
+
+    // SEO layer: canonical + OG per tenant, sitemap, RSS, robots
+    assert(/<link rel="canonical" href="https:\/\/www\.liesnicht\.ch\/">/.test(deHome.body) && /og:locale" content="de_CH"/.test(deHome.body), 'DE home canonical + og:locale');
+    assert(/<link rel="canonical" href="https:\/\/www\.nieczytaj\.pl\/">/.test(plHome.body) && /og:locale" content="pl_PL"/.test(plHome.body), 'PL home canonical + og:locale');
+    const deSitemap = await req('www.liesnicht.ch', '/sitemap.xml');
+    assert(deSitemap.status === 200 && /<urlset/.test(deSitemap.body) && /liesnicht\.ch\/werbung/.test(deSitemap.body) && !/nieczytaj/.test(deSitemap.body), 'DE /sitemap.xml');
+    const plSitemap = await req('www.nieczytaj.pl', '/sitemap.xml');
+    assert(plSitemap.status === 200 && /nieczytaj\.pl\/warszawa/.test(plSitemap.body) && /\/reklama<\/loc>/.test(plSitemap.body) && !/liesnicht/.test(plSitemap.body), 'PL /sitemap.xml lists cities');
+    const deRss = await req('www.liesnicht.ch', '/rss.xml');
+    assert(deRss.status === 200 && /<rss version="2.0"/.test(deRss.body) && /<language>de-CH<\/language>/.test(deRss.body) && /liesnicht\.ch\/rss\.xml/.test(deRss.body), 'DE /rss.xml');
+    const plRss = await req('www.nieczytaj.pl', '/feed');
+    assert(plRss.status === 200 && /<language>pl-PL<\/language>/.test(plRss.body), 'PL /feed alias');
+    const deRobots = await req('www.liesnicht.ch', '/robots.txt');
+    assert(/Sitemap: https:\/\/www\.liesnicht\.ch\/sitemap\.xml/.test(deRobots.body), 'DE robots.txt names the sitemap');
   } catch (e) {
     fails.push(String(e));
     console.log('FAIL', e);
