@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     # Where the success page sends the buyer to authorize posting on X.
     # Empty falls back to the on-site onboarding form.
     x_oauth_onboarding_url: str = ""
+    # Post quality judge (/x-autopilot/judge, /x-autopilot/compose): the n8n
+    # engines send this shared key as X-Judge-Key. Vetoes go to the log and,
+    # when set, to the n8n webhook. Generation needs an Anthropic key.
+    xautopilot_judge_key: str = ""
+    n8n_xa_veto_log_url: str = ""
+    anthropic_api_key: str = ""
+    xautopilot_generate_model: str = "claude-opus-5"
 
     # /apps — WhatsApp reservation setup. One Checkout Session carries both
     # prices: the one-time setup fee and the monthly subscription.

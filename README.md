@@ -60,6 +60,31 @@ authorization step (`X_OAUTH_ONBOARDING_URL`, falling back to
 write fails the endpoint answers `503` so Stripe retries; if the variable is
 unset the order is only logged, and the plan row in Postgres is still written.
 
+## X Autopilot post quality judge
+
+The n8n engines (Two Agents — Reactive/Structured, Recap, Longform) draft the
+posts; before posting they call this app, which vetoes **hard fails only** and
+names the best variant. Both endpoints need the shared header
+`X-Judge-Key: $XAUTOPILOT_JUDGE_KEY`.
+
+| Endpoint | Body | Answer |
+| --- | --- | --- |
+| `POST /x-autopilot/judge` | `{profile, candidates[], recent_posts[]}` | `{best, reports[], vetoes_recorded}` |
+| `POST /x-autopilot/compose` | `{profile, brief, recent_posts[], variants}` | same, after Claude drafted `variants` posts (needs `ANTHROPIC_API_KEY`) |
+
+`profile` is the customer's tone profile — `{customer, language, banned_terms[],
+topics[], voice, max_hashtags}` — built by the engine from the `agents` row and
+the onboarding answers. `recent_posts` are `{text, posted_at}` from `post_log`.
+
+Veto codes: `too_long` (X count: a link is 23, emoji 2), `spam` (hashtag /
+mention / link floods, shouting, `!!!`, emoji floods, follow-me / link-in-bio /
+giveaway phrases), `banned_claim` (guarantees, comparisons against competitors,
+cures, get-rich promises, the customer's own terms), `wrong_language`,
+`duplicate` (same as a post from the last 30 days). Every veto is one
+`xa_judge_veto {...}` JSON log line and, with `N8N_XA_VETO_LOG_URL` set, a row
+posted to that webhook. Among the survivors the pick is a soft score (length
+near 200, a concrete number, structure, few hashtags) — never a veto.
+
 ## Stripe webhook
 
 One endpoint serves both ventures: **`POST /stripe/webhook`**, signature-verified

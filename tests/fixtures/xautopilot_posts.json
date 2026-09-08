@@ -1,0 +1,49 @@
+{
+  "now": "2026-09-08T12:00:00+00:00",
+  "recent_posts": [
+    {
+      "text": "Drei Fragen vor jedem Pitch: Wer zahlt? Wofür genau? Und was passiert, wenn niemand zahlt? Die dritte Frage spart die meiste Zeit.",
+      "posted_at": "2026-09-01T08:00:00+00:00"
+    },
+    {
+      "text": "Preise runden nach oben, nicht nach unten. CHF 1'390 statt 1'350 sieht nach einer Entscheidung aus, nicht nach einem Rabatt.",
+      "posted_at": "2026-08-30T08:00:00+00:00"
+    },
+    {
+      "text": "Ein Angebot pro Seite. Wer zwei Dinge verkauft, verkauft keins.",
+      "posted_at": "2026-07-01T08:00:00+00:00"
+    }
+  ],
+  "posts": [
+    {"id": 1, "language": "de", "expected": [], "text": "Die meisten Angebote scheitern nicht am Preis, sondern an der Unklarheit. Wer in einem Satz sagen kann, was der Kunde nach dem Kauf hat, gewinnt."},
+    {"id": 2, "language": "de", "expected": [], "text": "Rechnung schreiben dauert 4 Minuten. Rechnung nicht schreiben kostet 40 Tage Liquidität.\n\nWelche Zahl ist grösser?"},
+    {"id": 3, "language": "de", "expected": [], "text": "Ein Restaurant mit 60 Plätzen verliert bei 8% No-Shows jeden Abend fast fünf Tische. Eine Erinnerung am Vortag holt die Hälfte davon zurück."},
+    {"id": 4, "language": "de", "expected": [], "text": "Der beste Zeitpunkt für die Preiserhöhung war vor sechs Monaten. Der zweitbeste ist der Montag, an dem du diesen Post liest."},
+    {"id": 5, "language": "de", "expected": [], "text": "Kunden kaufen keine Features. Sie kaufen die Version von sich, die das Problem nicht mehr hat. Schreib die Landingpage für diese Person. #B2B"},
+    {"id": 6, "language": "de", "expected": [], "text": "Was wir in drei Jahren gelernt haben: Der erste zahlende Kunde ist mehr wert als 1'000 Newsletter-Abonnenten. Beides ist gut, nur eines ist ein Beweis."},
+    {"id": 7, "language": "de", "expected": [], "text": "Kurz und konkret: https://startend.ch/apps zeigt in 20 Sekunden, wie eine WhatsApp-Reservation für Gäste aussieht."},
+    {"id": 8, "language": "de", "expected": [], "text": "Öffnungszeiten im Impressum, Preise auf der Startseite, Telefonnummer im Footer. Drei Dinge, die 9 von 10 Gastro-Websites vergessen."},
+    {"id": 9, "language": "en", "expected": [], "text": "Most pricing pages fail at the first sentence. If a stranger cannot tell what changes for them after paying, the price is not the problem."},
+    {"id": 10, "language": "en", "expected": [], "text": "A reminder the day before cuts no-shows roughly in half. Costs one message. Which of your tables is worth one message?"},
+    {"id": 11, "language": "de", "expected": ["too_long"], "text": "Wer heute noch glaubt, dass eine Website ohne klaren Preis, ohne Öffnungszeiten, ohne Telefonnummer und ohne eine einzige konkrete Aussage darüber, was der Kunde nach dem Kauf tatsächlich in der Hand hat, irgendjemanden überzeugt, der hat die letzten fünf Jahre im Internet schlicht verschlafen und wundert sich dann über leere Reservierungsbücher."},
+    {"id": 12, "language": "de", "expected": ["too_long"], "text": "Ein Link zählt auf X immer 23 Zeichen, egal wie lang er wirklich ist. Dieser Post ist mit dem Link knapp über der Grenze, weil der Text davor schon zweihundertsechzig Zeichen lang ist und daher jede weitere Silbe zu viel wird, genau so. Jede einzelne Silbe zählt hier mit. https://example.com/x"},
+    {"id": 13, "language": "de", "expected": [], "text": "Ein Link zählt auf X immer 23 Zeichen, egal wie lang er wirklich ist. Dieser Post bleibt mit dem Link unter der Grenze, weil der Text davor kurz genug ist. https://startend.ch/x-autopilot/pricing/very/long/path/that/does/not/matter"},
+    {"id": 14, "language": "de", "expected": ["spam"], "text": "Neues Angebot für Restaurants in Zürich. #gastro #zürich #restaurant #whatsapp #reservation #startup"},
+    {"id": 15, "language": "de", "expected": ["spam"], "text": "JETZT RESERVIEREN UND NIE WIEDER AM TELEFON WARTEN. DAS IST DIE ZUKUNFT DER GASTRONOMIE."},
+    {"id": 16, "language": "de", "expected": ["spam"], "text": "Das musst du sehen!!! Reservierungen per WhatsApp, automatisch bestätigt??? Ja wirklich!!!"},
+    {"id": 17, "language": "de", "expected": ["spam"], "text": "Wer mehr über automatische Reservationen wissen will: Folge mir und schau in den Link in der Bio."},
+    {"id": 18, "language": "de", "expected": ["spam"], "text": "🔥🔥🔥 Reservationen 🚀🚀 per WhatsApp 🎉🎉🎉 ohne Anruf 💥💥"},
+    {"id": 19, "language": "de", "expected": ["banned_claim"], "text": "Mit unserem System sind 30% weniger No-Shows garantiert, ab dem ersten Monat."},
+    {"id": 20, "language": "de", "expected": ["banned_claim"], "text": "Unsere WhatsApp-Reservation ist besser als alle Mitbewerber am Markt, und das seit Jahren."},
+    {"id": 21, "language": "de", "expected": ["banned_claim"], "text": "Die Wunderdiät für dein Reservierungsbuch: eine Nachricht am Vortag, und die Tische bleiben nicht leer."},
+    {"id": 22, "language": "de", "expected": ["banned_claim"], "text": "Wer mit Gastro-Software schnell reich werden will, sollte etwas anderes verkaufen. Wir verkaufen volle Tische."},
+    {"id": 23, "language": "de", "expected": ["wrong_language"], "text": "Most restaurants lose a table a night to no-shows, and the fix is a single message the day before. We build exactly that for you."},
+    {"id": 24, "language": "de", "expected": ["wrong_language"], "text": "Większość restauracji traci stolik dziennie przez nieobecnych gości, a rozwiązaniem jest jedna wiadomość dzień wcześniej. Budujemy to dla was."},
+    {"id": 25, "language": "de", "expected": ["duplicate"], "text": "Drei Fragen vor jedem Pitch: Wer zahlt? Wofür genau? Und was passiert, wenn niemand zahlt? Die dritte Frage spart die meiste Zeit."},
+    {"id": 26, "language": "de", "expected": ["duplicate"], "text": "Preise runden nach oben, nicht nach unten. CHF 1'390 statt 1'350 sieht nach einer Entscheidung aus, nicht nach einem Rabatt. Immer."},
+    {"id": 27, "language": "de", "expected": [], "text": "Ein Angebot pro Seite. Wer zwei Dinge verkauft, verkauft keins."},
+    {"id": 28, "language": "de", "expected": ["too_long", "spam"], "text": "JETZT JETZT JETZT: WER DIESEN POST LIEST UND NICHT SOFORT RESERVIERT, VERPASST DIE GRÖSSTE CHANCE SEINES LEBENS, DENN NIE WIEDER WIRD ES SO EINFACH SEIN, EINEN TISCH PER WHATSAPP ZU BUCHEN, OHNE TELEFON, OHNE WARTEN, OHNE STRESS, OHNE ALLES, WAS FRÜHER NERVTE, UND DAS ALLES KOSTENLOS FÜR IMMER!!! #gastro #zürich #jetzt #whatsapp"},
+    {"id": 29, "language": "en", "expected": [], "text": "One offer per page. Two offers is a menu, and menus make people leave. #pricing"},
+    {"id": 30, "language": "de", "expected": [], "text": "Was kostet ein leerer Tisch am Samstag? Bei CHF 65 pro Gast und vier Plätzen sind es CHF 260 pro Abend. Eine Erinnerung kostet einen Rappen."}
+  ]
+}
