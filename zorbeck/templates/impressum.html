@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Impressum – Zorbeck{% endblock %}
+{% block description %}Impressum von Zorbeck, einem Angebot der STARTEND GmbH, Cham.{% endblock %}
+{% block content %}
+  <section class="legal">
+    <h1>Impressum</h1>
+    <p><strong>{{ legal.company }}</strong><br>{{ legal.street }}<br>{{ legal.city }}<br>Schweiz</p>
+    <p>UID: {{ legal.uid }}<br>E-Mail: <a href="mailto:{{ legal.email }}">{{ legal.email }}</a></p>
+    <p>Zorbeck ist ein Angebot der {{ legal.company }}. Vertreten durch die Geschäftsführung. Verantwortlich für den Inhalt dieser Website: {{ legal.company }}, Cham.</p>
+    <p>Zahlungsabwicklung: Stripe Payments Europe, Ltd., Dublin, Irland.</p>
+  </section>
+{% endblock %}

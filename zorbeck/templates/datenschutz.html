@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Datenschutz – Zorbeck{% endblock %}
+{% block description %}Datenschutzerklärung für Zorbeck: welche Daten wir wofür verwenden. Keine Cookies, kein Tracking.{% endblock %}
+{% block content %}
+  <section class="legal">
+    <h1>Datenschutz</h1>
+    <p class="muted">Stand: 8. September 2026</p>
+
+    <h2>Verantwortliche Stelle</h2>
+    <p>{{ legal.company }}, {{ legal.street }}, {{ legal.city }}, Schweiz. Kontakt: <a href="mailto:{{ legal.email }}">{{ legal.email }}</a>.</p>
+
+    <h2>Keine Cookies, kein Tracking</h2>
+    <p>Diese Website setzt keine Cookies und verwendet keine Analyse- oder Werbedienste. Es gibt nichts, dem Sie zustimmen müssten.</p>
+
+    <h2>Welche Daten wir verarbeiten</h2>
+    <p>Wenn Sie den Deal-Alarm bestellen: Ihre E-Mail-Adresse, die gewünschte Stadt und Ihr Budget. Diese Angaben brauchen wir, um den Report zu erstellen und Ihnen die Meldungen zu senden. Sie werden 30 Tage nach Ende des Alarms gelöscht, soweit keine gesetzliche Aufbewahrungspflicht besteht.</p>
+    <p>Beim Aufruf der Website speichert unser Hosting-Anbieter technische Zugriffsdaten (IP-Adresse, Zeitpunkt, aufgerufene Seite) für die Betriebssicherheit, in der Regel für höchstens 30 Tage.</p>
+
+    <h2>Zahlung</h2>
+    <p>Die Zahlung wickelt Stripe Payments Europe, Ltd., Dublin, ab. Ihre Kartendaten sehen wir nicht. Stripe teilt uns mit, ob die Zahlung erfolgt ist, und den Betrag. Es gilt zusätzlich die Datenschutzerklärung von Stripe.</p>
+
+    <h2>Dienstleister</h2>
+    <p>Hosting: Railway (USA). E-Mail-Versand und Verarbeitung der Bestellung: eigene Systeme der {{ legal.company }} sowie n8n Cloud (EU). Mit allen Dienstleistern bestehen Vereinbarungen zum Datenschutz.</p>
+
+    <h2>Ihre Rechte</h2>
+    <p>Sie können jederzeit Auskunft, Berichtigung oder Löschung Ihrer Daten verlangen. Schreiben Sie an <a href="mailto:{{ legal.email }}">{{ legal.email }}</a>.</p>
+  </section>
+{% endblock %}

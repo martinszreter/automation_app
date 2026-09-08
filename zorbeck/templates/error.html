@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Zorbeck – Fehler{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+  <section class="hero">
+    <h1>Das hat nicht geklappt</h1>
+    <p class="sub">{{ message }}</p>
+    <p><a class="link" href="/">Zurück zur Startseite</a></p>
+  </section>
+{% endblock %}
