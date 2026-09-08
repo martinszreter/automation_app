@@ -28,6 +28,7 @@ from app.services.google_oauth import (
     GoogleOAuthError,
     LOGIN_SCOPES,
     SHEETS_SCOPES,
+    SheetsReconnectRequired,
 )
 from app.services.hq_mail import HQMailError, HQMailNotConfigured, send_hq_mail
 from app.services.stripe_checkout import (
@@ -67,7 +68,8 @@ _CHECKOUT_KEY = "xa_checkout_session_id"
 _SESSION_ID_MAX = 160
 # Don't re-send the Sheets reconnect request on every panel view.
 _SHEETS_RECONNECT_EMAIL_COOLDOWN = 6 * 3600
-_sheets_reconnect_email_sent_at = 0.0
+_SHEETS_RECONNECT_SUBJECT = "X Autopilot: Sheets reconnect needed"
+_sheets_reconnect_mail: dict[str, float] = {"sent_at": 0.0}
 
 
 def _base_url(request: Request) -> str:
@@ -78,29 +80,29 @@ def _base_url(request: Request) -> str:
     )
 
 
-async def _request_sheets_reconnect(request: Request) -> None:
-    """Ask Marcin (via HQ Mail) to reconnect Sheets when the refresh token is missing."""
-    global _sheets_reconnect_email_sent_at
+async def _request_sheets_reconnect(request: Request, reason: str) -> None:
+    """Ask Marcin (via HQ Mail) to reconnect Sheets. Debounced; never raises."""
     now = time.time()
-    if now - _sheets_reconnect_email_sent_at < _SHEETS_RECONNECT_EMAIL_COOLDOWN:
+    if now - _sheets_reconnect_mail["sent_at"] < _SHEETS_RECONNECT_EMAIL_COOLDOWN:
         return
     key = settings.google_sheets_reconnect_key.strip()
-    if not key:
+    if not key or not settings.google_oauth_client_id.strip():
+        # Without a reconnect key or a Google client the link could not work.
+        logger.warning("Sheets reconnect needed (%s) but no reconnect link can be built", reason)
         return
-    reconnect_url = f"{_base_url(request)}/x-autopilot/sheets/reconnect?key={key}"
+    reconnect_url = f"{_base_url(request)}/x-autopilot/sheets/reconnect?key={quote(key, safe='')}"
     body = (
-        "X Autopilot's Google Sheets access needs to be reconnected "
-        "(GOOGLE_SHEETS_REFRESH_TOKEN is missing or expired).\n\n"
+        f"X Autopilot's Google Sheets access needs to be reconnected: {reason}.\n\n"
         f"Reconnect: {reconnect_url}\n\n"
-        "This grants read-only access to the configured spreadsheet and "
-        "shows a new refresh token to paste into Railway."
+        "This grants read-only access to the configured spreadsheet and shows a "
+        "new GOOGLE_SHEETS_REFRESH_TOKEN to paste into Railway."
     )
     try:
-        await send_hq_mail("X Autopilot: Sheets reconnect needed", body)
+        await send_hq_mail(_SHEETS_RECONNECT_SUBJECT, body)
     except (HQMailNotConfigured, HQMailError) as exc:
         logger.warning("Could not send Sheets reconnect email: %s", exc)
         return
-    _sheets_reconnect_email_sent_at = now
+    _sheets_reconnect_mail["sent_at"] = now
 
 
 def _render(name: str, **context: Any) -> HTMLResponse:
@@ -409,9 +411,9 @@ async def panel(request: Request, db: AsyncSession = Depends(get_db)) -> Respons
     if plan is not None and plan.status == PlanStatus.ACTIVE:
         try:
             sheets = await google_oauth.read_sheet_values()
-        except GoogleNotConfigured as exc:
+        except (GoogleNotConfigured, SheetsReconnectRequired) as exc:
             sheets_error = str(exc)
-            await _request_sheets_reconnect(request)
+            await _request_sheets_reconnect(request, str(exc))
         except GoogleOAuthError as exc:
             sheets_error = str(exc)
 
