@@ -56,6 +56,23 @@ DEMO_ERROR_SEND_FAILED = (
     "Bitte versuchen Sie es nochmals oder schreiben Sie an info@startend.ch."
 )
 
+# /apps/admin — the operator's list of demo requests and setup details.
+ADMIN_TITLE = "Buchungen — WhatsApp-Reservierung"
+ADMIN_HEADLINE = "Buchungen"
+ADMIN_LEAD = "Demo-Anfragen und Einrichtungsangaben, neueste zuerst."
+ADMIN_COL_WHEN = "Eingang"
+ADMIN_COL_KIND = "Art"
+ADMIN_COL_RESTAURANT = "Restaurant"
+ADMIN_COL_CONTACT = "Kontakt"
+ADMIN_COL_DETAILS = "Angaben"
+ADMIN_KIND_DEMO = "Demo"
+ADMIN_KIND_SETUP = "Einrichtung"
+ADMIN_GUESTS = "Personen"
+ADMIN_EMPTY = "Noch keine Buchungen."
+ADMIN_SIGN_OUT = "Abmelden"
+ADMIN_FORBIDDEN = "Dieses Google-Konto hat keinen Zugriff auf die Buchungen."
+ADMIN_SIGN_IN = "Mit Google anmelden"
+
 DEMO_DONE_TITLE = "Demo gebucht — WhatsApp-Reservierung"
 DEMO_DONE_HEADLINE = "Demo gebucht."
 DEMO_DONE_LEAD = "Wir bestätigen den Termin über den Kontakt, den Sie angegeben haben."

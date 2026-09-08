@@ -1,8 +1,8 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -79,6 +79,26 @@ class XAutopilotPlan(Base):
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # The n8n agents-table row this customer posts through, learned from the lane.
     agent_name: Mapped[str | None] = mapped_column(String(120))
+
+
+class AppsBooking(Base):
+    """What /apps collected — demo requests and setup details — for /apps/admin."""
+
+    __tablename__ = "apps_bookings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # demo | setup
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="new", server_default="new")
+    restaurant_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    contact: Mapped[str | None] = mapped_column(String(160))
+    phone: Mapped[str | None] = mapped_column(String(32))
+    booking_date: Mapped[date | None] = mapped_column(Date)
+    booking_time: Mapped[str | None] = mapped_column(String(16))
+    guests: Mapped[int | None] = mapped_column(Integer)
+    note: Mapped[str | None] = mapped_column(Text)
+    opening_hours: Mapped[str | None] = mapped_column(Text)
+    session_id: Mapped[str | None] = mapped_column(String(255), index=True)
 
 
 class ContactRequest(Base):

@@ -53,6 +53,18 @@
   footer{border-top:1px solid var(--rule);padding:24px 0 40px;font-size:13px;color:var(--ink-soft)}
   footer a{color:var(--ink-soft)}
   :focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+  .chat{max-width:420px;border:1.5px solid var(--ink);border-radius:2px;background:#E5DDD5;overflow:hidden}
+  .chat-head{display:flex;align-items:center;gap:8px;background:#075E54;color:#fff;font-weight:700;font-size:14px;padding:12px 14px}
+  .chat-dot{width:9px;height:9px;border-radius:50%;background:#25D366;flex:none}
+  .thread{min-height:260px;padding:14px 12px;display:flex;flex-direction:column;gap:8px}
+  .msg{max-width:84%;padding:9px 12px;border-radius:8px;font-size:15px;line-height:1.4;box-shadow:0 1px 0 rgba(0,0,0,.08)}
+  .msg.in{align-self:flex-start;background:#fff;border-top-left-radius:2px}
+  .msg.out{align-self:flex-end;background:#DCF8C6;border-top-right-radius:2px}
+  .msg.sys{align-self:center;background:#D4E6F1;font-size:12px;padding:5px 10px;border-radius:12px;color:#33475b}
+  .choices{display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#F0F0F0;border-top:1px solid #d8d8d8;min-height:58px}
+  .choices button,.choices a{font:inherit;font-size:14px;font-weight:600;padding:9px 14px;border-radius:20px;border:1.5px solid #075E54;background:#fff;color:#075E54;cursor:pointer;text-decoration:none}
+  .choices button:hover,.choices a:hover{background:#075E54;color:#fff}
 </style>
 </head>
 <body>
@@ -85,6 +97,20 @@
         <li data-n="04">Alle Reservierungen laufen in einer Übersicht zusammen, samt Absagen und Änderungen.</li>
         <li data-n="05">Texte auf Deutsch, abgestimmt auf Ihre Öffnungszeiten.</li>
       </ul>
+    </div>
+  </section>
+
+  <section id="demo">
+    <div class="wrap">
+      <h2>So läuft es für Ihre Gäste</h2>
+      <p style="color:var(--ink-soft);margin-bottom:18px">Klicken Sie sich durch — genau so sieht der Ablauf auf WhatsApp aus. Nichts wird gesendet.</p>
+      <div class="chat" data-testid="wa-demo">
+        <div class="chat-head"><span class="chat-dot"></span>Ihr Restaurant · WhatsApp</div>
+        <div class="thread" id="wa-thread" aria-live="polite">
+          <div class="msg in">Guten Tag! Hier reservieren Sie per WhatsApp. Für wie viele Personen?</div>
+        </div>
+        <div class="choices" id="wa-choices"></div>
+      </div>
     </div>
   </section>
 
@@ -123,5 +149,75 @@
     <a href="/impressum/">Impressum</a> · <a href="mailto:info@startend.ch">info@startend.ch</a>
   </div>
 </footer>
+
+<script>
+(function () {
+  var thread = document.getElementById('wa-thread');
+  var choices = document.getElementById('wa-choices');
+  if (!thread || !choices) return;
+  var state = { guests: 0, when: '' };
+
+  function say(text, kind, testid) {
+    var el = document.createElement('div');
+    el.className = 'msg ' + kind;
+    el.textContent = text;
+    if (testid) el.setAttribute('data-testid', testid);
+    thread.appendChild(el);
+    thread.scrollTop = thread.scrollHeight;
+  }
+  function offer(items) {
+    choices.textContent = '';
+    items.forEach(function (it) {
+      var el;
+      if (it.href) { el = document.createElement('a'); el.href = it.href; }
+      else { el = document.createElement('button'); el.type = 'button'; el.addEventListener('click', it.onClick); }
+      el.textContent = it.label;
+      if (it.testid) el.setAttribute('data-testid', it.testid);
+      choices.appendChild(el);
+    });
+  }
+  function askGuests() {
+    offer([2, 4, 6].map(function (n) {
+      return { label: n + ' Personen', testid: 'demo-guests-' + n, onClick: function () { pickGuests(n); } };
+    }));
+  }
+  function pickGuests(n) {
+    state.guests = n;
+    say(n + ' Personen', 'out');
+    say('Gerne. Für wann?', 'in');
+    offer([
+      { label: 'Heute, 19.30 Uhr', testid: 'demo-when-0', onClick: function () { pickWhen('heute um 19.30 Uhr'); } },
+      { label: 'Samstag, 20.00 Uhr', testid: 'demo-when-1', onClick: function () { pickWhen('Samstag um 20.00 Uhr'); } }
+    ]);
+  }
+  function pickWhen(when) {
+    state.when = when;
+    say(when.charAt(0).toUpperCase() + when.slice(1), 'out');
+    say('Reserviert: ' + state.guests + ' Personen, ' + when + '. Wir freuen uns auf Sie!', 'in', 'demo-confirmed');
+    say('Am Vortag, automatisch', 'sys');
+    say('Erinnerung: ' + state.when + ', ' + state.guests + ' Personen. Kommen Sie? Antworten Sie mit JA oder NEIN — oder mit einer Zahl, um die Personenanzahl zu ändern.', 'in');
+    offer([
+      { label: 'JA', testid: 'demo-reply-yes', onClick: function () { reply('JA', 'Bestätigt. Bis dann!'); } },
+      { label: 'NEIN', testid: 'demo-reply-no', onClick: function () { reply('NEIN', 'Storniert — der Tisch ist wieder frei. Danke fürs Bescheidsagen.'); } },
+      { label: '5', testid: 'demo-reply-5', onClick: function () { reply('5', 'Angepasst auf 5 Personen. Bis dann!'); } }
+    ]);
+  }
+  function reply(text, answer) {
+    say(text, 'out');
+    say(answer, 'in', 'demo-done');
+    offer([
+      { label: 'Nochmals', testid: 'demo-restart', onClick: restart },
+      { label: 'Echte Demo buchen', href: '/apps/demo', testid: 'demo-book' }
+    ]);
+  }
+  function restart() {
+    thread.textContent = '';
+    state.guests = 0; state.when = '';
+    say('Guten Tag! Hier reservieren Sie per WhatsApp. Für wie viele Personen?', 'in');
+    askGuests();
+  }
+  askGuests();
+})();
+</script>
 </body>
 </html>
