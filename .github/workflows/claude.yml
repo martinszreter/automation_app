@@ -28,8 +28,9 @@ jobs:
           prompt: |
             You are executing a STARTEND task contract in automation mode (No Human Touch).
             Issue #${{ github.event.issue.number }} in ${{ github.repository }}.
+            MERGE STAYS HQ (ratified 9 Sep 2026). Never `gh pr merge`. Never --auto --squash. Never merge from this Action.
             Rules: FIRST create the branch and push it immediately; commit and push after every completed step so partial work is never lost; if you are near the turn budget, stop implementing, push, open the PR with what exists and comment PARTIAL: with the remaining steps. Then: implement fully; run tests/py_compile/npm test where present;
-            open a PR to main with `gh pr create`, then `gh pr merge --auto --squash`; comment on the issue with the PR URL.
+            open a PR to main with `gh pr create` (ready-for-review, not draft). Comment on the issue with the PR URL and READY-FOR-HQ-MERGE.
             Never commit secrets; env-only config. If something needs Marcin (Stripe dashboard, OAuth consent, DNS, capital),
             comment on the issue starting with "ASK:" or "BLOCKED:" and stop.
             --- CONTRACT ---
