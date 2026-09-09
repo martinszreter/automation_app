@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from zorbeck_app.config import settings
 from zorbeck_app.main import app
 
-PAGES = ("/", "/impressum", "/agb", "/datenschutz")
+PAGES = ("/deal-alarm", "/impressum", "/agb", "/datenschutz")
 IMPRINT = ("STARTEND GmbH", "CHE-223.488.613", "Bahnhofstrasse 7", "6330 Cham", "info@startend.ch")
 LEGAL_LINKS = ('href="/impressum"', 'href="/agb"', 'href="/datenschutz"')
 
@@ -20,7 +20,7 @@ def client() -> AsyncClient:
 @pytest.mark.asyncio
 async def test_landing_sells_one_offer_with_one_cta() -> None:
     async with client() as c:
-        response = await c.get("/")
+        response = await c.get("/deal-alarm")
     assert response.status_code == 200
     assert 'lang="de-CH"' in response.text
     assert response.text.count("<h1") == 1
@@ -33,7 +33,7 @@ async def test_landing_sells_one_offer_with_one_cta() -> None:
 @pytest.mark.asyncio
 async def test_landing_states_the_offer_once_with_five_faq_answers() -> None:
     async with client() as c:
-        text = (await c.get("/")).text
+        text = (await c.get("/deal-alarm")).text
     # One offer block, one price, one CTA — nothing competes with the form.
     assert text.count('data-testid="offer"') == 1
     assert text.count('data-testid="price"') == 1
@@ -64,7 +64,7 @@ async def test_landing_states_the_offer_once_with_five_faq_answers() -> None:
 async def test_landing_price_comes_from_the_environment(monkeypatch) -> None:
     monkeypatch.setattr(settings, "price_cents", 100)
     async with client() as c:
-        response = await c.get("/")
+        response = await c.get("/deal-alarm")
     assert "CHF 1<" in response.text or "CHF 1 " in response.text
     assert "CHF 49" not in response.text
 

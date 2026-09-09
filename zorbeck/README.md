@@ -1,3 +1,17 @@
+# Global discovery preview — 9 September 2026
+
+The root page now presents the Zorbeck global investment discovery preview: local sample catalog, interactive world map, filters, property details, device-local shortlist and early-access registration. All properties, photos and prices are illustrative. There is no live AI search, active property feed, account authentication or return calculation in this version.
+
+The original paid-offer page is preserved at `/deal-alarm`. Existing `/checkout`, `/danke`, `/signup`, health and legal routes continue to work. Cancellation redirects still show the original offer. No Stripe settings were enabled by this redesign.
+
+`POST /api/early-access` accepts JSON with `email`, `city`, optional `budget_max`, and `consent: true`. It records registration through the existing `SIGNUP_WEBHOOK_URL`, returns 201 only on an acknowledged upstream request, and surfaces validation or persistence failure. It sends no direct email. Per-email rate limiting is in-process for this single-instance preview. Local tests mock the upstream service; no synthetic live signup was sent.
+
+Leaflet is pinned to 1.9.4 and vendored with its license. OSM map attribution remains visible; requests use normal browser caching without prefetch. Photo attribution is in `docs/IMAGE_SOURCES.md` and the public credits dialog. The source `.map` reference in the vendor file is optional developer tooling, not a runtime dependency.
+
+Implementation and acceptance: `docs/SPEC.md`, `docs/TASKS.md`. Filter checks: `node tests/discovery_filter_checks.cjs`. The earlier report/checkout documentation below applies to the preserved paid-offer route; unverified report delivery and C12 extraction remain open.
+
+---
+
 # Zorbeck — Deal-Alarm für Immobilien
 
 Ein Angebot, ein Preis, ein Klick: der Besucher nennt Stadt und Budget, zahlt
