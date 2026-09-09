@@ -211,6 +211,49 @@ async def test_webhook_refund_marks_plan_refunded(monkeypatch: pytest.MonkeyPatc
     assert plan.status == PlanStatus.REFUNDED
 
 
+@pytest.mark.asyncio
+async def test_webhook_session_without_an_id_is_422_not_500(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "stripe_webhook_secret", "whsec_test")
+    monkeypatch.setattr(settings, "n8n_xautopilot_order_url", "")
+    session = {key: value for key, value in PAID_SESSION.items() if key != "id"}
+    payload = json.dumps(
+        {"id": "evt_6", "type": "checkout.session.completed", "data": {"object": session}}
+    ).encode()
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.post(
+            "/x-autopilot/stripe/webhook",
+            content=payload,
+            headers={"stripe-signature": sign_webhook_payload(payload, "whsec_test")},
+        )
+
+    assert response.status_code == 422
+    assert "no id" in response.json()["error"]
+    db.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_login_page_clamps_the_session_id_it_remembers() -> None:
+    from app.api.x_autopilot import _SESSION_ID_MAX
+
+    db = _mock_db()
+    async with _client(db) as client:
+        response = await client.get("/x-autopilot/panel/login", params={"session_id": "x" * 5000})
+
+    assert response.status_code == 200
+    # The cookie carries at most _SESSION_ID_MAX characters of it.
+    assert len(client.cookies.get("xa_session", "")) < 5000
+    assert "x" * (_SESSION_ID_MAX + 1) not in response.text
+
+
+def test_amount_label_carries_the_currency_once() -> None:
+    from app.api.x_autopilot import _format_amount
+
+    assert _format_amount(100, "chf") == "CHF 1"
+    assert _format_amount(14900, "chf") == "CHF 149"
+    assert _format_amount(150, "eur") == "EUR 1.50"
+
+
 def test_stripe_signature_roundtrip() -> None:
     secret = "whsec_x"
     payload = b'{"ok":true}'

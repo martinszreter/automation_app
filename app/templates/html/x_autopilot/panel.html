@@ -18,7 +18,7 @@
     <li><span class="k">{{ t.FACT_PLAN }}</span><span>{% if plan_active and panel and panel.paused %}{{ t.STATUS_PAUSED }}{% elif plan_active %}{{ t.STATUS_ACTIVE }}{% elif plan %}{{ plan.status.value }}{% else %}{{ t.STATUS_NONE }}{% endif %}</span></li>
     <li><span class="k">{{ t.FACT_PRODUCT }}</span><span>X Autopilot</span></li>
     {% if plan %}
-    <li><span class="k">{{ t.FACT_AMOUNT }}</span><span>{{ amount_label }} {{ plan.currency|upper }}</span></li>
+    <li><span class="k">{{ t.FACT_AMOUNT }}</span><span>{{ amount_label }}</span></li>
     <li><span class="k">{{ t.FACT_STRIPE_EMAIL }}</span><span>{{ plan.stripe_email or plan.email }}</span></li>
     {% if panel and panel.agent %}
     <li><span class="k">{{ t.FACT_AGENT }}</span><span>{{ panel.agent.handle or panel.agent.agent_name }}</span></li>

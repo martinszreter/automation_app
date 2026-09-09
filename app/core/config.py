@@ -1,19 +1,20 @@
 import re
 
 from pydantic import model_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Anything Postgres-shaped (postgres://, postgresql://, postgresql+psycopg://…)
+# is rewritten onto the one async driver this app ships with.
+_POSTGRES_SCHEME = re.compile(r"^postgres(?:ql)?(?:\+\w+)?://")
+
+DEV_SESSION_SECRET = "dev-session-secret-change-me"
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     database_url: str = "postgresql+asyncpg://startend:startend_dev@db:5432/startend"
 
-    @model_validator(mode="after")
-    def _normalize_database_url(self) -> "Settings":
-        self.database_url = re.sub(
-            r"^postgres(ql)?://", "postgresql+asyncpg://", self.database_url
-        )
-        return self
-    port: int = 80
     whatsapp_adapter: str = "mock"
     meta_whatsapp_token: str = ""
     meta_phone_number_id: str = ""
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     contact_to: str = ""
 
     public_base_url: str = ""
-    session_secret: str = "dev-session-secret-change-me"
+    session_secret: str = DEV_SESSION_SECRET
     session_https_only: bool = False
 
     stripe_secret_key: str = ""
@@ -86,7 +87,10 @@ class Settings(BaseSettings):
     # {app, workflow, node, message, description, stack, url, mode}. Env-only.
     error_alert_webhook_url: str = ""
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    @model_validator(mode="after")
+    def _normalize_database_url(self) -> "Settings":
+        self.database_url = _POSTGRES_SCHEME.sub("postgresql+asyncpg://", self.database_url)
+        return self
 
 
 settings = Settings()

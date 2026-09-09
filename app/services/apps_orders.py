@@ -17,17 +17,12 @@ The URL is env-only: an n8n webhook is a write key, so it never enters the repo.
 
 from __future__ import annotations
 
-import logging
 import re
-from datetime import datetime, timezone
 from typing import Any
 
-import httpx
-
 from app.core.config import settings
-from app.services.stripe_events import price_ids
-
-logger = logging.getLogger(__name__)
+from app.services import n8n_rows
+from app.services.stripe_events import identifier, iso_timestamp, now_iso, price_ids
 
 ORDER_TABLE = "apps_orders"
 ROW_PAID = "paid"
@@ -45,6 +40,14 @@ class AppsOrderNotConfigured(RuntimeError):
 
 class AppsOrderError(RuntimeError):
     """The n8n webhook rejected the row or could not be reached."""
+
+
+class DetailsInvalid(ValueError):
+    """The success form is missing or malformed; ``field`` names the input."""
+
+    def __init__(self, field: str, message: str) -> None:
+        super().__init__(f"{field}: {message}")
+        self.field = field
 
 
 def normalize_swiss_phone(raw: str) -> str:
@@ -73,31 +76,9 @@ def normalize_swiss_phone(raw: str) -> str:
     return f"+41{national}"
 
 
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _identifier(value: Any) -> str:
-    """Stripe returns ids either bare or expanded into an object."""
-    if isinstance(value, dict):
-        return str(value.get("id") or "")
-    return str(value or "")
-
-
-def _timestamp(value: Any) -> str:
-    """Stripe sends times as unix seconds; fall back to now when absent."""
-    try:
-        seconds = int(value)
-    except (TypeError, ValueError):
-        return _now()
-    if seconds <= 0:
-        return _now()
-    return datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat(timespec="seconds")
-
-
 def paid_row_from_session(session: dict[str, Any]) -> dict[str, Any]:
     """Flat ``apps_orders`` row built from a Checkout Session object."""
-    session_id = _identifier(session.get("id"))
+    session_id = identifier(session.get("id"))
     if not session_id:
         raise ValueError("checkout session has no id")
     details = session.get("customer_details") or {}
@@ -107,12 +88,12 @@ def paid_row_from_session(session: dict[str, Any]) -> dict[str, Any]:
         "session_id": session_id,
         "email": str(details.get("email") or session.get("customer_email") or "").strip().lower(),
         "customer_name": str(details.get("name") or "").strip(),
-        "customer_id": _identifier(session.get("customer")),
-        "subscription_id": _identifier(session.get("subscription")),
+        "customer_id": identifier(session.get("customer")),
+        "subscription_id": identifier(session.get("subscription")),
         "payment_status": str(session.get("payment_status") or ""),
         "amount_total_cents": int(session.get("amount_total") or 0),
         "currency": str(session.get("currency") or "chf").lower(),
-        "created_at": _now(),
+        "created_at": now_iso(),
     }
 
 
@@ -122,27 +103,34 @@ def details_row(
     phone: str,
     opening_hours: str,
 ) -> dict[str, Any]:
-    """Row carrying what the success page collects. Raises ValueError on bad input."""
+    """Row carrying what the success page collects.
+
+    Raises :class:`DetailsInvalid` (a ``ValueError``) naming the offending field.
+    """
     name = (restaurant_name or "").strip()[:_NAME_MAX]
     hours = (opening_hours or "").strip()[:_OPENING_HOURS_MAX]
     if not name:
-        raise ValueError("restaurant_name is required")
+        raise DetailsInvalid("restaurant_name", "is required")
     if not hours:
-        raise ValueError("opening_hours is required")
+        raise DetailsInvalid("opening_hours", "is required")
+    try:
+        normalized_phone = normalize_swiss_phone(phone)
+    except ValueError as exc:
+        raise DetailsInvalid("phone", f"not a Swiss number ({exc})") from exc
     return {
         "table": ORDER_TABLE,
         "kind": ROW_DETAILS,
         "session_id": (session_id or "").strip()[:_NAME_MAX],
         "restaurant_name": name,
-        "phone": normalize_swiss_phone(phone),
+        "phone": normalized_phone,
         "opening_hours": hours,
-        "created_at": _now(),
+        "created_at": now_iso(),
     }
 
 
 def cancellation_row_from_subscription(subscription: dict[str, Any]) -> dict[str, Any]:
     """Flat ``apps_orders`` row built from a deleted subscription object."""
-    subscription_id = _identifier(subscription.get("id"))
+    subscription_id = identifier(subscription.get("id"))
     if not subscription_id:
         raise ValueError("subscription has no id")
     prices = price_ids(subscription)
@@ -150,11 +138,11 @@ def cancellation_row_from_subscription(subscription: dict[str, Any]) -> dict[str
         "table": ORDER_TABLE,
         "kind": ROW_CANCELED,
         "subscription_id": subscription_id,
-        "customer_id": _identifier(subscription.get("customer")),
+        "customer_id": identifier(subscription.get("customer")),
         "price_id": prices[0] if prices else "",
         "status": str(subscription.get("status") or ""),
-        "canceled_at": _timestamp(subscription.get("canceled_at") or subscription.get("ended_at")),
-        "created_at": _now(),
+        "canceled_at": iso_timestamp(subscription.get("canceled_at") or subscription.get("ended_at")),
+        "created_at": now_iso(),
     }
 
 
@@ -163,13 +151,4 @@ async def post_order_row(row: dict[str, Any]) -> None:
     url = settings.n8n_apps_order_url.strip()
     if not url:
         raise AppsOrderNotConfigured("N8N_APPS_ORDER_URL is not set")
-    try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            response = await client.post(url, json=row)
-    except httpx.HTTPError as exc:
-        raise AppsOrderError(f"n8n request failed: {exc}") from exc
-    if response.status_code >= 400:
-        logger.warning(
-            "n8n %s row rejected: %s %s", row.get("kind"), response.status_code, response.text[:300]
-        )
-        raise AppsOrderError(f"n8n responded {response.status_code}")
+    await n8n_rows.post_row(url, row, error=AppsOrderError)

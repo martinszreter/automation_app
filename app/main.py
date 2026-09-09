@@ -1,7 +1,6 @@
-from pathlib import Path
+import logging
 
 from fastapi import FastAPI
-from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.apps import router as apps_router
@@ -12,7 +11,16 @@ from app.api.stripe_webhook import router as stripe_webhook_router
 from app.api.webhook import router as webhook_router
 from app.api.x_autopilot import router as x_autopilot_router
 from app.core.alerts import install_error_alerts
-from app.core.config import settings
+from app.core.config import DEV_SESSION_SECRET, settings
+from app.core.templating import templates
+
+__all__ = ["app", "templates"]
+
+logger = logging.getLogger(__name__)
+
+if settings.session_secret == DEV_SESSION_SECRET:
+    # Loud rather than fatal: local runs are fine with it, production is not.
+    logger.warning("SESSION_SECRET is the development default; set it before going live")
 
 app = FastAPI(title="STARTEND", version="0.2.0")
 install_error_alerts(app)
@@ -24,8 +32,6 @@ app.add_middleware(
     https_only=settings.session_https_only,
     max_age=60 * 60 * 24 * 14,
 )
-
-templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates" / "html"))
 
 app.include_router(health_router)
 app.include_router(webhook_router)

@@ -24,6 +24,7 @@ from app.services.apps_checkout import (
 from app.services.apps_orders import (
     AppsOrderError,
     AppsOrderNotConfigured,
+    DetailsInvalid,
     details_row,
     normalize_swiss_phone,
     paid_row_from_session,
@@ -215,6 +216,20 @@ def test_details_row_normalizes_and_trims() -> None:
 def test_details_row_rejects_incomplete_input(name, phone, hours, expected) -> None:
     with pytest.raises(ValueError, match=expected):
         details_row("cs_1", name, phone, hours)
+
+
+@pytest.mark.parametrize(
+    "name, phone, hours, field",
+    [
+        ("", "079 938 03 72", "Mo–Fr", "restaurant_name"),
+        ("Beiz", "079 938 03 72", "  ", "opening_hours"),
+        ("Beiz", "+49 30 123456", "Mo–Fr", "phone"),
+    ],
+)
+def test_details_row_names_the_field_so_the_form_can_point_at_it(name, phone, hours, field) -> None:
+    with pytest.raises(DetailsInvalid) as excinfo:
+        details_row("cs_1", name, phone, hours)
+    assert excinfo.value.field == field
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,12 @@
-"""Verify that 'alembic upgrade head' creates all expected tables."""
+"""Verify that 'alembic upgrade head' creates all expected tables.
+
+Needs a real Postgres (``TEST_DATABASE_URL``); the test skips itself when none
+is listening so the rest of the suite stays runnable on a laptop without one.
+CI provides the database, so the skip never hides a broken migration there.
+"""
 
 import os
+from subprocess import run as subprocess_run
 
 import pytest
 from sqlalchemy import inspect, text
@@ -11,47 +17,33 @@ TEST_DB_URL = os.environ.get(
     "postgresql+asyncpg://postgres:test@localhost:5432/startend_migration_test",
 )
 
-
-async def _run_alembic_upgrade(db_url: str) -> None:
-    from alembic import command
-    from alembic.config import Config
-
-    cfg = Config("alembic.ini")
-    cfg.set_main_option("sqlalchemy.url", db_url.replace("+asyncpg", ""))
-
-    from app.db.session import _force_asyncpg_url
-
-    async_url = _force_asyncpg_url(db_url)
-    engine = create_async_engine(async_url)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(
-            lambda sync_conn: command.upgrade(cfg, "head")
-        )
-    await engine.dispose()
+EXPECTED_TABLES = {"tenants", "guests", "bookings", "contact_requests", "x_autopilot_plans"}
 
 
-async def _get_tables(db_url: str) -> set[str]:
-    engine = create_async_engine(db_url)
-    async with engine.connect() as conn:
-        table_names = await conn.run_sync(
-            lambda sync_conn: inspect(sync_conn).get_table_names()
-        )
-    await engine.dispose()
-    return set(table_names)
+async def _reset_schema() -> None:
+    engine = create_async_engine(TEST_DB_URL)
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("DROP SCHEMA public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
+    except OSError as exc:
+        pytest.skip(f"no test database at {TEST_DB_URL}: {exc}")
+    finally:
+        await engine.dispose()
 
 
-async def _setup_and_check() -> set[str]:
-    from sqlalchemy.ext.asyncio import create_async_engine as cae
+async def _get_tables() -> set[str]:
+    engine = create_async_engine(TEST_DB_URL)
+    try:
+        async with engine.connect() as conn:
+            return set(await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names()))
+    finally:
+        await engine.dispose()
 
-    engine = cae(TEST_DB_URL)
-    async with engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA public CASCADE"))
-        await conn.execute(text("CREATE SCHEMA public"))
-    await engine.dispose()
 
-    os.environ["DATABASE_URL"] = TEST_DB_URL
-    from subprocess import run as subprocess_run
+@pytest.mark.asyncio
+async def test_migrations_create_all_tables() -> None:
+    await _reset_schema()
 
     result = subprocess_run(
         ["python", "-m", "alembic", "upgrade", "head"],
@@ -59,16 +51,8 @@ async def _setup_and_check() -> set[str]:
         text=True,
         env={**os.environ, "DATABASE_URL": TEST_DB_URL},
     )
-    if result.returncode != 0:
-        raise RuntimeError(f"alembic upgrade head failed:\n{result.stderr}")
+    assert result.returncode == 0, f"alembic upgrade head failed:\n{result.stderr}"
 
-    return await _get_tables(TEST_DB_URL)
-
-
-@pytest.mark.asyncio
-async def test_migrations_create_all_tables():
-    tables = await _setup_and_check()
-    assert "tenants" in tables, f"tenants table missing, got: {tables}"
-    assert "guests" in tables, f"guests table missing, got: {tables}"
-    assert "bookings" in tables, f"bookings table missing, got: {tables}"
-    assert "x_autopilot_plans" in tables, f"x_autopilot_plans table missing, got: {tables}"
+    tables = await _get_tables()
+    missing = EXPECTED_TABLES - tables
+    assert not missing, f"tables missing after upgrade: {sorted(missing)}; got {sorted(tables)}"

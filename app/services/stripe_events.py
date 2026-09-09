@@ -17,6 +17,7 @@ sent, so the whole routing layer is unit-testable without the network.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any
 
 from app.core.config import settings
@@ -46,11 +47,32 @@ _VENTURE_BY_SETTINGS_PREFIX: tuple[tuple[str, str], ...] = (
 _METADATA_KEYS = ("venture", "product")
 
 
-def _identifier(value: Any) -> str:
-    """Stripe returns ids either bare or expanded into an object."""
+# --- reading Stripe objects ----------------------------------------------------
+
+
+def identifier(value: Any) -> str:
+    """Stripe returns ids either bare (``"cus_1"``) or expanded into an object."""
     if isinstance(value, dict):
         return str(value.get("id") or "")
     return str(value or "")
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def iso_timestamp(value: Any) -> str:
+    """Stripe sends times as unix seconds; fall back to now when absent."""
+    try:
+        seconds = int(value)
+    except (TypeError, ValueError):
+        return now_iso()
+    if seconds <= 0:
+        return now_iso()
+    return datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat(timespec="seconds")
+
+
+# --- routing -------------------------------------------------------------------
 
 
 def _rows(container: Any) -> list[dict[str, Any]]:
@@ -72,9 +94,9 @@ def price_ids(obj: dict[str, Any]) -> list[str]:
     found: list[str] = []
 
     def add(value: Any) -> None:
-        identifier = _identifier(value)
-        if identifier and identifier not in found:
-            found.append(identifier)
+        identifier_ = identifier(value)
+        if identifier_ and identifier_ not in found:
+            found.append(identifier_)
 
     for key in ("line_items", "items"):
         for row in _rows(obj.get(key)):
