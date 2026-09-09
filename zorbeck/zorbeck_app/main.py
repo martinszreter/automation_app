@@ -11,6 +11,7 @@ from urllib.parse import parse_qsl
 
 import httpx
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -47,6 +48,7 @@ logger = logging.getLogger("zorbeck")
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Zorbeck", docs_url=None, redoc_url=None, openapi_url=None)
+app.add_middleware(GZipMiddleware, minimum_size=800, compresslevel=5)
 app.include_router(discovery_router)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")

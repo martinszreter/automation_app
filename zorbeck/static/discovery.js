@@ -144,6 +144,7 @@
     const mapVisible = $('#discovery-split').classList.toggle('mobile-map');
     $('#discovery-split').classList.remove('list-layout');
     $('#mobile-map-toggle span').textContent = mapVisible ? 'Show properties' : 'Show map';
+    if (mapVisible && !map) initializeMap();
     if (mapVisible) setTimeout(() => { fitMap(); $('#discovery-split').scrollIntoView({block: 'start', behavior: 'smooth'}); }, 50);
   });
   $('#register-form').addEventListener('submit', async event => {
@@ -168,5 +169,5 @@
       p.append(link, document.createTextNode(` · ${credit.subject} · ${credit.license}`)); $('#photo-credits').append(p);
     });
   }).catch(() => { $('#photo-credits').textContent = 'Photo attribution is temporarily unavailable.'; });
-  syncSaved(); initializeMap();
+  syncSaved(); if (window.innerWidth > 680) initializeMap();
 })();
