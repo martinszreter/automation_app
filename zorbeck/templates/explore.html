@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore Zorbeck, an AI real estate investment platform in development. Discover global markets, build your shortlist and register for early access.">
+  <meta name="theme-color" content="#153f35">
+  <title>Zorbeck — A world of property. A smarter way to explore.</title>
+  <link rel="icon" href="/static/discovery/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/discovery.css?v=20260909">
+  <script src="/static/vendor/leaflet/leaflet.js" defer></script>
+  <script src="/static/discovery-core.js?v=20260909" defer></script>
+  <script src="/static/discovery.js?v=20260909" defer></script>
+</head>
+<body data-zorbeck-discovery="2026-09-09">
+  <a class="skip-link" href="#explore">Skip to properties</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6.5h14M5 17.5h14"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.8a5.5 5.5 0 0 0-7.8 0L12 5.9l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.4a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5Z"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.2"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16m6-14v16"/></symbol>
+    <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 18v3m18-3v3M3 12h18v6H3Zm2 0V5h14v7M7 8h3m4 0h3"/></symbol>
+    <symbol id="i-area" viewBox="0 0 24 24"><path d="M3 9V3h6m6 0h6v6m0 6v6h-6M9 21H3v-6M3 3l6 6m12-6-6 6m6 12-6-6M3 21l6-6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h8m4 0h4M4 17h3m4 0h9"/><circle cx="14" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Zorbeck home"><span class="brand-mark">z<span></span></span>zorbeck<span class="brand-period">.</span></a>
+    <nav class="main-nav" aria-label="Main navigation"><a class="nav-active" href="#explore">Discover</a><button type="button" data-open="approach-dialog">Our approach</button></nav>
+    <div class="header-actions"><span class="global-label"><svg class="icon"><use href="#i-globe"/></svg>Global perspective</span><button class="button button-dark" type="button" data-register>Join early access<svg class="icon"><use href="#i-arrow"/></svg></button></div>
+  </header>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Explore views">
+      <button class="rail-button is-active" id="discover-view" type="button" aria-label="Discover properties" title="Discover"><svg class="icon"><use href="#i-globe"/></svg><span>Explore</span></button>
+      <button class="rail-button" id="saved-view" type="button" aria-label="Show saved properties" title="Saved properties"><svg class="icon"><use href="#i-heart"/></svg><span>Saved</span><b id="saved-count">0</b></button>
+      <div class="rail-bottom"><span class="swiss-cross" aria-label="Based in Switzerland">+</span><span>Born in<br>Switzerland</span></div>
+    </aside>
+
+    <main class="workspace" id="explore">
+      <section class="intro">
+        <div><p class="eyebrow"><span></span>REAL ESTATE. A WIDER PERSPECTIVE.</p><h1>A world of property.<br><span>A smarter way to explore.</span></h1><p class="intro-copy">Find your place in the world. Build a shortlist worth a closer look.</p></div>
+        <div class="intro-note"><svg class="icon"><use href="#i-spark"/></svg><p>Your next investment<br>starts with a better search.</p><span>AI discovery · early-access preview</span></div>
+      </section>
+
+      <form class="search-bar" id="search-form" role="search">
+        <div class="location-field"><svg class="icon"><use href="#i-search"/></svg><label class="sr-only" for="search-input">Search a city, country or property type</label><input id="search-input" name="query" maxlength="160" placeholder="Where would you like to invest?" autocomplete="off"></div>
+        <div class="filter-field"><label for="budget-filter">Budget</label><select id="budget-filter" name="budget"><option value="0">Any budget</option><option value="300000">Up to €300,000</option><option value="600000">Up to €600,000</option><option value="1000000">Up to €1 million</option><option value="2000000">Up to €2 million</option></select></div>
+        <div class="filter-field property-filter"><label for="type-filter">Property type</label><select id="type-filter" name="type"><option value="">All properties</option><option>Apartment</option><option>Villa</option><option>House</option></select></div>
+        <button class="button button-dark search-button" type="submit">Explore<svg class="icon"><use href="#i-arrow"/></svg></button>
+      </form>
+
+      <div class="market-row" role="group" aria-label="Filter by market"><span>Explore markets</span><div class="market-chips"><button class="market-chip is-active" data-market="" type="button">Anywhere<svg class="icon"><use href="#i-globe"/></svg></button><button class="market-chip" data-market="Portugal" type="button">Portugal</button><button class="market-chip" data-market="Spain" type="button">Spain</button><button class="market-chip" data-market="Switzerland" type="button">Switzerland</button><button class="market-chip" data-market="United Arab Emirates" type="button">Dubai</button><button class="market-chip" data-market="United States" type="button">United States</button><button class="market-chip" data-market="Indonesia" type="button">Bali</button></div><button class="reset-filters" type="button" id="reset-filters">Reset</button></div>
+
+      <div class="preview-banner"><span><svg class="icon"><use href="#i-info"/></svg><strong>Product preview</strong> · Illustrative properties and prices, not active listings.</span><button type="button" data-open="preview-dialog">What’s included?</button></div>
+
+      <div class="results-toolbar"><div><h2 id="results-heading">Places worth exploring<span id="results-count">8 examples</span></h2><p id="results-context" aria-live="polite">A starting point for your next chapter.</p></div><div class="view-controls"><button class="mobile-saved" id="mobile-saved" type="button" aria-pressed="false"><svg class="icon"><use href="#i-heart"/></svg><span>Saved</span></button><label class="sort-label" for="sort-filter">Sort<select id="sort-filter"><option value="featured">Featured</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label><div class="view-toggle" role="group" aria-label="Results view"><button type="button" data-layout="split" class="is-active" aria-label="Show list and map" title="List and map"><svg class="icon"><use href="#i-map"/></svg></button><button type="button" data-layout="list" aria-label="Show property grid" title="Property grid"><svg class="icon"><use href="#i-grid"/></svg></button></div></div></div>
+
+      <section class="discovery-split" id="discovery-split" aria-label="Property examples and map">
+        <div class="results-column"><div class="property-grid" id="property-grid">
+          {% for property in properties %}
+          <article class="property-card" data-property="{{ property.id }}"><div class="card-photo"><button class="photo-link" type="button" data-detail="{{ property.id }}" aria-label="View example in {{ property.city }}"><img src="/static/discovery/{{ property.image }}" alt="{{ property.imageAlt }}" width="800" height="600" {% if loop.index > 2 %}loading="lazy"{% else %}fetchpriority="high"{% endif %}></button><span class="photo-tag">{{ property.tag }}</span><button class="save-button" type="button" data-save="{{ property.id }}" aria-label="Save {{ property.city }} example" aria-pressed="false"><svg class="icon"><use href="#i-heart"/></svg></button><span class="example-label">Illustrative example</span></div><div class="card-body"><p class="card-location">{{ property.city }}, {{ property.country }}<svg class="icon"><use href="#i-pin"/></svg></p><h3><button type="button" data-detail="{{ property.id }}">{{ property.title }}</button></h3><div class="property-features"><span>{{ property.type }}</span><span><svg class="icon"><use href="#i-bed"/></svg>{{ property.beds }} beds</span><span><svg class="icon"><use href="#i-area"/></svg>{{ property.area }} m²</span></div><div class="card-bottom"><strong>€{{ '{:,}'.format(property.price) }}</strong><button type="button" class="card-details" data-detail="{{ property.id }}" aria-label="Details for {{ property.city }} example"><svg class="icon"><use href="#i-arrow"/></svg></button></div></div></article>
+          {% endfor %}
+        </div><div class="empty-state" id="empty-state" hidden><svg class="icon"><use href="#i-search"/></svg><h3>No examples match yet.</h3><p>Try a different location or widen your budget. This preview contains eight illustrative properties.</p><button class="button button-dark" type="button" id="empty-reset">Explore all examples</button></div><p class="catalog-note">Sample catalog · All amounts shown in EUR · Photos illustrate a style, not the property’s location.</p></div>
+        <div class="map-column" id="map-column"><div class="map-panel"><div id="property-map" aria-label="Interactive map of example markets"></div><div class="map-topline"><span><svg class="icon"><use href="#i-globe"/></svg>Explore the bigger picture</span><button id="reset-map" type="button" aria-label="Fit all matching markets" title="Fit matching markets"><svg class="icon"><use href="#i-area"/></svg></button></div><div class="map-bottom-note"><span class="legend-pin"></span>Example locations · city-level pins</div><div class="map-unavailable" id="map-unavailable" hidden>Map tiles are unavailable. You can still explore every property in the list.</div></div><div class="map-cta"><div class="map-cta-icon"><svg class="icon"><use href="#i-spark"/></svg></div><div><h3>Have a place in mind?</h3><p>Register your search for early access.</p></div><button type="button" data-register aria-label="Register your search"><svg class="icon"><use href="#i-arrow"/></svg></button></div></div>
+      </section>
+      <div class="mobile-map-switch"><button class="button button-dark" type="button" id="mobile-map-toggle"><svg class="icon"><use href="#i-map"/></svg><span>Show map</span></button></div>
+
+      <section class="closing-note"><span class="tiny-brand">z.</span><div><h2>Less noise. More perspective.</h2><p>We’re building AI-assisted discovery to help you find and compare real estate across borders. Start exploring the preview, and help shape what comes next.</p></div><button type="button" class="button button-outline" data-register>Be part of what’s next<svg class="icon"><use href="#i-arrow"/></svg></button></section>
+      <footer class="discovery-footer"><div><a href="/" class="footer-brand">zorbeck.</a><span>A STARTEND GmbH platform · Cham, Switzerland</span></div><nav aria-label="Legal"><a href="/impressum">Impressum</a><a href="/datenschutz">Privacy</a><a href="/agb">Terms</a><button type="button" data-open="credits-dialog">Photo credits</button></nav><p>{{ legal.company }} · UID {{ legal.uid }} · {{ legal.street }} · {{ legal.city }} · <a href="mailto:{{ legal.email }}">{{ legal.email }}</a></p><p>No tracking cookies. Your shortlist is saved only on this device.</p></footer>
+    </main>
+  </div>
+
+  <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title"><button class="dialog-close" type="button" data-close aria-label="Close property details"><svg class="icon"><use href="#i-close"/></svg></button><div id="detail-content"></div></dialog>
+  <dialog id="register-dialog" class="register-dialog" aria-labelledby="register-title"><button class="dialog-close" type="button" data-close aria-label="Close registration"><svg class="icon"><use href="#i-close"/></svg></button><div class="dialog-emblem"><svg class="icon"><use href="#i-spark"/></svg></div><p class="eyebrow">YOUR NEXT CHAPTER</p><h2 id="register-title">A better search<br>starts with you.</h2><p class="dialog-intro">Join early access to Zorbeck’s real estate discovery platform. Tell us where you’d like to look.</p><form id="register-form"><label for="register-email">Email address</label><input type="email" id="register-email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com"><label for="register-city">Where would you like to invest?</label><input id="register-city" name="city" required maxlength="80" placeholder="A city, region or country"><label for="register-budget">Maximum budget in EUR <span>(optional)</span></label><input id="register-budget" name="budget_max" type="number" min="1" max="1000000000" inputmode="numeric" placeholder="e.g. 600000"><div class="honeypot" aria-hidden="true"><label for="register-website">Website</label><input id="register-website" name="website" tabindex="-1" autocomplete="off"></div><label class="consent"><input type="checkbox" name="consent" required><span>I agree to the <a href="/datenschutz" target="_blank" rel="noopener">privacy notice</a> and to being contacted about Zorbeck early access.</span></label><button class="button button-dark" type="submit">Join early access<svg class="icon"><use href="#i-arrow"/></svg></button><p class="form-status" id="registration-status" role="status" aria-live="polite"></p></form><p class="dialog-footnote">Free to register. No payment required. Live listings and AI analysis are not available in this preview.</p></dialog>
+  <dialog id="preview-dialog" class="text-dialog" aria-labelledby="preview-title"><button class="dialog-close" type="button" data-close aria-label="Close preview information"><svg class="icon"><use href="#i-close"/></svg></button><p class="eyebrow">AN OPEN LOOK AT WHAT’S NEXT</p><h2 id="preview-title">Explore the experience.</h2><p>The map, filters, example details and your device-local shortlist work today. Registration records your interest and search preferences for early access.</p><p>Every property, price and photograph in this catalog is illustrative. Map pins represent cities, not property addresses. They are not active offers, market valuations or investment recommendations.</p><p>Live property feeds, sourced comparisons and AI analysis are still in development. Preview searches filter this sample catalog; they do not run a live AI search.</p><button class="button button-dark" type="button" data-register>Join early access<svg class="icon"><use href="#i-arrow"/></svg></button></dialog>
+  <dialog id="approach-dialog" class="text-dialog" aria-labelledby="approach-title"><button class="dialog-close" type="button" data-close aria-label="Close approach information"><svg class="icon"><use href="#i-close"/></svg></button><p class="eyebrow">OUR APPROACH</p><h2 id="approach-title">Start with the place.<br>Understand the possibilities.</h2><ol class="approach-list"><li><span>01</span><div><h3>Explore across borders</h3><p>Put locations, property types and your budget in one view.</p></div></li><li><span>02</span><div><h3>Build your shortlist</h3><p>Save the possibilities that fit. Keep the questions you need to answer in focus.</p></div></li><li><span>03</span><div><h3>Make room for the facts</h3><p>Our planned AI tools will organize sourced property information for a closer review. Evidence comes before any deal label.</p></div></li></ol><button class="button button-dark" type="button" data-register>Join us early<svg class="icon"><use href="#i-arrow"/></svg></button></dialog>
+  <dialog id="credits-dialog" class="text-dialog" aria-labelledby="credits-title"><button class="dialog-close" type="button" data-close aria-label="Close photo credits"><svg class="icon"><use href="#i-close"/></svg></button><h2 id="credits-title">A little architectural inspiration.</h2><p>Photos are illustrative and do not depict the fictional properties or their locations.</p><div id="photo-credits"></div><p>Interactive mapping by <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>. Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>.</p></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script type="application/json" id="property-data">{{ properties|tojson }}</script>
+  <noscript><div class="noscript-note">Enable JavaScript to use the map, filters and registration. The example catalog and legal information are available above.</div></noscript>
+</body>
+</html>

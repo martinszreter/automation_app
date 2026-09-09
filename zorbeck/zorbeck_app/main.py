@@ -11,11 +11,13 @@ from urllib.parse import parse_qsl
 
 import httpx
 from fastapi import FastAPI, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from zorbeck_app import stub
+from zorbeck_app.discovery import PROPERTIES, router as discovery_router
 from zorbeck_app.alerts import send_alert
 from zorbeck_app.config import settings
 from zorbeck_app.intake import (
@@ -46,6 +48,8 @@ logger = logging.getLogger("zorbeck")
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Zorbeck", docs_url=None, redoc_url=None, openapi_url=None)
+app.add_middleware(GZipMiddleware, minimum_size=800, compresslevel=5)
+app.include_router(discovery_router)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # The stylesheet is small and inlined into every page (read once at start).
@@ -135,6 +139,13 @@ async def unhandled(request: Request, exc: Exception) -> HTMLResponse:
 # Explicit HEAD alongside GET so HEAD / returns 200 directly —
 # nieczytaj had uptime monitors stuck in a HEAD -> 302 redirect loop.
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
+async def explore(request: Request) -> HTMLResponse:
+    if request.query_params.get("abgebrochen") == "1":
+        return render(request, "index.html", cancelled=True, values={}, error=None)
+    return render(request, "explore.html", properties=PROPERTIES)
+
+
+@app.api_route("/deal-alarm", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
     cancelled = request.query_params.get("abgebrochen") == "1"
     return render(request, "index.html", cancelled=cancelled, values={}, error=None)

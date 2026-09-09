@@ -44,7 +44,7 @@ test('stranger: land → understand the offer in 10 s → pay CHF 1 → first va
   const errors = watchConsole(page);
   const started = Date.now();
 
-  await page.goto('/');
+  await page.goto('/deal-alarm');
 
   // Understand the offer: one headline, one price, one call to action — all above the fold on a phone.
   const headline = page.getByRole('heading', { level: 1 });
@@ -138,7 +138,7 @@ test('first value within 2 minutes even when Stripe delivers the webhook late �
   await request.post('/_stub/config', { data: { deliver_webhook: false } });
 
   const email = `late+${Date.now()}@example.ch`;
-  await page.goto('/');
+  await page.goto('/deal-alarm');
   await page.fill('#email', email);
   await page.fill('#city', 'Basel');
   await page.getByTestId('cta').click();
@@ -175,7 +175,7 @@ test('first value within 2 minutes even when Stripe delivers the webhook late �
 
 test('a typo is answered in German and nothing is charged', async ({ page, request }) => {
   const errors = watchConsole(page);
-  await page.goto('/');
+  await page.goto('/deal-alarm');
   await page.fill('#email', 'kein-mail');
   await page.fill('#city', 'Zug');
   await page.getByTestId('cta').click();

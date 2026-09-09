@@ -1,0 +1,23 @@
+[
+  {
+    "photographer": "John Fornander",
+    "subject": "Modern villa and pool",
+    "source": "https://unsplash.com/photos/modern-white-villa-with-swimming-pool-Id7u0EkTjBE",
+    "license": "Unsplash License",
+    "licenseUrl": "https://unsplash.com/license"
+  },
+  {
+    "photographer": "Annie Spratt",
+    "subject": "Alpine-style chalet",
+    "source": "https://unsplash.com/photos/beige-and-white-wooden-house-surrounded-by-snowy-field-during-daytime-T7xg8hn-ecM",
+    "license": "Unsplash License",
+    "licenseUrl": "https://unsplash.com/license"
+  },
+  {
+    "photographer": "Ciro Rizzo",
+    "subject": "City apartments",
+    "source": "https://unsplash.com/photos/modern-white-apartment-building-with-blue-glass-balconies-vpAUwzvzJn4",
+    "license": "Unsplash License",
+    "licenseUrl": "https://unsplash.com/license"
+  }
+]
