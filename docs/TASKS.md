@@ -285,3 +285,13 @@ Existing reservation #428. Dependency: C26.
 - [ ] C29-03 — Make the handover identify merged, preserved and still-blocked work.
 
   Acceptance: `test -s docs/HANDOVER.md` exits 0 with concrete PR/commit URLs, one first unticked item per lane and exact runtime-secret/click blockers. Do not resume @claude dispatch or schedule a check-in.
+
+
+## C06-COUNTRY — separate Switzerland, Germany and Austria (09 Sep amendment)
+
+- [x] C06-COUNTRY-01 — Resolve exact country hosts and country-specific mastheads/locales/canonical/advertising currency. Acceptance: `cd nieczytaj && npm test && npm run validate`; CH/DE/AT and preview fixtures pass, Polish regression passes, DE/AT cannot inherit CH checkout links.
+- [x] C06-COUNTRY-02 — Isolate news pools, categories, latest articles, API and RSS by country. Acceptance: country regression test seeds one unique story per country's publisher; each host's HTML, API and RSS contain only its own story; failed/empty pools do not fall back across editions.
+- [ ] C06-COUNTRY-03 — Verify production editions and Austria domain routing. Acceptance: HTTPS GET `/`, `/health`, `/api/top`, `/rss.xml` and `/werbung` for CH/DE/AT selects expected country/source pool/currency/canonical. Record status, deployment and exact outstanding DNS if any in docs/LIESNICHT_COUNTRIES.md. A DNS blocker leaves this item unticked.
+
+  Evidence 2026-09-09: `npm test && npm run validate` passed. 220 country assertions plus existing Polish/Swiss regressions and TENANT validation. Request fixtures exercise the actual HTTP handler with seeded publisher articles; no outgoing feed or payment requests. C06-COUNTRY-03 remains open until public AT DNS and production checks pass.
+

@@ -1,7 +1,4 @@
 'use strict';
-const { spawn } = require('child_process');
-const http = require('http');
-const path = require('path');
 
 const PORT = 18082;
 const fails = [];
@@ -10,52 +7,20 @@ function assert(cond, msg) {
   else console.log('OK  ', msg);
 }
 
-function req(host, urlPath) {
-  return new Promise((resolve, reject) => {
-    const r = http.request({
-      hostname: '127.0.0.1', port: PORT, path: urlPath, method: 'GET',
-      headers: { host },
-    }, res => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({
-        status: res.statusCode,
-        location: res.headers.location || '',
-        body: Buffer.concat(chunks).toString('utf8'),
-      }));
-    });
-    r.on('error', reject);
-    r.end();
-  });
-}
-
-const child = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
-  cwd: __dirname,
-  env: { ...process.env, PORT: String(PORT) },
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
-let buf = '';
-const ready = new Promise((resolve, reject) => {
-  const t = setTimeout(() => reject(new Error('server start timeout')), 8000);
-  function onOut(d) {
-    buf += d;
-    if (/listening/.test(buf)) { clearTimeout(t); resolve(); }
-  }
-  child.stdout.on('data', onOut);
-  child.stderr.on('data', onOut);
-  child.on('exit', code => reject(new Error('server exited ' + code + '\n' + buf)));
-});
+process.env.TENANT = '';
+const { server } = require('./server');
+const requestFixture = require('./request-fixture');
+function req(host, urlPath) { return requestFixture(server, host, urlPath); }
 
 (async () => {
   try {
-    await ready;
     const deHome = await req('www.liesnicht.ch', '/');
     assert(deHome.status === 200, 'DE / 200');
-    assert(/lang="de"/.test(deHome.body), 'DE / html lang=de');
+    assert(/lang="de-CH"/.test(deHome.body), 'DE / html lang=de-CH');
     assert(/LIESNICHT/.test(deHome.body), 'DE / brand LIESNICHT');
     assert(!/NIECZYTAJ/.test(deHome.body), 'DE / no NIECZYTAJ');
     assert(/Nicht alles lesen/.test(deHome.body), 'DE / German copy');
-    assert(/DACH/.test(deHome.body), 'DE / DACH feeds copy');
+    assert(/Schweiz/.test(deHome.body), 'DE / DACH feeds copy');
     assert(/Werbung/.test(deHome.body), 'DE / Werbung link');
 
     const deRail = await req('liesnicht-production.up.railway.app', '/');
@@ -98,8 +63,8 @@ const ready = new Promise((resolve, reject) => {
     const plJ = JSON.parse(plHealth.body);
     assert(deJ.price.baner7 === 149 && deJ.price.kaf7 === 119 && deJ.price.box7 === 89, 'DE health locked prices');
     assert(plJ.price.baner7 === 490 && plJ.price.kaf7 === 390 && plJ.price.box7 === 290, 'PL health 490/390/290');
-    assert((deJ.feeds || []).some(f => f.id === 'tagesschau'), 'DE health lists DACH feeds');
-    assert((plJ.feeds || []).some(f => f.id === 'onet') && !(plJ.feeds || []).some(f => f.id === 'tagesschau'), 'PL health still Polish feeds');
+    assert((deJ.feeds || []).some(f => f.id === 'srf'), 'DE health lists DACH feeds');
+    assert((plJ.feeds || []).some(f => f.id === 'onet') && !(plJ.feeds || []).some(f => f.id === 'srf'), 'PL health still Polish feeds');
 
     // SEO layer: canonical + OG per tenant, sitemap, RSS, robots
     assert(/<link rel="canonical" href="https:\/\/www\.liesnicht\.ch\/">/.test(deHome.body) && /og:locale" content="de_CH"/.test(deHome.body), 'DE home canonical + og:locale');
@@ -118,7 +83,6 @@ const ready = new Promise((resolve, reject) => {
     fails.push(String(e));
     console.log('FAIL', e);
   } finally {
-    child.kill('SIGTERM');
     if (fails.length) {
       console.log('\n' + fails.length + ' failed');
       process.exit(1);
@@ -126,3 +90,4 @@ const ready = new Promise((resolve, reject) => {
     console.log('\nall passed');
   }
 })();
+

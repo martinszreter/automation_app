@@ -60,6 +60,22 @@ const FEEDS_DACH = [
   { id: 'golem',      name: 'Golem',          url: 'https://www.golem.de/rss.php?feed=RSS2',                cat: 'tech' },
 ];
 
+FEEDS_DACH.push({ id: 'orf', name: 'ORF', url: 'https://rss.orf.at/news.xml', cat: 'kraj' });
+
+// Publisher pools are deliberately disjoint. A failed country never borrows another pool.
+const CH_FEED_IDS = new Set(['srf', 'nzz', 'ta', 'blick']);
+const AT_FEED_IDS = new Set(['standard', 'orf']);
+const FEEDS_BY_COUNTRY = Object.freeze({
+  ch: FEEDS_DACH.filter(f => CH_FEED_IDS.has(f.id)),
+  de: FEEDS_DACH.filter(f => !CH_FEED_IDS.has(f.id) && !AT_FEED_IDS.has(f.id)),
+  at: FEEDS_DACH.filter(f => AT_FEED_IDS.has(f.id)),
+});
+const COUNTRY_CONFIG = Object.freeze({
+  ch: { name: 'Schweiz', from: 'der Schweiz', locale: 'de-CH', timeZone: 'Europe/Zurich', currency: 'CHF', accent: '#c8102e' },
+  de: { name: 'Deutschland', from: 'Deutschland', locale: 'de-DE', timeZone: 'Europe/Berlin', currency: 'EUR', accent: '#164b87' },
+  at: { name: 'Österreich', from: 'Österreich', locale: 'de-AT', timeZone: 'Europe/Vienna', currency: 'EUR', accent: '#70284d' },
+});
+
 const CATS = [
   { id: 'kraj',     label: 'Wiadomości' },
   { id: 'biznes',   label: 'Biznes' },
@@ -114,7 +130,8 @@ const state = {
   summaries: new Map(),
   pv: { total: 0, days: {}, cities: {}, geo: {} },
   lastError: '',
-  de: { clusters: [], byCat: {}, latest: [], cities: {} },
+  editions: Object.fromEntries(['ch', 'de', 'at'].map(c => [c, { clusters: [], byCat: {}, latest: [], cities: {} }])),
+  editionViews: Object.fromEntries(['ch', 'de', 'at'].map(c => [c, { total: 0, days: {} }])),
 };
 
 // ------------------------- utils -------------------------
@@ -250,6 +267,29 @@ function fillPool(feedList, now) {
   }
   return pool;
 }
+function rebuildCountryEditions(now = Date.now()) {
+  for (const country of Object.keys(FEEDS_BY_COUNTRY)) {
+    const ed = clusterEdition(fillPool(FEEDS_BY_COUNTRY[country], now));
+    // Include strong single-source stories if a small country pool has no co-coverage yet.
+    // The source count stays honest; this does not substitute another country's news.
+    if (!ed.clusters.length) {
+      const ranked = Object.values(ed.byCat).flat().sort((a, b) => b.score - a.score);
+      ed.clusters = ranked.slice(0, 6);
+      const chosen = new Set(ed.clusters);
+      for (const cat of Object.keys(ed.byCat)) ed.byCat[cat] = ed.byCat[cat].filter(c => !chosen.has(c));
+      const links = new Set(ed.clusters.flatMap(c => c.items.map(i => i.link)));
+      ed.latest = ed.latest.filter(i => !links.has(i.link));
+    }
+    for (const c of [...ed.clusters, ...Object.values(ed.byCat).flat()]) c.key = country + ':' + c.key;
+    state.editions[country] = { ...ed, cities: {} };
+  }
+}
+function editionFor(t) { return t.id === 'de' ? state.editions[t.country] : state; }
+function feedsFor(t) { return t.id === 'de' ? FEEDS_BY_COUNTRY[t.country] : FEEDS; }
+function viewsFor(t) { return t.id === 'de' ? state.editionViews[t.country] : state.pv; }
+function editionDay(t) {
+  return t.id === 'de' ? new Intl.DateTimeFormat('en-CA', { timeZone: t.timeZone }).format(new Date()) : warsawDay();
+}
 async function refresh() {
   const ALL = FEEDS.concat(CITIES.flatMap(c => c.feeds)).concat(FEEDS_DACH);
   const results = await Promise.allSettled(ALL.map(f => fetchFeed(f)));
@@ -281,10 +321,7 @@ async function refresh() {
     }
     state.cities[c.slug] = cityCluster(cpool);
   }
-  const deEd = clusterEdition(fillPool(FEEDS_DACH, now));
-  state.de.clusters = deEd.clusters;
-  state.de.byCat = deEd.byCat;
-  state.de.latest = deEd.latest;
+  rebuildCountryEditions(now);
   state.lastRefresh = now;
   state.refreshCount++;
   const okN = FEEDS.filter(f => state.feedCache[f.id] && state.feedCache[f.id].ok).length;
@@ -445,32 +482,55 @@ const PRICE_DE_LOCKED = Object.freeze({
   baner7: 149, baner30: 449, kaf7: 119, kaf30: 299, box7: 89, box30: 199,
 });
 const STRIPE_CHF1 = 'https://buy.stripe.com/6oU5kE8RD3DrgzG2Tx0x20f';
-// TENANT=liesnicht pins the DE tenant for every request (the liesnicht
-// Railway service, local boots); otherwise the Host header decides.
+// TENANT pins the product on preview hosts; explicit country domains always select their edition.
 const TENANT_PIN = String(process.env.TENANT || '').toLowerCase();
+function normalizeHost(host) {
+  return String(host || '').trim().toLowerCase().split(',')[0].split(':')[0].replace(/\.$/, '');
+}
 function requestHost(req) {
   const h = (req && req.headers) || {};
-  return String(h.host || h['x-forwarded-host'] || h[':authority'] || '').toLowerCase().split(',')[0].split(':')[0];
+  return normalizeHost(h.host || h['x-forwarded-host'] || h[':authority'] || '');
 }
 function tenantFromHost(host) {
-  const raw = String(host || '').toLowerCase();
-  if (raw.includes('liesnicht') || TENANT_PIN === 'liesnicht') {
-    const ch = raw.includes('.ch');
+  const raw = normalizeHost(host);
+  const match = raw.match(/^(?:www\.)?liesnicht\.(ch|de|at)$/);
+  const preview = /^liesnicht(?:-[a-z0-9-]+)?\.up\.railway\.app$/.test(raw);
+  if (match || preview || raw === 'liesnicht.com' || raw === 'www.liesnicht.com' || TENANT_PIN === 'liesnicht') {
+    const country = match ? match[1] : 'ch';
+    const config = COUNTRY_CONFIG[country];
     return {
-      id: 'de', lang: 'de', brand: 'LIESNICHT',
-      brandHtml: ch ? 'LIESNICHT<span class="pl">.CH</span>' : 'LIESNICHT',
-      currency: 'CHF', price: PRICE_DE_LOCKED,
-      adsPath: '/werbung', legalPath: '/impressum', privacyPath: '/datenschutz', ch,
+      id: 'de', country, countryName: config.name, from: config.from,
+      lang: config.locale, locale: config.locale, timeZone: config.timeZone,
+      brand: 'LIESNICHT', brandHtml: 'LIESNICHT<span class="pl">.' + country.toUpperCase() + '</span>',
+      domain: 'liesnicht.' + country, currency: config.currency, accent: config.accent, price: PRICE_DE_LOCKED,
+      adsPath: '/werbung', legalPath: '/impressum', privacyPath: '/datenschutz', ch: country === 'ch',
     };
   }
   return {
-    id: 'pl', lang: 'pl', brand: 'NIECZYTAJ',
-    brandHtml: 'NIECZYTAJ<span class="pl">.PL</span>',
-    currency: 'zł', price: PRICE,
+    id: 'pl', country: 'pl', countryName: 'Polska', lang: 'pl', locale: 'pl-PL', timeZone: 'Europe/Warsaw',
+    brand: 'NIECZYTAJ', brandHtml: 'NIECZYTAJ<span class="pl">.PL</span>',
+    domain: 'nieczytaj.pl', currency: 'zł', price: PRICE, accent: '#c8102e',
     adsPath: '/reklama', legalPath: '/regulamin', privacyPath: '/regulamin', ch: false,
   };
 }
-function money(n, t) { return t && t.id === 'de' ? ('CHF ' + n) : (n + ' zł'); }
+function money(n, t) { return t && t.id === 'de' ? (t.currency + ' ' + n) : (n + ' zł'); }
+function editionNav(t, path = '/') {
+  if (t.id !== 'de') return '';
+  return '<nav class="country-nav" aria-label="Länderausgabe">' + Object.entries(COUNTRY_CONFIG).map(([code, c]) =>
+    `<a href="https://www.liesnicht.${code}${path}"${code === t.country ? ' aria-current="page"' : ''}>${c.name}</a>`
+  ).join('') + '</nav>';
+}
+function editionMeta(t, path = '/') {
+  const canonical = siteFor(t) + path;
+  return `<link rel="canonical" href="${canonical}">
+<meta property="og:url" content="${canonical}">
+<meta property="og:locale" content="${t.locale.replace('-', '_')}">` +
+    (t.id === 'de' ? Object.entries(COUNTRY_CONFIG).map(([code, c]) => `<link rel="alternate" hreflang="${c.locale}" href="https://www.liesnicht.${code}${path}">`).join('') : '');
+}
+function editionCss(t) {
+  if (t.id !== 'de') return '';
+  return `:root{--acc:${t.accent}}body{font-size:16px}.country-nav{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.country-nav a{font:600 14px/1.4 -apple-system,'Segoe UI',sans-serif;padding:8px 12px;border:1px solid var(--line);border-radius:4px;color:var(--ink);text-decoration:none}.country-nav a[aria-current]{background:var(--acc);border-color:var(--acc);color:#fff}.country-nav a:hover{border-color:var(--acc)}.country-nav a:focus-visible{outline:3px solid var(--acc);outline-offset:3px}.country-label{color:var(--acc);font-size:14px;font-weight:700;letter-spacing:.04em}.tagline,.updline,.rmeta,.cm,.edhint{font-size:14px}.edwrap{align-items:flex-start}.edhint{white-space:normal}.tile h3{font-size:18px}header{border-top:4px solid var(--acc)}@media(max-width:520px){.country-nav a{padding:8px}.tile h3{font-size:16px}}`;
+}
 function agoTxt(ms, t) {
   if (!(t && t.id === 'de')) return agoPL(ms);
   const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
@@ -485,9 +545,10 @@ function catLabel(cat, t) {
   if (!(t && t.id === 'de')) return cat.label;
   return ({ kraj: 'Nachrichten', biznes: 'Wirtschaft', sport: 'Sport', tech: 'Technologie', rozrywka: 'Unterhaltung' })[cat.id] || cat.label;
 }
-function adFor(slot) {
+function adFor(slot, t) {
+  t = t || tenantFromHost('');
   const now = Date.now();
-  return ADS.find(a => a && a.slot === slot && a.src && (!a.until || Date.parse(a.until) > now)) || null;
+  return ADS.find(a => a && a.slot === slot && a.src && (a.country ? String(a.country).toLowerCase() === t.country : (t.country === 'ch' || t.country === 'pl')) && (!a.until || Date.parse(a.until) > now)) || null;
 }
 function adCreative(a, t) {
   const alt = (t && t.id === 'de') ? 'Werbung' : 'Reklama';
@@ -499,7 +560,7 @@ function adSlot(slot, houseText, t) {
   t = t || tenantFromHost('');
   const lab = t.id === 'de' ? 'Werbung' : 'Reklama';
   const cta = t.id === 'de' ? 'Angebot ansehen →' : 'Zobacz ofertę →';
-  const a = adFor(slot);
+  const a = adFor(slot, t);
   if (a) return `<a class="adbox ${slot}" href="${esc(a.href || t.adsPath)}" target="_blank" rel="noopener sponsored"><span class="adlab">${lab}</span>${adCreative(a, t)}</a>`;
   return `<a class="adbox ${slot} house" href="${t.adsPath}"><span class="adlab">${lab}</span><b>${houseText}</b><span class="adcta">${cta}</span></a>`;
 }
@@ -511,7 +572,7 @@ function adBanner(t) {
   return `<div class="adwrap">${adSlot('baner', house, t)}</div>`;
 }
 // paid kafelek keeps its own high slot; house kafelek only ever fills a hole in the grid
-function adTileSold(t) { return adFor('kafelek') ? `<article class="tile ad">${adSlot('kafelek', '', t)}</article>` : ''; }
+function adTileSold(t) { return adFor('kafelek', t) ? `<article class="tile ad">${adSlot('kafelek', '', t)}</article>` : ''; }
 function adTileHouse(t) {
   const p = t.price;
   const house = t.id === 'de'
@@ -532,25 +593,25 @@ function adRail(t) {
 function page(cityDef, t) {
   t = t || tenantFromHost('');
   const de = t.id === 'de';
-  const tz = de ? 'Europe/Zurich' : 'Europe/Warsaw';
-  const loc = de ? 'de-CH' : 'pl-PL';
+  const tz = t.timeZone;
+  const loc = t.locale;
   const upd = state.lastRefresh
     ? new Intl.DateTimeFormat(loc, { timeZone: tz, hour: '2-digit', minute: '2-digit' }).format(new Date(state.lastRefresh))
     : '—';
   const today = new Intl.DateTimeFormat(loc, { timeZone: tz, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
-  const edition = de ? state.de : state;
-  const feedN = de ? FEEDS_DACH.length : FEEDS.length;
-  const cd = cityDef ? ((de ? state.de.cities : state.cities)[cityDef.slug] || { clusters: [], latest: [] }) : null;
+  const edition = editionFor(t);
+  const feedN = feedsFor(t).length;
+  const cd = cityDef ? (editionFor(t).cities[cityDef.slug] || { clusters: [], latest: [] }) : null;
   const hot = cd ? cd.clusters : edition.clusters;
   const loading = !state.lastRefresh;
   const aiOn = ANTHROPIC_API_KEY || [...state.summaries.values()].some(s => Date.now() - s.at < 3 * 3600e3);
   const hero = hot[0];
   const rest = hot.slice(1);
   const latest = cd ? cd.latest : (edition.latest || []);
-  const byCatSrc = de ? state.de.byCat : state.byCat;
-  const country = de ? 'DACH' : 'Polska';
+  const byCatSrc = edition.byCat;
+  const country = t.countryName;
   // single pill: shows the current edition. On a local edition it returns to Polska; on Polska it finds your area.
-  const pill = cityDef
+  const pill = de ? editionNav(t) : cityDef
     ? `<a class="edpill on" href="/" title="${de ? 'Zurück zur Landesausgabe' : 'Wróć do wydania krajowego'}">📍 ${esc(cityDef.name)} <span class="pillx">✕</span></a>`
     : `<button class="edpill" onclick="ncGeo()" title="${de ? 'Nachrichten aus deiner Gegend' : 'Wiadomości z Twojej okolicy'}">📍 ${country}</button>`;
   // 3-column grid: a trailing hole is either sold space or a dropped tile — never empty air
@@ -566,18 +627,18 @@ function page(cityDef, t) {
     }
     return a.length ? `<div class="ggrid">${a.join('\n')}</div>` : '';
   };
-  const pillHint = cityDef
+  const pillHint = de ? 'Länderausgabe wählen' : cityDef
     ? (de ? '✕ = zurück zu DACH' : '✕ = powrót do całej Polski')
     : (de ? 'klicken → Nachrichten aus deiner Gegend' : 'kliknij → wiadomości z Twojej okolicy');
   const title = de
-    ? `${t.brand}${cityDef ? ' · ' + cityDef.name : ''} — nicht alles lesen. KI wählt die heissen Nachrichten`
+    ? `${t.brand}.${t.country.toUpperCase()} — Nachrichten aus ${t.from}`
     : `NIECZYTAJ.PL${cityDef ? ' · ' + cityDef.name : ''} — nie czytaj wszystkiego. AI wybiera gorące wiadomości`;
   const desc = de
-    ? `KI liest DACH-Nachrichtenportale alle ${REFRESH_MIN} Minuten und zeigt nur, worüber wirklich gesprochen wird. Nicht alles lesen — lies, was heiss ist.`
+    ? `Nachrichten aus ${t.from}: ${feedsFor(t).map(f => f.name).join(", ")}. Alle ${REFRESH_MIN} Minuten neu sortiert. Nicht alles lesen — das Wichtigste im Überblick.`
     : `AI czyta polskie serwisy informacyjne co ${REFRESH_MIN} minut i pokazuje tylko to, o czym naprawdę się mówi. Nie czytaj wszystkiego — czytaj to, co gorące.`;
-  const ogTitle = de ? `${t.brand} — heisse Nachrichten, gewählt von KI` : 'NIECZYTAJ.PL — gorące wiadomości wybrane przez AI';
+  const ogTitle = de ? `${t.brand}.${t.country.toUpperCase()} — Nachrichten aus ${t.from}` : 'NIECZYTAJ.PL — gorące wiadomości wybrane przez AI';
   const ogDesc = de
-    ? `Nicht alles lesen. KI überwacht ${feedN} DACH-Dienste und rangiert Themen, über die alle sprechen.`
+    ? `Nicht alles lesen. ${feedN} Nachrichtenquellen aus ${t.from}, nach Themen geordnet.`
     : `Nie czytaj wszystkiego. AI monitoruje ${feedN} polskich serwisów i ranguje tematy, o których mówią wszyscy.`;
   const site = siteFor(t);
   const canonical = site + (cityDef ? '/' + cityDef.slug : '/');
@@ -589,13 +650,13 @@ function page(cityDef, t) {
 <meta property="og:title" content="${esc(ogTitle)}">
 <meta property="og:description" content="${esc(ogDesc)}">
 <meta property="og:type" content="website">
-<meta property="og:url" content="${esc(canonical)}">
+
 <meta property="og:site_name" content="${esc(t.brand)}">
-<meta property="og:locale" content="${de ? 'de_CH' : 'pl_PL'}">
+
 <meta name="twitter:card" content="summary">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="theme-color" content="#fbfbfa">
-<link rel="canonical" href="${esc(canonical)}">
+${editionMeta(t, cityDef ? '/' + cityDef.slug : '/')}
 <link rel="alternate" type="application/rss+xml" title="${esc(t.brand)} RSS" href="${esc(site)}/rss.xml">
 <style>
 :root{--paper:#fbfbfa;--ink:#141414;--mut:#6f6a64;--acc:#c8102e;--line:#e7e5e1;--aibg:#f3f0ea}
@@ -662,21 +723,22 @@ footer{margin-top:40px;padding-top:12px;border-top:3px solid var(--ink);font-siz
 footer a{color:var(--mut)}
 .empty{padding:60px 0;text-align:center;color:var(--mut);font-size:17px}
 @media(max-width:520px){.logo{font-size:26px}.tile.hero h3{font-size:18.5px}.updline{margin-left:0}.tile h3{font-size:13.5px}.edwrap{align-items:flex-start;margin-left:0}.edhint{text-align:left}}
+${editionCss(t)}
 </style></head><body><div class="wrap">
 <header>
 <h1 class="logo"><a href="/">${t.brandHtml}</a></h1>
 <p class="tagline">${de
-    ? `<b>Nicht alles lesen.</b> KI liest ${cityDef ? 'lokale Dienste' : feedN + ' DACH-Dienste'} alle ${REFRESH_MIN} Min. — du liest, was heiss ist.`
+    ? `<b>Nicht alles lesen.</b> ${feedN} Quellen aus ${t.from}. Das Wichtigste im Überblick.`
     : `<b>Nie czytaj wszystkiego.</b> AI czyta ${cityDef ? 'lokalne serwisy' : feedN + ' serwisów'} co ${REFRESH_MIN} min — Ty czytasz to, co gorące.`}</p>
-<div class="edwrap">${pill}<span class="edhint">${pillHint}</span></div>
-<div class="updline"><span class="dotlive">${de ? '● LIVE' : '● NA ŻYWO'}</span><span>${esc(today)}</span><span>${de ? 'Aktualisierung' : 'aktualizacja'} ${esc(upd)}</span><a class="geolink" onclick="ncGeo();return false" href="#">📍 ${de ? 'mein Standort' : 'moja lokalizacja'}</a><span id="geonote" class="geonote" style="display:none"></span>${aiOn ? `<span>${de ? 'Kurzfassungen: KI' : 'skróty: AI'}</span>` : ''}<a class="geolink" href="${t.adsPath}" style="border:0">${de ? 'Werbung' : 'reklama'}</a></div>
+<div class="edwrap">${de ? `<span class="country-label">Ausgabe ${t.countryName}</span>` : ''}${pill}<span class="edhint">${pillHint}</span></div>
+<div class="updline"><span class="dotlive">${de ? '● LIVE' : '● NA ŻYWO'}</span><span>${esc(today)}</span><span>${de ? 'Aktualisierung' : 'aktualizacja'} ${esc(upd)}</span>${de ? '' : '<a class="geolink" onclick="ncGeo();return false" href="#">📍 moja lokalizacja</a>'}<span id="geonote" class="geonote" style="display:none"></span>${aiOn ? `<span>${de ? 'Kurzfassungen: KI' : 'skróty: AI'}</span>` : ''}<a class="geolink" href="${t.adsPath}" style="border:0">${de ? 'Werbung' : 'reklama'}</a></div>
 </header>
 ${loading ? `<div class="empty">${de ? 'Lade die neuesten Nachrichten…' : 'Pobieram najnowsze wiadomości…'}<br>${de ? 'Die Seite wird automatisch aktualisiert.' : 'Strona odświeży się automatycznie.'}</div><script>setTimeout(()=>location.reload(),8000)</script>` : `
 <div class="layout">
 <main>
-<h2><span class="n">🔥</span> ${cityDef ? (de ? 'Heiss: ' : 'Gorące: ') + cityDef.name : (de ? 'Jetzt heiss — darüber sprechen alle' : 'Gorące teraz — o tym mówią wszyscy')}</h2>
+<h2><span class="n">🔥</span> ${cityDef ? (de ? 'Heiss: ' : 'Gorące: ') + cityDef.name : (de ? 'Im Fokus — ' + t.countryName : 'Gorące teraz — o tym mówią wszyscy')}</h2>
 <div class="ggrid">
-${hero ? tileHtml(hero, true, t) : ''}
+${hero ? tileHtml(hero, true, t) : (de ? `<p class="empty">Aktuell sind keine Nachrichten für ${t.countryName} verfügbar. Wir prüfen die Quellen erneut.</p>` : '')}
 ${rest.slice(0, 2).map(c => tileHtml(c, false, t)).join('\n')}
 </div>
 ${adBanner(t)}
@@ -696,8 +758,8 @@ ${latest.slice(4).map(it => railRow(it, t)).join('\n')}
 </div>`}
 <footer>
 ${de
-    ? `<b>${esc(t.brand)}</b> — vollautomatische Seite: KI aggregiert Schlagzeilen und Vorschaubilder aus DACH-Medien, gruppiert Themen und rangiert sie nach Quellenanzahl und Frische. Schlagzeilen, Fotos und Links führen zu den Ursprungsmedien — alle Rechte an Artikeln und Bildern liegen bei den Verlagen. Kurze Zusammenfassungen schreibt die KI in eigenen Worten.<br>
-MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="${t.adsPath}">Werbung auf liesnicht.ch</a> · <a href="${t.legalPath}">Impressum</a> · <a href="${t.privacyPath}">Datenschutz</a> · Kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>`
+    ? `<b>${esc(t.brand)}</b> — vollautomatische Seite: KI aggregiert Schlagzeilen und Vorschaubilder aus Medien in ${t.from}, gruppiert Themen und rangiert sie nach Quellenanzahl und Frische. Schlagzeilen, Fotos und Links führen zu den Ursprungsmedien — alle Rechte an Artikeln und Bildern liegen bei den Verlagen. Kurze Zusammenfassungen schreibt die KI in eigenen Worten.<br>
+MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="${t.adsPath}">Werbung auf ${t.domain}</a> · <a href="${t.legalPath}">Impressum</a> · <a href="${t.privacyPath}">Datenschutz</a> · Kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>`
     : `<b>NIECZYTAJ.PL</b> — strona w pełni automatyczna: AI agreguje nagłówki i miniatury z polskich serwisów, grupuje tematy i ranguje je według liczby źródeł i świeżości. Nagłówki, zdjęcia i linki prowadzą do serwisów źródłowych — wszystkie prawa do artykułów i zdjęć należą do ich wydawców. Krótkie podsumowania pisze AI własnymi słowami.<br>
 MVP · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="/reklama">reklama na nieczytaj.pl</a> · <a href="/regulamin">regulamin</a> · kontakt: <a href="mailto:info@startend.ch">info@startend.ch</a>`}
 </footer>
@@ -745,11 +807,13 @@ function buyLink(pkg, label, price, t) {
   // STRIPE_BANER7 / STRIPE_BANER30 / STRIPE_KAF7 / STRIPE_KAF30 / STRIPE_BOX7 /
   // STRIPE_BOX30 — each Railway service (nieczytaj, liesnicht) sets its own
   // Payment Links; unset falls back to a mailto reservation.
-  const env = process.env['STRIPE_' + pkg.toUpperCase()];
+  const env = t.id === 'de'
+    ? (process.env['STRIPE_' + t.country.toUpperCase() + '_' + pkg.toUpperCase()] || (t.ch ? process.env['STRIPE_' + pkg.toUpperCase()] : ''))
+    : process.env['STRIPE_' + pkg.toUpperCase()];
   if (t.id === 'de') {
-    if (env) return `<a class="buy" href="${esc(env)}" target="_blank" rel="noopener">Bestellen · CHF ${price}</a>`;
-    const href = `mailto:info@startend.ch?subject=${encodeURIComponent('Werbung LIESNICHT — ' + label)}&body=${encodeURIComponent('Guten Tag,\n\nich möchte reservieren: ' + label + ' (CHF ' + price + ' netto).\n\nFirma:\nUID/MWST:\nMotiv (Bild/Video):\nZiel-Link:\nKampagnenstart:\n\n')}`;
-    return `<a class="buy" href="${esc(href)}">Bestellen · CHF ${price}</a>`;
+    if (env) return `<a class="buy" href="${esc(env)}" target="_blank" rel="noopener">Bestellen · ${money(price, t)}</a>`;
+    const href = `mailto:info@startend.ch?subject=${encodeURIComponent('Werbung ' + t.domain + ' — ' + label)}&body=${encodeURIComponent('Guten Tag,\n\nich möchte reservieren: ' + label + ' (' + money(price, t) + ' netto).\n\nFirma:\nUID/MWST:\nMotiv (Bild/Video):\nZiel-Link:\nKampagnenstart:\n\n')}`;
+    return `<a class="buy" href="${esc(href)}">Anfragen · ${money(price, t)}</a>`;
   }
   const href = env || `mailto:info@startend.ch?subject=${encodeURIComponent('Reklama nieczytaj.pl — ' + label)}&body=${encodeURIComponent('Dzień dobry,\n\nchcę zarezerwować: ' + label + ' (' + price + ' zł netto).\n\nFirma:\nNIP:\nMateriał (obraz/wideo):\nLink docelowy:\nStart kampanii:\n\n')}`;
   return `<a class="buy" href="${esc(href)}"${env ? ' target="_blank" rel="noopener"' : ''}>Zamów · ${price} zł</a>`;
@@ -932,7 +996,8 @@ function legalShell(t, title, body) {
   return `<!DOCTYPE html><html lang="${t.lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>${esc(title)} — ${esc(t.brand)}</title>
+<title>${esc(title)} — ${esc(t.brand)} · ${esc(t.countryName)}</title>
+${editionMeta(t, title === 'Impressum' ? '/impressum' : '/datenschutz')}
 <style>
 :root{--paper:#fbfbfa;--ink:#141414;--mut:#6f6a64;--acc:#c8102e;--line:#e7e5e1;--aibg:#f3f0ea}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 -apple-system,'Segoe UI',Roboto,Arial,sans-serif}
@@ -947,11 +1012,13 @@ h2{font-family:Georgia,serif;font-size:13px;letter-spacing:1.4px;text-transform:
 p,li{font-size:14.5px}ul{padding-left:18px}li{margin:6px 0}
 footer{margin-top:40px;padding-top:14px;border-top:3px solid var(--ink);font-size:12.5px;color:var(--mut)}
 footer a,a{color:var(--acc)}
+${editionCss(t)}
 </style></head><body><div class="wrap">
 <header>
 <h1 class="logo"><a href="/">${t.brandHtml}</a></h1>
 <div class="back"><a href="/">← ${t.id === 'de' ? 'Zur Startseite' : 'Wróć'}</a></div>
 </header>
+${editionNav(t, title === 'Impressum' ? '/impressum' : '/datenschutz')}
 ${body}
 <footer>
 <b>${esc(t.brand)}</b> · © ${new Date().getFullYear()} <a href="https://startend.ch">STARTEND GmbH</a>, Cham (CH) · <a href="${t.adsPath}">${t.id === 'de' ? 'Werbung' : 'reklama'}</a> · <a href="mailto:info@startend.ch">info@startend.ch</a>
@@ -963,7 +1030,7 @@ function impressumPage(t) {
   t = t || tenantFromHost('liesnicht.ch');
   return legalShell(t, 'Impressum', `
 <h1>Impressum</h1>
-<p class="sub">Angaben gemäss schweizerischem Recht. Herausgeberin von LIESNICHT.</p>
+<p class="sub">Herausgeberin von ${t.domain} · Ausgabe ${t.countryName}.</p>
 <h2>Herausgeberin</h2>
 <p><b>STARTEND GmbH</b><br>Cham, Schweiz<br>UID CHE-223.488.613<br>E-Mail: <a href="mailto:info@startend.ch">info@startend.ch</a></p>
 <h2>Vertretung</h2>
@@ -995,12 +1062,13 @@ function datenschutzPage(t) {
 function werbungPage(t) {
   t = t || tenantFromHost('liesnicht.ch');
   const P = PRICE_DE_LOCKED; // locked — never PRICE / Polish tail
-  const pv = state.pv.days[warsawDay()] || 0;
-  const cur = t.ch ? 'CHF' : 'CHF';
-  return `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">
+  const pv = viewsFor(t).days[editionDay(t)] || 0;
+  const cur = t.currency;
+  return `<!DOCTYPE html><html lang="${t.lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Werbung auf LIESNICHT — Bild oder Video, ab ${cur} ${P.box7} / 7 Tage</title>
-<meta name="description" content="Werbung auf LIESNICHT — Bild und Video zwischen heissen Nachrichten. Fixpreise in CHF, B2B.">
+${editionMeta(t, '/werbung')}
+<title>Werbung auf ${t.domain} — Bild oder Video, ab ${cur} ${P.box7} / 7 Tage</title>
+<meta name="description" content="Werbung auf ${t.domain} — Bild und Video zwischen Nachrichten aus ${t.from}. Fixpreise in ${cur}, B2B.">
 <style>
 :root{--paper:#fbfbfa;--ink:#141414;--mut:#6f6a64;--acc:#c8102e;--line:#e7e5e1;--aibg:#f3f0ea}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 -apple-system,'Segoe UI',Roboto,Arial,sans-serif}
@@ -1030,14 +1098,17 @@ td.p{font-weight:700;white-space:nowrap}
 .note{background:var(--aibg);border-left:3px solid var(--acc);padding:14px 16px;border-radius:0 8px 8px 0;font-size:14.5px;margin:26px 0}
 footer{margin-top:44px;padding-top:14px;border-top:3px solid var(--ink);font-size:12.5px;color:var(--mut);line-height:1.6}
 footer a{color:var(--mut)}
+${editionCss(t)}
 </style></head><body><div class="wrap">
 <header>
 <h1 class="logo"><a href="/">${t.brandHtml}</a></h1>
 <div class="back"><a href="/">← Zurück zu den Nachrichten</a></div>
 </header>
-<h1>Werbung, die niemand wegscrollt</h1>
-<p class="lede"><b>Bild oder Video</b> — dort, wo die Leser ohnehin hinschauen: zwischen den heissen News. Keine Pop-ups, kein Ton, kein Nutzer-Tracking. Reservation in einer Minute.</p>
-<div class="note"><b>CHF 1 Test:</b> Zahlungslink prüfen — <a class="buy" href="${esc(STRIPE_CHF1)}" target="_blank" rel="noopener" style="margin-top:10px">Test · CHF 1</a></div>
+${editionNav(t, '/werbung')}
+<p class="country-label">Ausgabe ${t.countryName}</p>
+<h1>Werbung in ${t.countryName}</h1>
+<p class="lede"><b>Bild oder Video</b> — dort, wo die Leser ohnehin hinschauen: zwischen Nachrichten aus ${t.from}. Keine Pop-ups, kein Ton, kein Nutzer-Tracking. Fragen Sie Ihren gewünschten Zeitraum an.</p>
+${t.ch ? `<div class="note"><b>CHF 1 Test:</b> Zahlungslink prüfen — <a class="buy" href="${esc(STRIPE_CHF1)}" target="_blank" rel="noopener" style="margin-top:10px">Test · CHF 1</a></div>` : ''}
 
 <h2>Formate</h2>
 <div class="fmt">
@@ -1079,7 +1150,7 @@ ${buyLink('box30', 'Box — 30 Tage', P.box30, t)}
 </table>
 <p style="font-size:13px;color:var(--mut);margin-top:8px">Nettopreise, Mindestlaufzeit 7 Tage, nur B2B — Rechnung von STARTEND GmbH (Schweiz), Steuerschuldnerschaft des Leistungsempfängers. Zahlung im Voraus. <a href="/impressum" style="color:var(--acc)">Impressum</a> · <a href="/datenschutz" style="color:var(--acc)">Datenschutz</a>.</p>
 
-<div class="note"><b>Offene Karten:</b> LIESNICHT ist neu — darum echte Zahlen statt Versprechen. Heute: <b>${pv}</b> Aufrufe (seit Mitternacht, ohne Bots). Ihr Satz gilt für die gebuchte Laufzeit, auch wenn der Preis später steigt.</div>
+<div class="note"><b>Offene Karten:</b> LIESNICHT ist neu — darum echte Zahlen statt Versprechen. Heute in ${t.countryName}: <b>${pv}</b> Seitenaufrufe (seit Mitternacht, ohne Bot-Filter). Ihr Satz gilt für die gebuchte Laufzeit, auch wenn der Preis später steigt.</div>
 
 <h2>Spezifikation</h2>
 <ul>
@@ -1099,7 +1170,15 @@ ${buyLink('box30', 'Box — 30 Tage', P.box30, t)}
 }
 
 // ------------------------- server -------------------------
-function countView(city) {
+function countView(city, t) {
+  if (t && t.id === 'de') {
+    const pv = viewsFor(t), d = editionDay(t);
+    pv.total++;
+    pv.days[d] = (pv.days[d] || 0) + 1;
+    const days = Object.keys(pv.days).sort();
+    while (days.length > 14) delete pv.days[days.shift()];
+    return;
+  }
   state.pv.total++;
   const d = warsawDay();
   state.pv.days[d] = (state.pv.days[d] || 0) + 1;
@@ -1118,7 +1197,7 @@ function sendHtml(res, status, html, maxAge) {
 }
 
 // ------------------------- SEO: canonical host, sitemap, RSS -------------------------
-function siteFor(t) { return t && t.id === 'de' ? 'https://www.liesnicht.ch' : 'https://www.nieczytaj.pl'; }
+function siteFor(t) { return 'https://www.' + (t ? t.domain : 'nieczytaj.pl'); }
 function xesc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
@@ -1142,9 +1221,9 @@ function sitemapXml(t) {
 function rssXml(t) {
   const site = siteFor(t);
   const de = t.id === 'de';
-  const edition = de ? state.de : state;
+  const edition = editionFor(t);
   const clusters = (edition.clusters || []).slice(0, 30);
-  const title = de ? `${t.brand} — heisse Nachrichten, gewählt von KI` : 'NIECZYTAJ.PL — gorące wiadomości wybrane przez AI';
+  const title = de ? `${t.brand}.${t.country.toUpperCase()} — Nachrichten aus ${t.from}` : 'NIECZYTAJ.PL — gorące wiadomości wybrane przez AI';
   const desc = de ? 'Nicht alles lesen. KI wählt die Nachrichten, über die alle sprechen.' : 'Nie czytaj wszystkiego. AI wybiera wiadomości, o których mówią wszyscy.';
   const items = clusters.map(c => {
     const lead = c.lead || (c.items && c.items[0]) || {};
@@ -1164,7 +1243,7 @@ function rssXml(t) {
     `    <title>${xesc(title)}</title>\n` +
     `    <link>${site}/</link>\n` +
     `    <description>${xesc(desc)}</description>\n` +
-    `    <language>${de ? 'de-CH' : 'pl-PL'}</language>\n` +
+    `    <language>${t.locale}</language>\n` +
     `    <lastBuildDate>${new Date(state.lastRefresh || Date.now()).toUTCString()}</lastBuildDate>\n` +
     `    <atom:link href="${site}/rss.xml" rel="self" type="application/rss+xml"/>\n` +
     items.join('\n') + (items.length ? '\n' : '') +
@@ -1175,7 +1254,7 @@ const server = http.createServer((req, res) => {
   const t = tenantFromHost(requestHost(req));
   try {
     if (url === '/' && req.method === 'GET') {
-      countView();
+      countView(null, t);
       return sendHtml(res, 200, page(null, t), 120);
     }
     if (url === '/reklama' && req.method === 'GET') {
@@ -1211,29 +1290,29 @@ const server = http.createServer((req, res) => {
     const cityList = t.id === 'de' ? [] : CITIES;
     const cityDef = cityList.find(c => '/' + c.slug === url);
     if (cityDef && req.method === 'GET') {
-      countView(cityDef.slug);
+      countView(cityDef.slug, t);
       return sendHtml(res, 200, page(cityDef, t), 120);
     }
     if (url === '/health') {
-      const list = t.id === 'de' ? FEEDS_DACH : FEEDS;
-      const hotN = t.id === 'de' ? state.de.clusters.length : state.clusters.length;
+      const list = feedsFor(t);
+      const hotN = editionFor(t).clusters.length;
       const okN = list.filter(f => state.feedCache[f.id] && state.feedCache[f.id].ok).length;
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(JSON.stringify({
         ok: state.lastRefresh > 0, lastRefresh: new Date(state.lastRefresh).toISOString(),
         refreshCount: state.refreshCount, feedsOk: okN, feedsTotal: list.length,
         hot: hotN, summaries: state.summaries.size,
-        cities: Object.fromEntries(CITIES.map(c => [c.slug, (state.cities[c.slug] || { clusters: [] }).clusters.length])),
-        ads: ADS.length, price: t.price, tenant: t.id, aiSelf: !!ANTHROPIC_API_KEY, pv: state.pv,
+        cities: Object.fromEntries((t.id === 'de' ? [] : CITIES).map(c => [c.slug, (state.cities[c.slug] || { clusters: [] }).clusters.length])),
+        ads: ['baner', 'kafelek', 'box'].filter(slot => adFor(slot, t)).length, price: t.price, tenant: t.id, country: t.country, locale: t.locale, currency: t.currency, canonical: siteFor(t), revision: process.env.RAILWAY_GIT_COMMIT_SHA || 'local', aiSelf: !!ANTHROPIC_API_KEY, pv: viewsFor(t),
         uptimeMin: Math.round((Date.now() - state.boot) / 60000),
-        feeds: list.map(f => ({ id: f.id, ok: !!(state.feedCache[f.id] && state.feedCache[f.id].ok), n: state.feedCache[f.id] ? state.feedCache[f.id].items.length : 0, via: f.via || '', err: state.feedCache[f.id] ? state.feedCache[f.id].error : 'pending' })),
+        feeds: list.map(f => ({ id: f.id, name: f.name, ok: !!(state.feedCache[f.id] && state.feedCache[f.id].ok), n: state.feedCache[f.id] ? state.feedCache[f.id].items.length : 0, via: f.via || '', err: state.feedCache[f.id] ? state.feedCache[f.id].error : 'pending' })),
       }));
     }
     if (url === '/api/top') {
       res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
       return res.end(JSON.stringify({
-        generatedAt: new Date().toISOString(),
-        clusters: state.clusters.map(c => ({
+        generatedAt: new Date().toISOString(), country: t.country, locale: t.locale,
+        clusters: editionFor(t).clusters.map(c => ({
           key: c.key, cat: c.cat, srcCount: c.srcCount, ageMin: Math.round((Date.now() - c.newest) / 60000),
           title: c.lead.title, hasSummary: state.summaries.has(c.key),
           sources: c.items.slice(0, 6).map(i => ({ name: i.srcName, title: i.title, link: i.link, desc: i.desc.slice(0, 200) })),
@@ -1246,7 +1325,7 @@ const server = http.createServer((req, res) => {
         try {
           const j = JSON.parse(b);
           let n = 0;
-          for (const s of (j.summaries || [])) if (s && s.key && s.text) { putSummary(s.key, String(s.text).slice(0, 300), 'n8n'); n++; }
+          for (const s of (j.summaries || [])) if (s && s.key && s.text && (t.id !== 'de' || String(s.key).startsWith(t.country + ':'))) { putSummary(s.key, String(s.text).slice(0, 300), 'n8n'); n++; }
           console.log(`[ai] received ${n} summaries (n8n)`);
           res.writeHead(200, { 'content-type': 'application/json' });
           res.end(JSON.stringify({ ok: true, stored: n }));
@@ -1271,9 +1350,13 @@ const server = http.createServer((req, res) => {
     try { res.writeHead(500); res.end('error'); } catch (_) {}
   }
 });
+if (require.main === module) {
 server.listen(PORT, () => console.log(`nieczytaj.pl v1.6 listening on :${PORT} (refresh ${REFRESH_MIN} min, feeds: ${FEEDS.length}+${CITIES.reduce((a, c) => a + c.feeds.length, 0)} city, ads: ${ADS.length})`));
 refresh().catch(e => console.log('[refresh] boot error: ' + String(e).slice(0, 300)));
 setInterval(() => refresh().catch(e => console.log('[refresh] error: ' + String(e).slice(0, 300))), REFRESH_MIN * 60000);
+
+}
+module.exports = { server, state, tenantFromHost, feedsFor, rebuildCountryEditions, tokens, page, rssXml, adFor, buyLink };
 
 // ---- cennik reklam (nadpisanie konfiguracyjne; zmiana ceny = tylko ta zmienna) ----
 Object.assign(PRICE, { baner7: 490, baner30: 1490, kaf7: 390, kaf30: 990, box7: 190, box30: 590 });
@@ -1282,3 +1365,4 @@ console.log('[ads] cennik:', JSON.stringify(PRICE));
 // ---- config tail: ceny nadpisywane tutaj (najtansza zmiana - tylko ta zmienna) ----
 Object.assign(PRICE, { baner7: 490, baner30: 1490, kaf7: 390, kaf30: 990, box7: 290, box30: 690 });
 console.log('[ads] cennik (tail):', JSON.stringify(PRICE));
+

@@ -1,3 +1,9 @@
+# LIESNICHT CH / DE / AT — 09 Sep 2026 country amendment
+
+Country split is implemented and locally verified: `npm test && npm run validate` passes, including 220 country assertions and existing tenant/Polish regressions. See docs/LIESNICHT_COUNTRIES.md for the cause, exact behavior, publisher pools, production evidence and outstanding Austria CNAME. Preserve other Cxx handovers and checkboxes. Do not treat this source patch as commercial LIVE or proof of Stripe payment. Bus sync was blocked by automatic approval review.
+
+---
+
 # HANDOVER — what runs where, how a stranger buys, how to refund
 
 One page per venture in this repository. Every value below is an environment
@@ -91,3 +97,4 @@ One `server.js`, two tenants: the `Host` header selects PL or DE; `TENANT=liesni
 - The `nieczytaj` service must be repointed to the repository (see above).
 - X Autopilot post generation inside this app needs `ANTHROPIC_API_KEY`; until then the engines draft in n8n and only the judge runs here.
 - Google Sign-In for `/apps/admin` reuses the X Autopilot OAuth client and callback; the same redirect URI covers both.
+
