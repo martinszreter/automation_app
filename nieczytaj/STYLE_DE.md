@@ -1,3 +1,17 @@
+# LIESNICHT country editions — 2026-09-09
+
+The country amendment supersedes the Switzerland-only rules below for DE and AT.
+
+| Domain | Audience | Language | Time zone | Advertising |
+|---|---|---|---|---|
+| liesnicht.ch | Switzerland | de-CH, Swiss spelling | Europe/Zurich | CHF |
+| liesnicht.de | Germany | de-DE, German spelling | Europe/Berlin | EUR |
+| liesnicht.at | Austria | de-AT, Austrian usage | Europe/Vienna | EUR |
+
+Use a visible country name and domain suffix on every edition. Each canonical URL, sitemap and RSS feed belongs to its own country domain. Regional navigation switches explicitly between countries; browser location does not override the chosen domain. Publisher headlines remain verbatim. Swiss publisher identity stays STARTEND GmbH, Cham, Switzerland for all editions; never invent a local company/address. Checkout settings and paid placements are country scoped. Existing source pools are split; an unavailable country must show its own empty state.
+
+---
+
 # LIESNICHT — Stilregeln für deutsche Schlagzeilen und Kurzfassungen
 
 Gilt für alles, was liesnicht.ch selbst formuliert: KI-Kurzfassungen der
@@ -51,3 +65,4 @@ im Infinitiv oder als Nomen: «mein Standort», «Zurück zur Landesausgabe»,
 Jede Seite hat `lang="de"`, eine eigene `description`, `canonical` auf
 `https://www.liesnicht.ch/…`, `og:locale` `de_CH`; `/rss.xml` und
 `/sitemap.xml` werden vom Server erzeugt und in `robots.txt` genannt.
+
