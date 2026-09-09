@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node test-host-tenant.js",
+    "test": "node test-host-tenant.js && node test-country-editions.js",
     "validate": "node validate-tenant.js"
   }
 }
