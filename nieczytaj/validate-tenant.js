@@ -3,9 +3,6 @@
 //   TENANT=liesnicht boots with DE strings on any Host, and the DE ads page
 //   honours the STRIPE_* Payment Link env vars (mailto fallback when unset).
 // Usage: node validate-tenant.js   (exit 0 = validator passes)
-const { spawn } = require('child_process');
-const http = require('http');
-const path = require('path');
 
 const PORT = 18083;
 const FAKE_BANER7 = 'https://buy.stripe.com/test_liesnicht_baner7';
@@ -15,56 +12,20 @@ function assert(cond, msg) {
   else console.log('OK  ', msg);
 }
 
-function req(host, urlPath) {
-  return new Promise((resolve, reject) => {
-    const r = http.request({
-      hostname: '127.0.0.1', port: PORT, path: urlPath, method: 'GET',
-      headers: { host },
-    }, res => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({
-        status: res.statusCode,
-        location: res.headers.location || '',
-        body: Buffer.concat(chunks).toString('utf8'),
-      }));
-    });
-    r.on('error', reject);
-    r.end();
-  });
-}
-
-const child = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
-  cwd: __dirname,
-  env: {
-    ...process.env,
-    PORT: String(PORT),
-    TENANT: 'liesnicht',
-    STRIPE_BANER7: FAKE_BANER7,
-    STRIPE_BOX7: '',
-  },
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
-let buf = '';
-const ready = new Promise((resolve, reject) => {
-  const t = setTimeout(() => reject(new Error('server start timeout')), 8000);
-  function onOut(d) {
-    buf += d;
-    if (/listening/.test(buf)) { clearTimeout(t); resolve(); }
-  }
-  child.stdout.on('data', onOut);
-  child.stderr.on('data', onOut);
-  child.on('exit', code => reject(new Error('server exited ' + code + '\n' + buf)));
-});
+process.env.TENANT = 'liesnicht';
+process.env.STRIPE_BANER7 = FAKE_BANER7;
+process.env.STRIPE_BOX7 = '';
+const { server } = require('./server');
+const requestFixture = require('./request-fixture');
+function req(host, urlPath) { return requestFixture(server, host, urlPath); }
 
 (async () => {
   try {
-    await ready;
 
     // Plain local host — no "liesnicht" in the Host header at all.
     const home = await req('localhost:' + PORT, '/');
     assert(home.status === 200, 'TENANT=liesnicht / 200');
-    assert(/lang="de"/.test(home.body), 'TENANT=liesnicht / html lang=de');
+    assert(/lang="de-CH"/.test(home.body), 'TENANT=liesnicht / html lang=de-CH');
     assert(/LIESNICHT/.test(home.body), 'TENANT=liesnicht / brand LIESNICHT');
     assert(!/NIECZYTAJ/.test(home.body), 'TENANT=liesnicht / no NIECZYTAJ');
     assert(/Nicht alles lesen/.test(home.body), 'TENANT=liesnicht / German copy');
@@ -72,7 +33,7 @@ const ready = new Promise((resolve, reject) => {
 
     // The pin wins even for a Polish Host — this service only serves DE.
     const plHost = await req('www.nieczytaj.pl', '/');
-    assert(plHost.status === 200 && /lang="de"/.test(plHost.body) && /LIESNICHT/.test(plHost.body),
+    assert(plHost.status === 200 && /lang="de-CH"/.test(plHost.body) && /LIESNICHT/.test(plHost.body),
       'TENANT=liesnicht overrides a nieczytaj.pl Host');
 
     const ads = await req('localhost:' + PORT, '/werbung');
@@ -103,7 +64,6 @@ const ready = new Promise((resolve, reject) => {
     fails.push(String(e));
     console.log('FAIL', e);
   } finally {
-    child.kill('SIGTERM');
     if (fails.length) {
       console.log('\n' + fails.length + ' failed — validator FAILED');
       process.exit(1);
@@ -111,3 +71,4 @@ const ready = new Promise((resolve, reject) => {
     console.log('\nvalidator passes');
   }
 })();
+
