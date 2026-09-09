@@ -357,3 +357,14 @@ Dependencies: C26
 Edge cases and non-goals: Preserve existing customer data, tenant isolation and unrelated source. Missing credentials, provider errors and unavailable domains remain explicit; no fake success, new orchestration layer or unsolicited outreach.
 
 Acceptance: the executable behavior attached to each selected checkbox, plus the shared payment/auth/LIVE requirements when applicable.
+
+
+## LIESNICHT country editions — Marcin amendment 2026-09-09
+
+Execute this bounded country-separation request now, taking over C06 reservation #405/#444. Keep the existing news engine and independent Polish behavior. The public brand is LIESNICHT, with Switzerland at liesnicht.ch, Germany at liesnicht.de, Austria at liesnicht.at. Each edition must visibly name its country and domain, select its own country's publisher feeds, and use separate clustered results, latest articles, category lists, API and RSS outputs. Shared international stories may naturally appear in multiple editions; never fill a failed edition with another country's feed pool. Preserve source headlines verbatim.
+
+Domain resolution is exact and normalized (apex/www, case, port, trailing dot). TENANT=liesnicht selects the brand on preview hosts, but must not collapse .de/.at onto Switzerland. Default preview remains CH. Use de-CH/Europe-Zurich/CHF; de-DE/Europe-Berlin/EUR; de-AT/Europe-Vienna/EUR. Give each edition its own canonical, Open Graph locale, sitemap, RSS language, masthead suffix and country navigation. Keep the recognizable shared layout with country-specific visual accents; main content remains the news surface.
+
+Reuse the already configured SRF, Tagesschau, Spiegel, ORF, Standard, Heise and WinFuture sources. Select Swiss feeds for CH, German for DE, Austrian for AT; any additional source must be verified before shipping. Use country-scoped sponsorship settings STRIPE_CH_*, STRIPE_DE_*, STRIPE_AT_* and country-targeted ADS_JSON entries; legacy German-tenant Stripe settings apply to CH only. Preserve locked amounts 149/119/89 (7 days), 449/299/199 (30 days). Do not attach a Swiss checkout to an EUR label. Missing country checkout is a clearly worded enquiry, not payment success. Keep STARTEND GmbH's real Swiss publisher identity on all editions; no invented local addresses or legal compliance claims.
+
+Acceptance lives in C06-COUNTRY below. Commit this amendment before implementation; preserve other contract checkboxes and open PRs. Deploy only reviewed, tested scoped changes using current main and required checks. Connect Austria to the existing Liesnicht service; report any unresolved DNS requirement with exact record evidence. Do not declare commercial LIVE or payment-tested from this task.
