@@ -1,9 +1,11 @@
-# Marcin Szreter — AI Security & Assurance
-Profile and initiative kit · 10 September 2026 · Draft for publication
+# STARTEND AI Security & Assurance — Showcase Page Launch Pack
+Updated 10 September 2026 · Approved direction: preserve the existing OMP personal profile; build the security initiative through STARTEND. Page copy is ready; publication is pending authenticated super-admin access.
 
 ## Recommendation
 
-Build a personal advisory and research practice focused on securing AI agents in financial services and public institutions. Marcin is the visible expert; STARTEND GmbH is the business behind the offer. Washington, D.C. is a target market, alongside major financial centres.
+Build an advisory and research initiative focused on securing AI agents in financial services and public institutions. Marcin is the named initiative lead and author; STARTEND GmbH is the business behind the offer. Washington, D.C. is a target market, alongside major financial centres.
+
+The user's latest decision supersedes the earlier recommendation to reposition his personal LinkedIn headline. Preserve the existing personal profile's name, headline, About, Experience and OMP/supply-chain skills, because it continues to generate consulting enquiries. Create no second personal account and delete no existing account. A future personal-profile entry is optional and outside this launch.
 
 The initial specialism is narrow: what AI agents may access, what they may do, who authorizes sensitive actions, and what evidence remains afterwards. This connects technical security with a decision that institutional buyers understand: whether a particular workflow is ready to deploy.
 
@@ -27,68 +29,83 @@ My strategic inference: a specialist who can turn these concerns into a concrete
 
 ## Profile structure
 
-| Surface | Proposed use | Current status |
+| Surface | Use now | Status |
 | --- | --- | --- |
-| Existing personal LinkedIn profile | Main reputation, research and relationships | URL and authenticated editing access not available here |
-| STARTEND company Page | Business identity and service information | Prior records say setup was pending; live status unverified |
-| STARTEND AI Security & Assurance Showcase Page | Optional initiative page under STARTEND once the parent Page exists | Proposed |
-| martinszreter.com | Personal biography, research and service enquiry | Owned according to STARTEND records; current site not audited |
-| GitHub | Public synthetic demonstrations and reproducible research examples | Demonstration repository not created |
-| IEEE profile | Link the existing professional credential and published work | Public profile not retrieved |
+| Existing personal LinkedIn profile | Continue attracting OMP and supply-chain consulting enquiries | Preserve as it is; no edit requested |
+| STARTEND GmbH company Page | Parent business identity for the initiative | The correct parent URL and super-admin status are not verified |
+| STARTEND AI Security & Assurance Showcase Page | Dedicated English-language research and service presence, naming Marcin as initiative lead | Copy prepared; not created or published |
+| https://www.startend.ch/ | Existing company website and contact destination for the Page | Public company details and contact email retrieved in this session |
+| martinszreter.com | Future personal research and biography destination | Owned according to STARTEND records; live content could not be verified; no website changes made |
+| GitHub and IEEE | Supporting work and credential links | GitHub documentation prepared; public demonstration and IEEE profile links still to be added when available |
 
-Use English for the international audience. Use the real Swiss location. LinkedIn permits one personal account in the member's real name; Showcase Pages can represent an organizational initiative.[5][6] Reuse the personal profile and STARTEND identity.
+Use the spelling Marcin Szreter consistently in the initiative's biography and authorship. Use English for its international audience and the real Swiss location. The Showcase Page is associated with STARTEND, while the personal profile keeps its current commercial focus.
 
-## LinkedIn copy
+## Ready-to-enter Showcase Page fields
 
-### Headline
+| Field | Exact value or action |
+| --- | --- |
+| Page name | STARTEND AI Security & Assurance |
+| Parent / Associated organization | Select the STARTEND GmbH Page that Marcin administers; verify the website is startend.ch |
+| Proposed URL suffix | startend-ai-security — availability must be checked in LinkedIn; this is not an existing Page URL |
+| Tagline | Practical security for AI agents in financial services and public institutions. |
+| Website | https://www.startend.ch/ |
+| Location, if requested | Cham, Zug, Switzerland |
+| Industry, if requested | Computer and Network Security, if available in LinkedIn's current choices |
+| Contact email | info@startend.ch |
+| Logo | Reuse the existing STARTEND company logo |
+| Banner wording | AI SECURITY & ASSURANCE / Secure AI agents. Clear permissions. Traceable decisions. |
+| Optional banner attribution | Led by Marcin Szreter, PhD |
+| About | Use the complete text below |
 
-PhD in Computer Science | AI Security & Assurance | Secure AI Agents for Financial Services & Public Institutions | Founder, STARTEND
+The website and contact email above appear on STARTEND's public website.[9] The personal domain should not be used as the Page's launch destination until it has a verified, relevant live page.
 
-### About
+A similarly named LinkedIn company is not sufficient evidence of identity. Match the parent Page to STARTEND GmbH, Switzerland and startend.ch before associating the Showcase Page.
 
-I am the founder of STARTEND GmbH, with a PhD in Computer Science, IEEE Senior Member status, and experience leading cybersecurity projects.
+### About — complete Page copy
 
-I am developing an independent AI security and assurance practice focused on financial services and public institutions. My work centres on a practical question: how can an organization give AI agents useful capabilities while keeping access, decisions and actions under control?
+STARTEND AI Security & Assurance is an initiative led by Marcin Szreter, focused on the secure use of AI agents in financial services and public institutions.
 
-My areas of focus include agent identity and permissions, prompt injection, sensitive-data handling, human authorization, and audit evidence. I aim to translate technical risks into clear deployment decisions and practical controls.
+Our work centres on a practical question: how can an organization give AI agents useful capabilities while keeping access, decisions and actions under control?
 
-Through STARTEND, I am developing focused workflow reviews, executive briefings and research demonstrations. I am interested in collaboration with security leaders, AI platform teams and specialist delivery partners working on trustworthy AI adoption.
+Our focus includes agent identity and permissions, sensitive-data handling, prompt injection, human authorization and audit evidence. We are developing workflow-review methods, research briefs and demonstrations that translate technical risks into practical controls.
 
-Based in Switzerland, with an international focus.
+Marcin holds a PhD in Computer Science, is an IEEE Senior Member, and has led cybersecurity projects. Through this initiative, he brings those foundations to the security challenges of AI-enabled workflows.
 
-### Experience entry
+Based in Cham, Switzerland, with an international focus.
 
-Title: Founder | AI Security & Assurance Initiative
-Organization: STARTEND GmbH
-Description:
+For research collaboration and scoped project enquiries: info@startend.ch
 
-Developing a specialist advisory and research initiative for the secure use of AI agents in financial services and public institutions.
+### Short initiative-lead biography
 
-Focus areas include permissions, data boundaries, authorization of sensitive actions, and traceable evidence. Initial work covers a practical review methodology, research briefs and synthetic demonstrations.
+Marcin Szreter leads the AI Security & Assurance initiative at STARTEND GmbH. He holds a PhD in Computer Science, is an IEEE Senior Member, and has led cybersecurity projects. His focus is practical security for AI agents, including permissions, sensitive-data handling, human authorization and traceable actions in financial services and public institutions.
 
-Use the actual initiative start date when adding this entry.
+### Parent Page description, only if STARTEND has no existing company Page
 
-### Banner copy
+STARTEND GmbH is an AI application studio based in Cham, Switzerland. We develop software and AI-enabled workflows for businesses.
 
-AI SECURITY & ASSURANCE
-Secure AI agents. Clear permissions. Traceable decisions.
-Marcin Szreter · STARTEND
+STARTEND AI Security & Assurance is our initiative focused on practical controls for AI agents in financial services and public institutions.
 
-### Initiative Page name and description
+Website: https://www.startend.ch/
+Contact: info@startend.ch
 
-Name: STARTEND AI Security & Assurance
+Keep any existing parent Page and its valid content. Do not create a duplicate company Page.
 
-Tagline: Practical security and assurance for AI agents in financial services and public institutions.
+## Publication steps and current blocker
 
-Description:
+LinkedIn's current help instructions require the creator to be a super admin of the parent Page.[8]
 
-STARTEND AI Security & Assurance is an initiative led by Marcin Szreter, focused on practical controls for AI agents in financial services and public institutions.
+1. Open the correct STARTEND GmbH Page in super-admin view.
+2. Choose Create → Create a Showcase Page.
+3. Select STARTEND as the associated organization.
+4. Enter the fields above and complete any required fields using actual company details.
+5. Reuse the company logo and paste the About copy.
+6. Create the Page, check its displayed name, parent association and contact destination, then publish the launch post below.
 
-The initiative develops workflow-review methods, research briefs and demonstrations covering identity, permissions, data access, human authorization and audit evidence. Its purpose is to help teams understand how an AI workflow should be controlled before deployment.
+If no STARTEND company Page exists, create that parent Page first using the actual company information and the short description above.
 
-### Short speaker biography
+The LinkedIn integration available in this conversation supports professional-profile lookup. It does not provide Page creation, editing or publishing. No authenticated Page admin action was possible here. This is an access/capability blocker, not a request for renewed permission.
 
-Marcin Szreter is the founder of STARTEND GmbH. He holds a PhD in Computer Science, is an IEEE Senior Member, and has led cybersecurity projects. His current focus is practical security and assurance for AI agents, including permissions, sensitive-data handling and traceable decisions in financial services and public institutions.
+No personal-profile changes, Page creation, account deletion, published post, invitation, direct message or website change has occurred.
 
 ## First commercial offer
 
@@ -154,26 +171,32 @@ Draft review questions:
 
 Use NIST's identity work and OWASP's agentic security resources as references for developing the methodology.[2][7] These questions are an initial research outline, not a validated assurance standard.
 
-## First LinkedIn post draft
+## First Showcase Page post — complete launch copy
+
+Introducing STARTEND AI Security & Assurance, led by Marcin Szreter.
 
 An AI agent can produce a correct answer and still take an action it should never have been allowed to take.
 
-That is the question I want to examine through my AI Security & Assurance work at STARTEND:
+Our initiative focuses on the controls around those actions:
 
-Who is the agent?
-What can it access?
-Which actions require independent authorization?
-Can we reconstruct what happened afterwards?
+• What information can the agent access?
+• Which tools can it use?
+• When is independent human authorization required?
+• Can a reviewer reconstruct what happened?
 
-For financial services and public institutions, these questions connect model behaviour to operational control.
+We are developing practical research and demonstrations for financial services and public institutions, covering permissions, data boundaries, human authorization and audit evidence.
 
-My research focus is practical: permissions, data boundaries, human authorization and audit evidence. I will be sharing methods and demonstrations using synthetic workflows, with the limitations made explicit.
+Our first research topic is an internal AI assistant working with sensitive documents. Demonstrations will use synthetic data, with observed results and limitations clearly identified.
+
+Research and collaboration enquiries: info@startend.ch
+
+By Marcin Szreter, PhD · STARTEND GmbH
 
 ## A manageable first month
 
 | Period | Work | Completion evidence |
 | --- | --- | --- |
-| Week 1 | Complete the credential links and update the personal profile | Accurate biography, consistent headline and evidence links |
+| Week 1 | Publish the STARTEND Showcase Page using the prepared copy; preserve the personal OMP profile | Correct parent association, live Page URL and accurate initiative-lead biography |
 | Week 2 | Produce a concise research brief explaining the ten review questions | Cited brief with concrete examples and limitations |
 | Week 3 | Build the synthetic demonstration | Reproducible procedure, observed results and limitations |
 | Week 4 | Package one scoped offer and prepare a partner conversation list | Defined deliverables, scope and one credible route to a pilot |
@@ -186,11 +209,11 @@ Existing STARTEND outbound gates continue to apply. This plan does not schedule 
 
 ## Session status and next action
 
-Completed: positioning, profile copy, Page copy, a speaker bio, first-post draft, proposed offer and proof plan.
+Completed: revised positioning that preserves the OMP personal profile; exact Showcase Page fields; About copy; initiative-lead bio; launch post; company contact destination; publication steps; proposed offer and proof plan.
 
-Prepared only: profile changes, website changes, Page creation, outreach and pricing publication.
+Prepared only: Showcase Page publication and first post. Personal-profile edits are excluded. The website has not been changed. Prices are not published, and there is no institutional-client claim.
 
-One next action: develop the synthetic workflow demonstration into a reproducible evidence piece for the personal profile.
+One next action: create the Showcase Page from the correct STARTEND parent Page's super-admin account using the ready-to-enter fields above.
 
 ## Sources
 
@@ -214,3 +237,9 @@ https://www.linkedin.com/help/linkedin/answer/a727893
 
 [7] OWASP Agentic Security Initiative:
 https://genai.owasp.org/initiatives/agentic-security-initiative/
+
+[8] LinkedIn, Create a LinkedIn Showcase Page:
+https://www.linkedin.com/help/linkedin/answer/a566168
+
+[9] STARTEND public website and company contact information:
+https://www.startend.ch/
