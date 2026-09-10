@@ -7,12 +7,12 @@
   <title>Zorbeck — A world of property. A smarter way to explore.</title>
   <link rel="icon" href="/static/discovery/favicon.svg?v=20260910-luxury" type="image/svg+xml">
   <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="/static/discovery.css?v=20260910-luxury">
+  <link rel="stylesheet" href="/static/discovery.css?v=20260910-search-first">
   <script src="/static/vendor/leaflet/leaflet.js" defer></script>
   <script src="/static/discovery-core.js?v=20260909" defer></script>
-  <script src="/static/discovery.js?v=20260909" defer></script>
+  <script src="/static/discovery.js?v=20260910-search-first" defer></script>
 </head>
-<body data-zorbeck-discovery="2026-09-09" data-zorbeck-theme="charcoal-champagne">
+<body data-zorbeck-discovery="2026-09-09" data-zorbeck-theme="charcoal-champagne" data-zorbeck-layout="search-first">
   <a class="skip-link" href="#explore">Skip to properties</a>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></symbol>
@@ -46,10 +46,7 @@
     </aside>
 
     <main class="workspace" id="explore">
-      <section class="intro">
-        <div><p class="eyebrow"><span></span>REAL ESTATE. A WIDER PERSPECTIVE.</p><h1>A world of property.<br><span>A smarter way to explore.</span></h1><p class="intro-copy">Find your place in the world. Build a shortlist worth a closer look.</p></div>
-        <div class="intro-note"><svg class="icon"><use href="#i-spark"/></svg><p>Your next investment<br>starts with a better search.</p><span>AI discovery · early-access preview</span></div>
-      </section>
+      <div class="market-row" role="group" aria-label="Filter by market"><span>Explore markets</span><div class="market-chips"><button class="market-chip is-active" data-market="" type="button">Anywhere<svg class="icon"><use href="#i-globe"/></svg></button><button class="market-chip" data-market="Portugal" type="button">Portugal</button><button class="market-chip" data-market="Spain" type="button">Spain</button><button class="market-chip" data-market="Switzerland" type="button">Switzerland</button><button class="market-chip" data-market="United Arab Emirates" type="button">Dubai</button><button class="market-chip" data-market="United States" type="button">United States</button><button class="market-chip" data-market="Indonesia" type="button">Bali</button></div><button class="reset-filters" type="button" id="reset-filters">Reset</button></div>
 
       <form class="search-bar" id="search-form" role="search">
         <div class="location-field"><svg class="icon"><use href="#i-search"/></svg><label class="sr-only" for="search-input">Search a city, country or property type</label><input id="search-input" name="query" maxlength="160" placeholder="Where would you like to invest?" autocomplete="off"></div>
@@ -58,11 +55,7 @@
         <button class="button button-dark search-button" type="submit">Explore<svg class="icon"><use href="#i-arrow"/></svg></button>
       </form>
 
-      <div class="market-row" role="group" aria-label="Filter by market"><span>Explore markets</span><div class="market-chips"><button class="market-chip is-active" data-market="" type="button">Anywhere<svg class="icon"><use href="#i-globe"/></svg></button><button class="market-chip" data-market="Portugal" type="button">Portugal</button><button class="market-chip" data-market="Spain" type="button">Spain</button><button class="market-chip" data-market="Switzerland" type="button">Switzerland</button><button class="market-chip" data-market="United Arab Emirates" type="button">Dubai</button><button class="market-chip" data-market="United States" type="button">United States</button><button class="market-chip" data-market="Indonesia" type="button">Bali</button></div><button class="reset-filters" type="button" id="reset-filters">Reset</button></div>
-
-      <div class="preview-banner"><span><svg class="icon"><use href="#i-info"/></svg><strong>Product preview</strong> · Illustrative properties and prices, not active listings.</span><button type="button" data-open="preview-dialog">What’s included?</button></div>
-
-      <div class="results-toolbar"><div><h2 id="results-heading">Places worth exploring<span id="results-count">8 examples</span></h2><p id="results-context" aria-live="polite">A starting point for your next chapter.</p></div><div class="view-controls"><button class="mobile-saved" id="mobile-saved" type="button" aria-pressed="false"><svg class="icon"><use href="#i-heart"/></svg><span>Saved</span></button><label class="sort-label" for="sort-filter">Sort<select id="sort-filter"><option value="featured">Featured</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label><div class="view-toggle" role="group" aria-label="Results view"><button type="button" data-layout="split" class="is-active" aria-label="Show list and map" title="List and map"><svg class="icon"><use href="#i-map"/></svg></button><button type="button" data-layout="list" aria-label="Show property grid" title="Property grid"><svg class="icon"><use href="#i-grid"/></svg></button></div></div></div>
+      <div class="results-toolbar"><div><h1 id="results-heading">Places worth exploring<span id="results-count">8 examples</span></h1><div class="results-caption"><p id="results-context" aria-live="polite">Illustrative properties and prices, not active listings.</p><button class="preview-link" type="button" data-open="preview-dialog">About this preview</button></div></div><div class="view-controls"><button class="mobile-saved" id="mobile-saved" type="button" aria-pressed="false"><svg class="icon"><use href="#i-heart"/></svg><span>Saved</span></button><label class="sort-label" for="sort-filter">Sort<select id="sort-filter"><option value="featured">Featured</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label><div class="view-toggle" role="group" aria-label="Results view"><button type="button" data-layout="split" class="is-active" aria-label="Show list and map" title="List and map"><svg class="icon"><use href="#i-map"/></svg></button><button type="button" data-layout="list" aria-label="Show property grid" title="Property grid"><svg class="icon"><use href="#i-grid"/></svg></button></div></div></div>
 
       <section class="discovery-split" id="discovery-split" aria-label="Property examples and map">
         <div class="results-column"><div class="property-grid" id="property-grid">
@@ -74,7 +67,7 @@
       </section>
       <div class="mobile-map-switch"><button class="button button-dark" type="button" id="mobile-map-toggle"><svg class="icon"><use href="#i-map"/></svg><span>Show map</span></button></div>
 
-      <section class="closing-note"><span class="tiny-brand">z.</span><div><h2>Less noise. More perspective.</h2><p>We’re building AI-assisted discovery to help you find and compare real estate across borders. Start exploring the preview, and help shape what comes next.</p></div><button type="button" class="button button-outline" data-register>Be part of what’s next<svg class="icon"><use href="#i-arrow"/></svg></button></section>
+      <section class="closing-note" aria-labelledby="about-zorbeck"><span class="tiny-brand">z.</span><div><p class="eyebrow">A WIDER PERSPECTIVE · EARLY ACCESS</p><h2 id="about-zorbeck">A world of property. A smarter way to explore.</h2><p>We’re building AI-assisted discovery for your next property investment. Explore across borders and build a shortlist worth a closer look.</p></div><button type="button" class="button button-outline" data-register>Join early access<svg class="icon"><use href="#i-arrow"/></svg></button></section>
       <footer class="discovery-footer"><div><a href="/" class="footer-brand">zorbeck.</a><span>A STARTEND GmbH platform · Cham, Switzerland</span></div><nav aria-label="Legal"><a href="/impressum">Impressum</a><a href="/datenschutz">Privacy</a><a href="/agb">Terms</a><button type="button" data-open="credits-dialog">Photo credits</button></nav><p>{{ legal.company }} · UID {{ legal.uid }} · {{ legal.street }} · {{ legal.city }} · <a href="mailto:{{ legal.email }}">{{ legal.email }}</a></p><p>No tracking cookies. Your shortlist is saved only on this device.</p></footer>
     </main>
   </div>

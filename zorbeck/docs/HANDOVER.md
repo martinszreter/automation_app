@@ -15,3 +15,7 @@ Release gate follow-up: the first hosted run passed all 99 Python tests, all eig
 ## Palette refinement — 2026-09-10
 
 Founder requested a more luxurious color palette while keeping the approved layout. Discovery now uses charcoal navigation and primary actions, warm ivory surfaces, and muted champagne accents for the brand, selected controls and map pins. Shared color tokens replace the green palette; the favicon and browser theme color match. The stylesheet and favicon URLs have new cache versions. Layout, typography, catalog, filters, forms and application behavior are preserved. No new dependencies, image assets or data integrations were introduced.
+
+## Search and results placement — 2026-09-10
+
+Founder requested the property cards and map higher on the page, with search directly above the results. The workspace now starts with compact market shortcuts, then the search form, the “Places worth exploring” title and the existing cards-left/map-right view. The large introductory section is merged into one compact note below the results. Sample disclosure remains next to the results title; preview details remain available. The results title is now the page h1, the luxury palette is preserved, and the CSS/JS URLs are versioned. Submitting search retains the selected market so the reordered controls compose correctly.
