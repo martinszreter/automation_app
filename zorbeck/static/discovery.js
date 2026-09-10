@@ -93,7 +93,7 @@
     $('#results-heading').firstChild.textContent = state.saved ? 'Your saved places' : 'Places worth exploring';
     $('#results-count').textContent = `${current.length} ${current.length === 1 ? 'example' : 'examples'}`;
     const filters = [state.query, state.market, state.budget ? `up to ${money(state.budget)}` : '', state.type].filter(Boolean);
-    $('#results-context').textContent = state.saved ? 'Your shortlist, saved only on this device.' : filters.length ? `Showing examples for ${filters.join(' · ')}` : 'A starting point for your next chapter.';
+    $('#results-context').textContent = state.saved ? 'Your shortlist, saved only on this device.' : filters.length ? `Showing examples for ${filters.join(' · ')}` : 'Illustrative properties and prices, not active listings.';
     $('#empty-state h3').textContent = state.saved ? 'Your shortlist starts here.' : 'No examples match yet.';
     $('#empty-state p').textContent = state.saved ? 'Tap the heart on a property to save it on this device.' : 'Try another location or widen your budget. This preview contains eight illustrative properties.';
     $$('.market-chip').forEach(button => { const active = button.dataset.market === state.market; button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active)); });
@@ -127,7 +127,7 @@
     else if (button.hasAttribute('data-close')) button.closest('dialog').close();
   });
   $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) { const r = dialog.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close(); } }));
-  $('#search-form').addEventListener('submit', event => { event.preventDefault(); state.query = $('#search-input').value.trim(); state.budget = Number($('#budget-filter').value); state.type = $('#type-filter').value; state.market = ''; render(); });
+  $('#search-form').addEventListener('submit', event => { event.preventDefault(); state.query = $('#search-input').value.trim(); state.budget = Number($('#budget-filter').value); state.type = $('#type-filter').value; render(); });
   ['budget-filter', 'type-filter'].forEach(id => document.getElementById(id).addEventListener('change', () => { state.budget = Number($('#budget-filter').value); state.type = $('#type-filter').value; render(); }));
   $('#sort-filter').addEventListener('change', event => { state.sort = event.target.value; render(); });
   $$('.market-chip').forEach(button => button.addEventListener('click', () => { state.market = button.dataset.market; state.query = ''; $('#search-input').value = ''; render(); }));
