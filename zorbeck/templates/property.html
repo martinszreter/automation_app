@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#18181b">
+  <meta name="description" content="Explore this illustrative {{ property.type|lower }} in {{ property.city }} in the Zorbeck property discovery preview. This is not an active seller listing.">
+  <title>{{ property.city }} {{ property.type|lower }} example — Zorbeck</title>
+  <link rel="icon" href="/static/discovery/favicon.svg?v=20260910-luxury" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/discovery.css?v=20260910-details">
+  <script src="/static/registration.js?v=20260910-details" defer></script>
+  <script src="/static/property.js?v=20260910-details" defer></script>
+</head>
+<body data-zorbeck-theme="charcoal-champagne" data-property-page="{{ property.id }}">
+  <a class="skip-link" href="#property-details">Skip to property details</a>
+  {% include "partials/discovery-icons.html" %}
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Zorbeck home"><span class="brand-mark">z<span></span></span>zorbeck<span class="brand-period">.</span></a>
+    <nav class="main-nav" aria-label="Main navigation"><a href="/">Discover properties</a></nav>
+    <div class="header-actions"><span class="global-label"><svg class="icon"><use href="#i-globe"/></svg>Global perspective</span><button class="button button-dark" type="button" data-register>Join early access<svg class="icon"><use href="#i-arrow"/></svg></button></div>
+  </header>
+  <main class="property-workspace" id="property-details">
+    <a class="back-to-map" href="/search?location={{ property.city|urlencode }}"><svg class="icon"><use href="#i-arrow"/></svg>Back to {{ property.city }} on the map</a>
+    <div class="registration-confirmation" id="registration-confirmation" role="status" hidden><svg class="icon"><use href="#i-check"/></svg><span>Your interest has been saved. Explore this property example below.</span></div>
+    <div class="property-page-heading"><p class="eyebrow">{{ property.city }} · {{ property.country }}</p><h1>{{ property.title }}</h1><p>{{ property.type }} · {{ property.beds }} bedrooms · {{ property.area }} m²</p></div>
+    <div class="property-page-layout">
+      <div class="property-story">
+        <figure class="property-hero"><img src="/static/discovery/{{ property.image }}" alt="{{ property.imageAlt }}" width="800" height="600" fetchpriority="high"><figcaption><span>Illustrative photograph</span><span>Photo by <a href="{{ credit.source }}" target="_blank" rel="noopener">{{ credit.photographer }}</a> / Unsplash</span></figcaption></figure>
+        <section class="property-overview" aria-labelledby="overview-title"><h2 id="overview-title">A closer look</h2><p>{{ property.description }}</p><dl class="property-facts"><div><dt>Property type</dt><dd>{{ property.type }}</dd></div><div><dt>Bedrooms</dt><dd>{{ property.beds }}</dd></div><div><dt>Floor area</dt><dd>{{ property.area }} m²</dd></div><div><dt>Location</dt><dd>{{ property.city }}, {{ property.country }}</dd></div></dl></section>
+        <section class="property-evidence" aria-labelledby="evidence-title"><div class="property-evidence-icon"><svg class="icon"><use href="#i-info"/></svg></div><div><h2 id="evidence-title">An example, not a verified opportunity</h2><p>This property, its price and its location are illustrative. There is no live seller offer, verified availability or investment rating attached to it.</p><p>Live listings and AI analysis are in development. A future opportunity assessment will need current source listings, comparable properties and clear cost assumptions.</p></div></section>
+      </div>
+      <aside class="property-price-panel" aria-label="Price and next steps">
+        <span class="property-preview-tag">Product preview</span><p class="price-label">Illustrative price</p><p class="property-page-price">€{{ '{:,}'.format(property.price) }}</p><p class="property-price-note">No live asking price has been verified.</p>
+        <dl class="property-availability"><div><dt>Availability</dt><dd>Not an active listing</dd></div><div><dt>Seller link</dt><dd>Not available for this example</dd></div><div><dt>Deal assessment</dt><dd>Not evaluated</dd></div></dl>
+        <button class="button button-dark" type="button" data-register>Register this search<svg class="icon"><use href="#i-arrow"/></svg></button>
+        <a class="button button-outline" href="/search?location={{ property.city|urlencode }}">Explore this market<svg class="icon"><use href="#i-map"/></svg></a>
+        <p class="property-panel-note">Free early access. We save your search preferences so we can contact you about Zorbeck.</p>
+      </aside>
+    </div>
+    <footer class="discovery-footer"><div><a href="/" class="footer-brand">zorbeck.</a><span>A STARTEND GmbH platform · Cham, Switzerland</span></div><nav aria-label="Legal"><a href="/impressum">Impressum</a><a href="/datenschutz">Privacy</a><a href="/agb">Terms</a></nav><p>{{ legal.company }} · UID {{ legal.uid }} · {{ legal.street }} · {{ legal.city }} · <a href="mailto:{{ legal.email }}">{{ legal.email }}</a></p></footer>
+  </main>
+  {% include "partials/discovery-register.html" %}
+  <script type="application/json" id="property-page-data">{{ {"id": property.id, "city": property.city}|tojson }}</script>
+  <noscript><p class="noscript-note">The property example is available above. Enable JavaScript to register your interest.</p></noscript>
+</body>
+</html>

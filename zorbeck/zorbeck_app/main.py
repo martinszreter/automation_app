@@ -10,14 +10,14 @@ from typing import Any
 from urllib.parse import parse_qsl
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from zorbeck_app import stub
-from zorbeck_app.discovery import PROPERTIES, router as discovery_router
+from zorbeck_app.discovery import PROPERTY_BY_ID, discovery_context, router as discovery_router
 from zorbeck_app.alerts import send_alert
 from zorbeck_app.config import settings
 from zorbeck_app.intake import (
@@ -142,7 +142,24 @@ async def unhandled(request: Request, exc: Exception) -> HTMLResponse:
 async def explore(request: Request) -> HTMLResponse:
     if request.query_params.get("abgebrochen") == "1":
         return render(request, "index.html", cancelled=True, values={}, error=None)
-    return render(request, "explore.html", properties=PROPERTIES)
+    return render(request, "explore.html", **discovery_context())
+
+
+@app.api_route("/search", methods=["GET", "HEAD"], response_class=HTMLResponse)
+async def search_results(request: Request) -> HTMLResponse:
+    return render(request, "explore.html", **discovery_context(
+        request.query_params.get("location", ""), request.query_params.get("budget", ""),
+    ))
+
+
+@app.api_route("/properties/{property_id}", methods=["GET", "HEAD"], response_class=HTMLResponse)
+async def property_details(request: Request, property_id: str) -> HTMLResponse:
+    property = PROPERTY_BY_ID.get(property_id)
+    if property is None:
+        raise HTTPException(status_code=404, detail="This example is not in the preview catalog.")
+    credits = json.loads((BASE_DIR / "static/discovery/photo-credits.json").read_text())
+    index = {"modern-villa.webp": 0, "alpine-home.webp": 1, "city-apartment.webp": 2}[property["image"]]
+    return render(request, "property.html", property=property, credit=credits[index])
 
 
 @app.api_route("/deal-alarm", methods=["GET", "HEAD"], response_class=HTMLResponse)

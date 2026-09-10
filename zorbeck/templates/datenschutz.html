@@ -4,7 +4,7 @@
 {% block content %}
   <section class="legal">
     <h1>Datenschutz</h1>
-    <p class="muted">Stand: 9. September 2026</p>
+    <p class="muted">Stand: 10. September 2026</p>
 
     <h2>Verantwortliche Stelle</h2>
     <p>{{ legal.company }}, {{ legal.street }}, {{ legal.city }}, Schweiz. Kontakt: <a href="mailto:{{ legal.email }}">{{ legal.email }}</a>.</p>
@@ -19,7 +19,8 @@
     <h2>Entdecken, Merkliste und Early Access</h2>
     <p>Die Merkliste im Entdecken-Bereich speichert ausschliesslich Beispiel-IDs lokal in Ihrem Browser (localStorage). Sie ist an dieses Gerät gebunden und wird nicht mit einem Konto synchronisiert. Sie können sie durch Entfernen der gespeicherten Beispiele oder über die Browser-Einstellungen löschen.</p>
     <p>Die interaktive Karte lädt Kacheln von OpenStreetMap. Dabei werden technisch notwendige Daten wie Ihre IP-Adresse und die Herkunftsseite an den Kartenanbieter übermittelt. Weitere Angaben finden Sie in der <a href="https://osmfoundation.org/wiki/Privacy_Policy">Datenschutzerklärung der OpenStreetMap Foundation</a>.</p>
-    <p>Bei der Early-Access-Registrierung verarbeiten wir Ihre E-Mail-Adresse, den Suchort, Ihr optionales Budget und den Zustimmungszeitpunkt über unseren bestehenden n8n-Dienst, um Ihre Anfrage aufzunehmen und Sie zum Early Access zu kontaktieren. Diese Registrierung erstellt kein Nutzerkonto. Eine Löschung können Sie jederzeit über die unten genannte Kontaktadresse verlangen.</p>
+    <p>Bei der Early-Access-Registrierung verarbeiten wir Ihre E-Mail-Adresse, den Suchort, Ihr optionales Budget, den Zustimmungszeitpunkt und gegebenenfalls die ID des ausgewählten Immobilienbeispiels über unseren bestehenden n8n-Dienst, um Ihre Anfrage aufzunehmen und Sie zum Early Access zu kontaktieren. Diese Registrierung erstellt kein Nutzerkonto. Eine Löschung können Sie jederzeit über die unten genannte Kontaktadresse verlangen.</p>
+    <p>Nach erfolgreicher Registrierung öffnet sich die ausgewählte Beispielseite oder eine Suchergebnisseite. Für eine einmalige Bestätigung speichern wir den Zielpfad und einen Zeitstempel vorübergehend im sessionStorage dieses Browser-Tabs. Der Pfad kann Ihren Suchort und Ihr Budget enthalten, aber keine E-Mail-Adresse. Der Eintrag wird beim nächsten Seitenaufruf entfernt; eine Bestätigung wird nur innerhalb von fünf Minuten angezeigt. Suchort und Budget stehen bei einer Suchergebnisseite auch in deren URL.</p>
 
     <h2>Zahlung</h2>
     <p>Die Zahlung wickelt Stripe Payments Europe, Ltd., Dublin, ab. Ihre Kartendaten sehen wir nicht. Stripe teilt uns mit, ob die Zahlung erfolgt ist, und den Betrag. Es gilt zusätzlich die Datenschutzerklärung von Stripe.</p>
