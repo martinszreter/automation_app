@@ -1,6 +1,10 @@
 # LIESNICHT CH / DE / AT — 09 Sep 2026 country amendment
 
-Country split is implemented and locally verified: `npm test && npm run validate` passes, including 220 country assertions and existing tenant/Polish regressions. See docs/LIESNICHT_COUNTRIES.md for the cause, exact behavior, publisher pools, production evidence and outstanding Austria CNAME. Preserve other Cxx handovers and checkboxes. Do not treat this source patch as commercial LIVE or proof of Stripe payment. Bus sync was blocked by automatic approval review.
+Country split is implemented and locally verified: `npm test && npm run validate` passes, including 220 country assertions and existing tenant/Polish regressions. See docs/LIESNICHT_COUNTRIES.md for the cause, exact behavior and publisher pools. Austria's CNAME and ownership TXT are now published; on 10 Sep, `https://liesnicht.at/` successfully redirected to `https://www.liesnicht.at/` with a valid HTTPS response. Preserve other Cxx handovers and checkboxes. This is not proof of commercial LIVE or Stripe payment. Bus sync was blocked by automatic approval review.
+
+## Article image and text repair — 10 Sep 2026
+
+DER STANDARD supplies image variants in the default Media RSS namespace and encoded HTML descriptions. The parser now accepts both forms, selects the largest supplied image, handles single/double quotes and keeps existing enclosure/prefixed-media formats. Non-image media and non-HTTP(S) image URLs are rejected. Articles with no image use compact text cards; failed image downloads collapse the image box and hero row span. Publisher descriptions appear with source attribution when an AI summary is unavailable, without labelling them as AI output. The shared renderer preserves the CH/DE/AT edition mapping and Polish tenant. `test-feed-images.js` exercises publisher-format fixtures through feed parsing and the real homepage handler without network or paid services.
 
 ---
 
