@@ -209,14 +209,40 @@ function curlGet(url) {
       (err, stdout) => (err ? reject(err) : resolve(String(stdout))));
   });
 }
+function xmlAttrs(element) {
+  return Object.fromEntries([...element.matchAll(/([\w:-]+)\s*=\s*(["'])([\s\S]*?)\2/g)]
+    .map(m => [m[1].toLowerCase(), decodeEnt(m[3])]));
+}
+function imageUrl(value) {
+  try {
+    const raw = String(value || '').trim();
+    const url = new URL(raw.startsWith('//') ? 'https:' + raw : raw);
+    return /^https?:$/.test(url.protocol) && !url.username && !url.password ? url.href : '';
+  } catch (_) { return ''; }
+}
 function itemImg(b) {
-  let m = b.match(/<enclosure[^>]+url="([^"]+)"[^>]*\/?>/i);
-  if (m && (/type="image/i.test(m[0]) || /\.(jpe?g|png|webp|gif)(\?|$)/i.test(m[1]))) return decodeEnt(m[1]);
-  m = b.match(/<media:content[^>]+url="([^"]+)"/i) || b.match(/<media:thumbnail[^>]+url="([^"]+)"/i);
-  if (m) return decodeEnt(m[1]);
-  m = b.match(/<img[^>]+src="(https?:\/\/[^"]+)"/i);
-  if (m) return decodeEnt(m[1]);
-  return '';
+  const candidates = [];
+  const add = (element, enclosure = false) => {
+    const a = xmlAttrs(element), url = imageUrl(a.url || a.src);
+    if (!url || (a.type && !/^image\//i.test(a.type)) || (a.medium && a.medium.toLowerCase() !== 'image')) return;
+    if (enclosure && !a.type && !/\.(jpe?g|png|webp|gif|avif)([?#]|$)/i.test(url)) return;
+    candidates.push({ url, width: Number(a.width) || 0 });
+  };
+  for (const m of b.matchAll(/<(enclosure|media:content|media:thumbnail)\b[^>]*>/gi)) add(m[0], m[1].toLowerCase() === 'enclosure');
+  // DER STANDARD uses the default Media RSS namespace, with 150px and 800px variants.
+  const mediaNS = 'http://search.yahoo.com/mrss/';
+  for (const group of b.matchAll(/<group\b([^>]*)>([\s\S]*?)<\/group>/gi)) {
+    if (xmlAttrs(group[1]).xmlns === mediaNS) {
+      for (const m of group[2].matchAll(/<(?:content|thumbnail)\b[^>]*>/gi)) add(m[0]);
+    }
+  }
+  for (const m of b.matchAll(/<(?:content|thumbnail)\b[^>]*>/gi)) {
+    if (xmlAttrs(m[0]).xmlns === mediaNS) add(m[0]);
+  }
+  // RSS descriptions may contain entity-encoded HTML or CDATA instead of media tags.
+  const html = decodeEnt(tag(b, 'description') + tag(b, 'content:encoded'));
+  for (const m of html.matchAll(/<img\b[^>]*>/gi)) add(m[0]);
+  return candidates.sort((a, c) => c.width - a.width)[0]?.url || '';
 }
 async function fetchFeed(feed) {
   let xml = '', via = 'fetch';
@@ -457,11 +483,13 @@ function srcBadge(c, t) {
 function tileHtml(c, big, t) {
   t = t || tenantFromHost('');
   const s = big ? state.summaries.get(c.key) : null;
-  const img = c.img ? `<a class="timg" href="${esc(c.lead.link)}" target="_blank" rel="noopener"><img src="${esc(c.img)}" alt="" ${big ? '' : 'loading="lazy" '}onerror="this.parentNode.style.display='none'"></a>` : `<a class="timg noimg" href="${esc(c.lead.link)}" target="_blank" rel="noopener"><span>${esc(t.brand)}</span></a>`;
-  return `<article class="tile${big ? ' hero' : ''}">
+  const source = c.lead.desc ? c.lead : c.items.find(it => it.desc);
+  const excerpt = source ? source.desc.slice(0, big ? 300 : 180) : '';
+  const img = c.img ? `<a class="timg" href="${esc(c.lead.link)}" target="_blank" rel="noopener"><img src="${esc(c.img)}" alt="" ${big ? 'fetchpriority="high" ' : 'loading="lazy" '}decoding="async" onerror="this.closest('article').classList.add('text-only');this.parentNode.remove()"></a>` : '';
+  return `<article class="tile${big ? ' hero' : ''}${c.img ? '' : ' text-only'}">
 ${img}
 <h3><a href="${esc(c.lead.link)}" target="_blank" rel="noopener">${esc(c.lead.title)}</a></h3>
-${s ? `<p class="ai"><span class="ailab">${t.id === 'de' ? 'KI kurzgefasst' : 'AI w skrócie'}</span> ${esc(s.text)}</p>` : ''}
+${s ? `<p class="ai"><span class="ailab">${t.id === 'de' ? 'KI kurzgefasst' : 'AI w skrócie'}</span> ${esc(s.text)}</p>` : excerpt ? `<p class="excerpt">${esc(excerpt)}${source.desc.length > excerpt.length ? '…' : ''}</p><a class="excerpt-source" href="${esc(source.link)}" target="_blank" rel="noopener">${esc(source.srcName)}</a>` : ''}
 <div class="cm">${srcBadge(c, t)}<span>${agoTxt(c.newest, t)}</span></div>
 </article>`;
 }
@@ -701,8 +729,12 @@ h2 .n{color:var(--acc)}
 .timg{display:block;position:relative}
 .timg img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:6px;background:#e8e6e2;display:block}
 .tile.hero .timg img{aspect-ratio:16/9;border-radius:8px}
-.timg.noimg{aspect-ratio:16/10;border-radius:6px;background:#efece7;display:flex;align-items:center;justify-content:center;text-decoration:none}
-.timg.noimg span{font-family:Georgia,serif;font-weight:700;color:#c9c4bc;font-size:14px;letter-spacing:1px}
+.tile.text-only{border-top:1px solid var(--line);padding-top:12px;align-self:start}
+.tile.hero.text-only{grid-row:span 1}
+.tile.text-only h3{margin-top:0}
+.excerpt{font-size:16px;line-height:1.5;color:var(--mut);margin:8px 0 4px}
+.excerpt-source{font-size:13px;color:var(--acc);text-decoration:none}
+.excerpt-source:hover{text-decoration:underline}
 .tile h3{margin:7px 0 0;font-size:14.5px;line-height:1.3;font-weight:700}
 .tile.hero h3{font-size:23px;line-height:1.2;margin-top:10px}
 .tile h3 a,h4 a{color:var(--ink);text-decoration:none}
@@ -1356,7 +1388,7 @@ refresh().catch(e => console.log('[refresh] boot error: ' + String(e).slice(0, 3
 setInterval(() => refresh().catch(e => console.log('[refresh] error: ' + String(e).slice(0, 300))), REFRESH_MIN * 60000);
 
 }
-module.exports = { server, state, tenantFromHost, feedsFor, rebuildCountryEditions, tokens, page, rssXml, adFor, buyLink };
+module.exports = { server, state, tenantFromHost, feedsFor, rebuildCountryEditions, tokens, page, rssXml, adFor, buyLink, fetchFeed };
 
 // ---- cennik reklam (nadpisanie konfiguracyjne; zmiana ceny = tylko ta zmienna) ----
 Object.assign(PRICE, { baner7: 490, baner30: 1490, kaf7: 390, kaf30: 990, box7: 190, box30: 590 });
