@@ -5,7 +5,8 @@
   const properties = JSON.parse($('#property-data').textContent);
   const byId = Object.fromEntries(properties.map(p => [p.id, p]));
   const cards = Object.fromEntries($$('.property-card').map(card => [card.dataset.property, card]));
-  const state = { query: '', budget: 0, type: '', market: '', sort: 'featured', saved: false };
+  const initial = JSON.parse($('#discovery-state').textContent);
+  const state = { query: initial.query || '', budget: Number(initial.budget) || 0, type: '', market: '', sort: 'featured', saved: false };
   const money = value => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
   const shortMoney = value => value >= 1000000 ? `€${(value / 1000000).toFixed(2).replace(/0$/, '')}m` : `€${Math.round(value / 1000)}k`;
   const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -39,8 +40,7 @@
     dialog.showModal();
   }
   function register(property) {
-    $('#register-city').value = property ? property.city : state.query || state.market || '';
-    $('#register-budget').value = state.budget || '';
+    ZorbeckRegistration.prepare({ propertyId: property?.id || '', location: property ? property.city : state.query || state.market || '', budget: state.budget });
     openDialog('register-dialog');
     setTimeout(() => $('#register-email').focus(), 50);
   }
@@ -48,7 +48,7 @@
     const property = byId[id];
     if (!property) return;
     select(id, false);
-    $('#detail-content').innerHTML = `<img class="detail-image" src="/static/discovery/${property.image}" alt="${property.imageAlt}" width="800" height="600"><div class="detail-inner"><p class="eyebrow">${property.city.toUpperCase()} · ${property.country.toUpperCase()}</p><h2 id="detail-title">${property.title}</h2><div class="detail-facts"><span>${property.type}</span><span>${property.beds} bedrooms</span><span>${property.area} m²</span></div><div class="detail-price">${money(property.price)}<span>Illustrative price<br>Not an active listing</span></div><p>${property.description}</p><p class="detail-disclosure">Sample property · Illustrative photograph · City-level map location. No availability, ownership rights or investment return has been verified.</p><div class="detail-actions"><button type="button" class="button button-outline detail-save" data-save="${property.id}">${icon('heart')}Save example</button><button type="button" class="button button-dark" data-register-property="${property.id}">Register this search${icon('arrow')}</button></div></div>`;
+    $('#detail-content').innerHTML = `<img class="detail-image" src="/static/discovery/${property.image}" alt="${property.imageAlt}" width="800" height="600"><div class="detail-inner"><p class="eyebrow">${property.city.toUpperCase()} · ${property.country.toUpperCase()}</p><h2 id="detail-title">${property.title}</h2><div class="detail-facts"><span>${property.type}</span><span>${property.beds} bedrooms</span><span>${property.area} m²</span></div><div class="detail-price">${money(property.price)}<span>Illustrative price<br>Not an active listing</span></div><p>${property.description}</p><p class="detail-disclosure">Sample property · Illustrative photograph · City-level map location. No availability, ownership rights or investment return has been verified.</p><div class="detail-actions"><button type="button" class="button button-outline detail-save" data-save="${property.id}">${icon('heart')}Save example</button><button type="button" class="button button-dark" data-register-property="${property.id}">Continue to property${icon('arrow')}</button></div></div>`;
     syncSaved(); openDialog('detail-dialog');
   }
   function select(id, pan = true) {
@@ -147,21 +147,6 @@
     if (mapVisible && !map) initializeMap();
     if (mapVisible) setTimeout(() => { fitMap(); $('#discovery-split').scrollIntoView({block: 'start', behavior: 'smooth'}); }, 50);
   });
-  $('#register-form').addEventListener('submit', async event => {
-    event.preventDefault(); const form = event.target; if (!form.reportValidity()) return;
-    const button = form.querySelector('button[type=submit]'), status = $('#registration-status');
-    const data = Object.fromEntries(new FormData(form)); data.consent = form.elements.consent.checked;
-    button.disabled = true; status.className = 'form-status'; status.textContent = 'Saving your registration…';
-    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 18000);
-    try {
-      const response = await fetch('/api/early-access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), signal: controller.signal });
-      const result = await response.json();
-      if (!response.ok || !result.ok) throw new Error(result.error || 'We could not save your registration. Please try again.');
-      status.className = 'form-status success'; status.textContent = result.message;
-      button.textContent = 'Registration saved'; form.reset();
-    } catch (error) { status.className = 'form-status error'; status.textContent = error.name === 'AbortError' ? 'The request timed out. Please try again.' : error.message; button.disabled = false; }
-    finally { clearTimeout(timer); }
-  });
   fetch('/static/discovery/photo-credits.json').then(response => response.json()).then(credits => {
     credits.forEach(credit => {
       const p = document.createElement('p'), link = document.createElement('a');
@@ -169,5 +154,8 @@
       p.append(link, document.createTextNode(` · ${credit.subject} · ${credit.license}`)); $('#photo-credits').append(p);
     });
   }).catch(() => { $('#photo-credits').textContent = 'Photo attribution is temporarily unavailable.'; });
-  syncSaved(); if (window.innerWidth > 680) initializeMap();
+  syncSaved();
+  const hasInitialSearch = Boolean(state.query || state.budget);
+  if (hasInitialSearch) render();
+  if (window.innerWidth > 680) { initializeMap(); if (hasInitialSearch) fitMap(); }
 })();

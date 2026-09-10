@@ -38,6 +38,10 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: zorbeck/e2e/package-lock.json
+      - name: Discovery and registration unit checks
+        run: |
+          node tests/discovery_filter_checks.cjs
+          node --test tests/registration_checks.cjs
       - run: npm ci
         working-directory: zorbeck/e2e
       - run: npx playwright install --with-deps chromium

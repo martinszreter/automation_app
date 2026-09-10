@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import time
+import unicodedata
 from collections import deque
 from hashlib import sha256
 from datetime import datetime, timezone
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Request
@@ -29,6 +31,40 @@ PROPERTIES = [
     {"id": "barcelona-01", "city": "Barcelona", "country": "Spain", "region": "Europe", "lat": 41.3874, "lng": 2.1686, "title": "City energy. A place to call yours.", "neighborhood": "Barcelona city example", "type": "Apartment", "price": 425000, "beds": 2, "area": 88, "image": "city-apartment.webp", "imageAlt": "Illustrative bright apartment building exterior", "tag": "City living", "description": "An example apartment brief for comparing European city locations. Building condition, fees and permitted use require verification against a real property and current sources."},
 ]
 
+PROPERTY_BY_ID = {property["id"]: property for property in PROPERTIES}
+
+
+def normalized(value: str) -> str:
+    return "".join(char for char in unicodedata.normalize("NFD", value.lower()) if not unicodedata.combining(char))
+
+
+def discovery_context(location: str = "", budget: str = "") -> dict:
+    """Render the same bounded sample search on the server and in the browser."""
+    query = " ".join(location.split())[:80]
+    ceiling = int(budget) if budget.isascii() and budget.isdigit() and len(budget) <= 10 else 0
+    ceiling = ceiling if 0 < ceiling <= 1_000_000_000 else 0
+    words = normalized(query).split()
+    matches = [
+        property for property in PROPERTIES
+        if (not ceiling or property["price"] <= ceiling)
+        and all(word in normalized(" ".join(str(property[key]) for key in ("city", "country", "type", "region", "tag"))) for word in words)
+    ]
+    return {
+        "properties": PROPERTIES,
+        "initial_filters": {"query": query, "budget": ceiling},
+        "matching_ids": [property["id"] for property in matches],
+        "result_count": len(matches),
+    }
+
+
+def registration_destination(property_id: str, city: str, budget: int | None) -> str:
+    if property_id:
+        return f"/properties/{property_id}"
+    params = {"location": city}
+    if budget:
+        params["budget"] = str(budget)
+    return "/search?" + urlencode(params)
+
 
 @router.post("/api/early-access")
 async def early_access(request: Request) -> JSONResponse:
@@ -51,6 +87,9 @@ async def early_access(request: Request) -> JSONResponse:
         intake = parse_intake(data)
     except IntakeError:
         return JSONResponse({"ok": False, "error": "Enter a valid email, location and budget."}, status_code=400)
+    property_id = data.get("property_id", "")
+    if not isinstance(property_id, str) or (property_id and property_id not in PROPERTY_BY_ID):
+        return JSONResponse({"ok": False, "error": "Choose a property from the preview and try again."}, status_code=400)
     if not settings.signup_webhook_url:
         return JSONResponse({"ok": False, "error": "Registration is temporarily unavailable. Please try again later."}, status_code=503)
 
@@ -71,6 +110,8 @@ async def early_access(request: Request) -> JSONResponse:
         status="early_access", source="zorbeck-explorer", currency="EUR",
         consent_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
+    if property_id:
+        payload.update(property_id=property_id, property_kind="illustrative", property_path=f"/properties/{property_id}")
     try:
         async with httpx.AsyncClient(timeout=12.0) as client:
             response = await client.post(settings.signup_webhook_url, json=payload)
@@ -83,4 +124,8 @@ async def early_access(request: Request) -> JSONResponse:
                 raise ValueError("Registration rejected")
     except (httpx.HTTPError, ValueError):
         return JSONResponse({"ok": False, "error": "We could not save your registration. Please try again."}, status_code=502)
-    return JSONResponse({"ok": True, "message": "You’re on the early-access list. Your location and budget have been saved."}, status_code=201)
+    return JSONResponse({
+        "ok": True,
+        "message": "You’re on the early-access list. Your search has been saved.",
+        "next_url": registration_destination(property_id, intake.city, intake.budget_max),
+    }, status_code=201)
