@@ -69,7 +69,8 @@
   }
   function moveMap(action) {
     movingMap = true;
-    try { map.stop(); action(); } finally { movingMap = false; }
+    // Size updates must not cancel a pan that the visitor has just started.
+    try { action(); } finally { movingMap = false; }
   }
   function viewport() {
     const bounds = map.getBounds();
