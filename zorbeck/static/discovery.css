@@ -71,6 +71,11 @@
 }
 
 /* Registration continues into property details or the visitor's matching search. */
+.map-auto-search{pointer-events:auto;display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:0 2px 10px #18181b10;font-size:14px;color:var(--ink);cursor:pointer;line-height:1.4}
+.map-auto-search input{width:16px;height:16px;accent-color:var(--night);margin:0;flex-shrink:0}
+.map-search-area{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:500;display:flex;align-items:center;gap:10px;white-space:nowrap;padding:12px 16px;border-radius:8px;background:var(--night);color:var(--surface);box-shadow:0 3px 14px #18181b25;font-size:14px;font-weight:600}
+.map-search-area .icon{color:var(--champagne);width:17px;height:17px}
+.map-area-status{font-size:13px;line-height:1.6;color:var(--muted);margin:10px 2px 0;min-height:21px}
 .registration-confirmation{display:flex;align-items:center;gap:12px;margin:0 0 20px;padding:14px 18px;border:1px solid var(--gold);border-radius:10px;background:var(--champagne-soft);color:var(--ink);font-size:14px;line-height:1.6}
 .registration-confirmation .icon{color:var(--gold-ink)}
 .property-workspace{max-width:1320px;margin:0 auto;padding:28px 40px 0}
