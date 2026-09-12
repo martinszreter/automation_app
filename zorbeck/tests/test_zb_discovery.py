@@ -173,8 +173,9 @@ async def test_property_pages_have_real_routes_and_honest_example_details(record
     assert 'https://unsplash.com/photos/' in page.text
     tags = PageElements(page.text).tags
     scripts = [attrs['src'] for tag, attrs in tags if tag == 'script' and 'src' in attrs]
-    assert scripts[0].startswith('/static/registration.js?')
-    assert scripts[1].startswith('/static/property.js?')
+    assert scripts[0].startswith('/static/theme.js?')
+    assert scripts[1].startswith('/static/registration.js?')
+    assert scripts[2].startswith('/static/property.js?')
     ids = [attrs['id'] for _, attrs in tags if 'id' in attrs]
     assert len(ids) == len(set(ids))
     form = next(attrs for tag, attrs in tags if tag == 'form' and attrs.get('id') == 'register-form')
