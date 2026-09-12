@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>LIVE-Checkliste — STARTEND</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 72rem; padding: 0 1rem; line-height: 1.4; color: #111; background: #fff; }
+  h1 { margin: 0 0 .25rem; } .muted { color: #666; }
+  .kpi { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
+  .kpi div { border: 1px solid #ddd; border-radius: 8px; padding: .6rem 1rem; min-width: 8rem; }
+  .kpi strong { display: block; font-size: 1.6rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+  th, td { border: 1px solid #e5e5e5; padding: .45rem .5rem; text-align: left; vertical-align: top; }
+  thead th { background: #f6f6f6; }
+  th[scope=row] { white-space: nowrap; }
+  td small { display: block; color: #666; font-size: .72rem; max-width: 16rem; }
+  td.ok { background: #e8f7ec; } td.fail { background: #fde8e8; } td.na { background: #f7f7f7; color: #999; }
+  tr.broken th[scope=row] { border-left: 4px solid #d33; }
+  .regressions { background: #fff3cd; border: 1px solid #ffe69c; border-radius: 8px; padding: .5rem 1rem; margin: 1rem 0; }
+  footer { margin-top: 2rem; font-size: .85rem; color: #666; }
+</style>
+</head>
+<body>
+<h1>LIVE-Checkliste</h1>
+<p class="muted">Stand 2026-09-12T18:20:56.239Z · alle 4 Stunden · <a href="latest.json">latest.json</a></p>
+<div class="kpi">
+<div><strong>2</strong>Ziele</div>
+<div><strong>1</strong>in Ordnung</div>
+<div><strong>1</strong>mit Befund</div>
+<div><strong>0</strong>Regressionen</div>
+</div>
+<p class="muted">Keine Regressionen gegenüber dem letzten Lauf.</p>
+<table>
+<thead><tr><th scope="col">Ziel</th><th scope="col">HTTPS</th><th scope="col">/healthz</th><th scope="col">Impressum</th><th scope="col">Checkout</th><th scope="col">Login</th></tr></thead>
+<tbody>
+<tr class="broken">
+<th scope="row"><a href="https://www.zorbeck.com">zorbeck.com</a><br><small>automation_app</small></th>
+<td class="fail" title="landing page unreachable: ERR_TLS_CERT_ALTNAME_INVALID">✗<small>landing page unreachable: ERR_TLS_CERT_ALTNAME_INVALID</small></td>
+<td class="fail" title="/healthz unreachable: ERR_TLS_CERT_ALTNAME_INVALID">✗<small>/healthz unreachable: ERR_TLS_CERT_ALTNAME_INVALID</small></td>
+<td class="fail" title="landing page not loaded">✗<small>landing page not loaded</small></td>
+<td class="na" title="landing page not loaded">–<small>landing page not loaded</small></td>
+<td class="na" title="landing page not loaded">–<small>landing page not loaded</small></td>
+</tr>
+<tr class="pass">
+<th scope="row"><a href="https://automationapp-production.up.railway.app">automationapp railway</a><br><small>automation_app</small></th>
+<td class="ok" title="200 in 180 ms over HTTPS">✓<small>200 in 180 ms over HTTPS</small></td>
+<td class="ok" title="200 {&quot;ok&quot;:true}">✓<small>200 {&quot;ok&quot;:true}</small></td>
+<td class="ok" title="landing page names STARTEND GmbH">✓<small>landing page names STARTEND GmbH</small></td>
+<td class="na" title="no checkout link on the landing page">–<small>no checkout link on the landing page</small></td>
+<td class="na" title="no sign-in link or wording on the landing page">–<small>no sign-in link or wording on the landing page</small></td>
+</tr>
+</tbody>
+</table>
+<footer>✓ erwartet und in Ordnung · ✗ erwartet und fehlgeschlagen · – nicht erwartet (nur informativ). Quelle: <code>live-targets.json</code>, Script: <code>scripts/live-checklist.js</code>.</footer>
+</body>
+</html>

@@ -1,0 +1,96 @@
+{
+  "generatedAt": "2026-09-12T18:20:56.239Z",
+  "imprint": "STARTEND GmbH",
+  "summary": {
+    "targets": 2,
+    "passing": 1,
+    "failing": 1,
+    "regressions": 0
+  },
+  "regressions": [],
+  "targets": [
+    {
+      "name": "zorbeck.com",
+      "project": "automation_app",
+      "url": "https://www.zorbeck.com",
+      "checkedAt": "2026-09-12T18:20:56.012Z",
+      "ok": false,
+      "failing": [
+        "https",
+        "healthz",
+        "imprint"
+      ],
+      "expect": {
+        "healthz": true,
+        "imprint": true,
+        "checkout": false,
+        "login": false,
+        "https": true
+      },
+      "checks": {
+        "https": {
+          "ok": false,
+          "reason": "landing page unreachable: ERR_TLS_CERT_ALTNAME_INVALID",
+          "ms": 523
+        },
+        "healthz": {
+          "ok": false,
+          "reason": "/healthz unreachable: ERR_TLS_CERT_ALTNAME_INVALID"
+        },
+        "imprint": {
+          "ok": false,
+          "reason": "landing page not loaded"
+        },
+        "checkout": {
+          "ok": false,
+          "reason": "landing page not loaded"
+        },
+        "login": {
+          "ok": false,
+          "reason": "landing page not loaded"
+        }
+      }
+    },
+    {
+      "name": "automationapp railway",
+      "project": "automation_app",
+      "url": "https://automationapp-production.up.railway.app",
+      "checkedAt": "2026-09-12T18:20:56.239Z",
+      "ok": true,
+      "failing": [],
+      "expect": {
+        "healthz": true,
+        "imprint": false,
+        "checkout": false,
+        "login": false,
+        "https": true
+      },
+      "checks": {
+        "https": {
+          "ok": true,
+          "reason": "200 in 180 ms over HTTPS",
+          "status": 200,
+          "ms": 180
+        },
+        "healthz": {
+          "ok": true,
+          "reason": "200 {\"ok\":true}",
+          "status": 200
+        },
+        "imprint": {
+          "ok": true,
+          "reason": "landing page names STARTEND GmbH"
+        },
+        "checkout": {
+          "ok": false,
+          "reason": "no checkout link on the landing page"
+        },
+        "login": {
+          "ok": false,
+          "reason": "no sign-in link or wording on the landing page"
+        }
+      }
+    }
+  ],
+  "bus": null
+}
