@@ -45,3 +45,14 @@ assert.equal(longitudeNear(175, -179), -185);
 assert.equal(longitudeNear(-175, 179), 185);
 assert.equal(longitudeNear(116.4, 100), 116.4);
 console.log('Worldwide map: regional results, price/type/saved filters, date-line wrapping, world copies and boundary checks passed.');
+
+// Only the front hemisphere and on-screen locations are eligible after rotation.
+const camera = { lng: 140, lat: 35, scale: 220, width: 600, height: 500 };
+const { projectOnGlobe } = require('../static/discovery-core.js');
+assert.equal(projectOnGlobe({ lat: 35, lng: 140 }, camera).visible, true);
+assert.equal(projectOnGlobe({ lat: -35, lng: -40 }, camera).visible, false);
+assert.equal(projectOnGlobe({ lat: 35, lng: 500 }, camera).visible, true);
+assert.equal(projectOnGlobe({ lat: 35, lng: 140 }, camera).x, 300);
+assert.equal(projectOnGlobe({ lat: 35, lng: 170 }, { ...camera, scale: 1500 }).visible, false);
+assert.equal(inBounds({ lat: 35, lng: 140 }, { globe: camera }), true);
+console.log('Globe: visible hemisphere, longitude wrapping and zoom clipping passed.');

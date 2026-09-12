@@ -9,6 +9,7 @@
   const state = { query: initial.query || '', budget: Number(initial.budget) || 0, type: '', market: '', sort: 'featured', saved: false, bounds: null };
   // Camera extents for shortcuts, not country boundaries or a claim of listing coverage.
   const regions = {
+    'Japan': [[24, 123], [46, 146]], 'Italy': [[36, 6], [48, 19]],
     'China': [[18, 73], [54, 135]], 'Thailand': [[5.5, 97], [20.5, 106]],
     'United States': [[24, -126], [50, -66]], 'Portugal': [[36.8, -9.6], [42.2, -6.1]],
     'Spain': [[35.8, -10], [44, 4.5]], 'Switzerland': [[45.7, 5.8], [47.9, 10.6]],
@@ -19,7 +20,7 @@
   const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
   let saved = [];
   try { const value = JSON.parse(localStorage.getItem('zorbeck-shortlist-v1') || '[]'); if (Array.isArray(value)) saved = value.filter(id => Object.hasOwn(byId, id)); } catch (_) { /* Device storage is optional. */ }
-  let map = null, markers = {}, selectedId = '', current = properties, toastTimer, movingMap = false, mapNeedsFit = false;
+  let map = null, selectedId = '', current = properties, toastTimer, mapNeedsFit = false;
 
   function toast(message) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('#toast').hidden = true; }, 2800); }
   function syncSaved() {
@@ -61,21 +62,9 @@
   function select(id, pan = true) {
     selectedId = id;
     Object.entries(cards).forEach(([key, card]) => card.classList.toggle('is-selected', key === id));
-    Object.entries(markers).forEach(([key, marker]) => {
-      marker.getElement()?.querySelector('.map-price-pin')?.classList.toggle('selected', key === id);
-      marker.setZIndexOffset(key === id ? 1000 : 0);
-    });
-    if (pan && map && markers[id]) { moveMap(() => map.panTo(markers[id].getLatLng(), { animate: false })); markers[id].openPopup(); }
+    if (map) map.select(id, pan);
   }
-  function moveMap(action) {
-    movingMap = true;
-    // Size updates must not cancel a pan that the visitor has just started.
-    try { action(); } finally { movingMap = false; }
-  }
-  function viewport() {
-    const bounds = map.getBounds();
-    return { south: bounds.getSouth(), west: bounds.getWest(), north: bounds.getNorth(), east: bounds.getEast() };
-  }
+  function viewport() { return { globe: map.camera() }; }
   function searchMapArea() {
     if (!map) return;
     state.bounds = viewport(); state.query = ''; state.market = ''; $('#search-input').value = '';
@@ -83,45 +72,25 @@
     render();
   }
   function onMapMove() {
-    if (movingMap) return;
     if ($('#map-auto-search').checked) searchMapArea();
     else {
       $('#search-map-area').hidden = false;
-      $('#map-area-status').textContent = 'Map moved. Search this area to update the examples.';
+      $('#map-area-status').textContent = 'Globe moved. Search this area to update the examples.';
     }
   }
   function fitMap() {
     if (!map) return;
-    if (!$('#property-map').clientWidth || !$('#property-map').clientHeight) { mapNeedsFit = true; return; }
+    if (!$('#property-map').clientWidth) { mapNeedsFit = true; return; }
     mapNeedsFit = false;
     const region = Object.keys(regions).find(name => ZorbeckDiscovery.normalize(name) === ZorbeckDiscovery.normalize(state.market || state.query));
-    moveMap(() => {
-      map.invalidateSize({ pan: false });
-      if (region) map.fitBounds(regions[region], { padding: [28, 60], animate: false });
-      else if (!state.query && !state.saved) map.fitWorld({ animate: false });
-      else if (current.length === 1) map.setView([current[0].lat, current[0].lng], 9, { animate: false });
-      else if (current.length) map.fitBounds(L.latLngBounds(current.map(p => [p.lat, p.lng])), { padding: [55, 65], maxZoom: 7, animate: false });
-    });
+    if (region) {
+      const [sw, ne] = regions[region];
+      map.focus((sw[1] + ne[1]) / 2, (sw[0] + ne[0]) / 2, 1.55, region);
+    } else if (!state.query && !state.saved) map.reset();
+    else if (current.length) map.focus(current[0].lng, current[0].lat, 1.5, current[0].city);
     syncMap();
   }
-  function syncMap() {
-    if (!map) return;
-    Object.values(markers).forEach(marker => marker.remove()); markers = {};
-    current.forEach(property => {
-      const lng = ZorbeckDiscovery.longitudeNear(property.lng, map.getCenter().lng);
-      const marker = L.marker([property.lat, lng], {
-        icon: L.divIcon({ className: 'map-pin-wrap', html: `<div class="map-price-pin${property.id === selectedId ? ' selected' : ''}">${shortMoney(property.price)}</div>`, iconSize: [72, 32], iconAnchor: [36, 32] }),
-        title: `${property.city}: ${money(property.price)}, illustrative example`, keyboard: true
-      }).addTo(map);
-      const popup = document.createElement('div');
-      const heading = document.createElement('strong'); heading.textContent = property.city; popup.append(heading);
-      const caption = document.createElement('div'); caption.className = 'map-popup-location'; caption.textContent = `${property.type} · ${money(property.price)} · Example`; popup.append(caption);
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'map-popup-button'; button.textContent = 'Explore this example'; button.addEventListener('click', () => detail(property.id)); popup.append(button);
-      marker.bindPopup(popup, { closeButton: false, offset: [0, -26], autoPan: false });
-      marker.on('click', () => { select(property.id, false); if (window.innerWidth > 680) cards[property.id]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
-      markers[property.id] = marker;
-    });
-  }
+  function syncMap() { if (map) map.setProperties(current, selectedId, shortMoney); }
   function render({ fit = false } = {}) {
     current = ZorbeckDiscovery.filterProperties(properties, state, saved);
     const ids = current.map(p => p.id);
@@ -143,25 +112,15 @@
   }
   function reset() { Object.assign(state, { query: '', budget: 0, type: '', market: '', saved: false, bounds: null }); $('#search-input').value = ''; $('#budget-filter').value = '0'; $('#type-filter').value = ''; $('#search-map-area').hidden = true; render({ fit: true }); }
   function initializeMap() {
-    if (typeof L === 'undefined') { $('#map-unavailable').hidden = false; return; }
-    map = L.map('property-map', { zoomControl: false, scrollWheelZoom: true, minZoom: 0, maxZoom: 18, worldCopyJump: true, trackResize: false }).setView([20, 0], 1);
-    L.control.zoom({ position: 'bottomleft' }).addTo(map);
-    let failures = 0;
-    const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors', maxZoom: 19
-    }).addTo(map);
-    tiles.on('tileerror', () => { failures++; if (failures > 4) $('#map-unavailable').hidden = false; });
-    tiles.on('tileload', () => { failures = 0; $('#map-unavailable').hidden = true; });
+    if (!window.ZorbeckGlobe) { $('#map-unavailable').hidden = false; return; }
+    map = ZorbeckGlobe.create({ element: $('#property-map'), onMove: onMapMove, onSelect: id => detail(id) });
+    if (!map) return;
     fitMap();
-    map.on('moveend', onMapMove);
-    L.DomEvent.disableClickPropagation($('.map-topline'));
-    L.DomEvent.disableScrollPropagation($('.map-topline'));
-    L.DomEvent.disableClickPropagation($('#search-map-area'));
     new ResizeObserver(() => {
-      if (!$('#property-map').clientWidth || !$('#property-map').clientHeight) return;
-      if (mapNeedsFit) { fitMap(); return; }
-      moveMap(() => map.invalidateSize({ pan: false }));
-      if (state.bounds && $('#map-auto-search').checked) { state.bounds = viewport(); render(); }
+      if (!$('#property-map').clientWidth) return;
+      map.resize();
+      if (mapNeedsFit) fitMap();
+      else if (state.bounds && $('#map-auto-search').checked) { state.bounds = viewport(); render(); }
     }).observe($('#map-column'));
   }
 
@@ -188,14 +147,14 @@
   $$('[data-layout]').forEach(button => button.addEventListener('click', () => {
     $('#discovery-split').classList.toggle('list-layout', button.dataset.layout === 'list');
     $$('[data-layout]').forEach(item => item.classList.toggle('is-active', item === button));
-    if (map) setTimeout(() => { if ($('#property-map').clientWidth) moveMap(() => map.invalidateSize({ pan: false })); }, 30);
+    if (map) setTimeout(() => { if ($('#property-map').clientWidth) map.resize(); }, 30);
   }));
   $('#mobile-map-toggle').addEventListener('click', () => {
     const mapVisible = $('#discovery-split').classList.toggle('mobile-map');
     $('#discovery-split').classList.remove('list-layout');
-    $('#mobile-map-toggle span').textContent = mapVisible ? 'Show properties' : 'Show map';
+    $('#mobile-map-toggle span').textContent = mapVisible ? 'Show properties' : 'Show globe';
     if (mapVisible && !map) initializeMap();
-    if (mapVisible) setTimeout(() => { if (map) { if (mapNeedsFit) fitMap(); else moveMap(() => map.invalidateSize({ pan: false })); } $('#discovery-split').scrollIntoView({block: 'start', behavior: 'smooth'}); }, 50);
+    if (mapVisible) setTimeout(() => { if (map) { if (mapNeedsFit) fitMap(); else map.resize(); } $('#discovery-split').scrollIntoView({block: 'start', behavior: 'smooth'}); }, 50);
   });
   fetch('/static/discovery/photo-credits.json').then(response => response.json()).then(credits => {
     credits.forEach(credit => {

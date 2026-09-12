@@ -37,3 +37,11 @@ The discovery map opens at world scale and filters the example cards on pan/zoom
 The pure geographic filter handles ordinary bounds, boundaries, the date line and repeated world copies. Markers are placed in the world copy nearest the map center. Camera fitting and resizing are kept separate from user pan/zoom to avoid resetting filters or bouncing the map back. Tests use synthetic country coordinates only within the test file; the production catalog is unchanged.
 
 No live listing provider is connected. The current Railway configuration exposes only PORT and SIGNUP_WEBHOOK_URL. Real China, Thailand and worldwide offers remain dependent on approved source access, appropriate coordinates, freshness/status checks and original seller links. The interface says Live listings not connected and does not treat a lack of preview records as zero real homes for sale. No data-provider outreach, contract or purchase was performed.
+
+## Single globe and luxury appearances - 2026-09-12
+
+Discovery now uses `globe.js`, self-hosted D3 3.1.1 / d3-array 3.2.4, and local Natural Earth 5.1.2 country geometry. `discovery-core.js` adds the same orthographic camera math used for pin visibility and result filtering, including rear-hemisphere exclusion and screen clipping at zoom. No external map tile requests or Leaflet flag remain on discovery. Dependencies and geography provenance are recorded under `static/vendor/d3/README.md`.
+
+Rotation is available by mouse, touch, arrow keys and labelled buttons; wheel, pinch and controls zoom. It updates results on gesture completion, or waits for Search this area when automatic search is off. Mobile list/globe switching retains camera and filters. No perpetual animation. Price labels use leader lines to reduce overlaps. All amounts and photographs remain clearly illustrative; Japan and Italy market shortcuts do not invent stock.
+
+`theme.js` restores the allowlisted Ivory/Dusk/Midnight choice before styling and provides a shared selector on discovery and property pages. Only this preference is added to localStorage. Registration, consent, redirect validation and paid legacy routes are unchanged. Privacy text reflects local geography and theme preference. Python and browser checks cover the preserved flow, rotation, visibility and cross-page theme persistence; hosted CI remains the release gate.

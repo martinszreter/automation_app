@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#18181b">
+  <meta name="theme-color" content="#131719">
+  <script src="/static/theme.js?v=20260912-globe"></script>
   <meta name="description" content="Explore this illustrative {{ property.type|lower }} in {{ property.city }} in the Zorbeck property discovery preview. This is not an active seller listing.">
   <title>{{ property.city }} {{ property.type|lower }} example — Zorbeck</title>
   <link rel="icon" href="/static/discovery/favicon.svg?v=20260910-luxury" type="image/svg+xml">
@@ -16,7 +17,7 @@
   <header class="topbar">
     <a class="brand" href="/" aria-label="Zorbeck home"><span class="brand-mark">z<span></span></span>zorbeck<span class="brand-period">.</span></a>
     <nav class="main-nav" aria-label="Main navigation"><a href="/">Discover properties</a></nav>
-    <div class="header-actions"><span class="global-label"><svg class="icon"><use href="#i-globe"/></svg>Global perspective</span><button class="button button-dark" type="button" data-register>Join early access<svg class="icon"><use href="#i-arrow"/></svg></button></div>
+    <div class="header-actions">{% include "partials/discovery-themes.html" %}<span class="global-label"><svg class="icon"><use href="#i-globe"/></svg>Global perspective</span><button class="button button-dark" type="button" data-register>Join early access<svg class="icon"><use href="#i-arrow"/></svg></button></div>
   </header>
   <main class="property-workspace" id="property-details">
     <a class="back-to-map" href="/search?location={{ property.city|urlencode }}"><svg class="icon"><use href="#i-arrow"/></svg>Back to {{ property.city }} on the map</a>
