@@ -16,7 +16,7 @@
     'United Arab Emirates': [[22.6, 51.4], [26.1, 56.5]], 'Indonesia': [[-11.5, 94.5], [6, 141.5]]
   };
   const money = value => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
-  const shortMoney = value => value >= 1000000 ? `€${(value / 1000000).toFixed(2).replace(/0$/, '')}m` : `€${Math.round(value / 1000)}k`;
+  const shortMoney = (value, property) => value === null ? (property?.currency || 'Price') : value < 1000 ? money(value) : value >= 1000000 ? `€${(value / 1000000).toFixed(2).replace(/0$/, '')}m` : `€${Math.round(value / 1000)}k`;
   const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
   let saved = [];
   try { const value = JSON.parse(localStorage.getItem('zorbeck-shortlist-v1') || '[]'); if (Array.isArray(value)) saved = value.filter(id => Object.hasOwn(byId, id)); } catch (_) { /* Device storage is optional. */ }
@@ -28,18 +28,26 @@
     $$('[data-save]').forEach(button => {
       const isSaved = saved.includes(button.dataset.save);
       button.setAttribute('aria-pressed', String(isSaved));
-      button.setAttribute('aria-label', `${isSaved ? 'Remove saved' : 'Save'} ${byId[button.dataset.save].city} example`);
-      if (button.classList.contains('detail-save')) button.innerHTML = icon('heart') + (isSaved ? 'Saved on this device' : 'Save example');
+      button.setAttribute('aria-label', `${isSaved ? 'Remove saved' : 'Save'} ${byId[button.dataset.save].city} property`);
+      if (button.classList.contains('detail-save')) button.innerHTML = icon('heart') + (isSaved ? 'Saved on this device' : 'Save property');
     });
   }
+  let saving = Promise.resolve();
   function toggleSaved(id) {
+    saving = saving.then(() => updateSaved(id)).catch(error => toast(error.message));
+  }
+  async function updateSaved(id) {
     if (!byId[id]) return;
-    const removing = saved.includes(id);
+    const previous = [...saved], removing = saved.includes(id);
     saved = removing ? saved.filter(value => value !== id) : [...saved, id];
+    if (accountUser) {
+      try { await ZorbeckAccount.save(saved); }
+      catch(error) { saved = previous; syncSaved(); toast(error.message); return; }
+    }
     let persistent = true;
     try { localStorage.setItem('zorbeck-shortlist-v1', JSON.stringify(saved)); } catch (_) { persistent = false; }
     syncSaved();
-    toast(removing ? 'Removed from your shortlist' : persistent ? 'Saved to your shortlist on this device' : 'Saved for this visit; device storage is unavailable');
+    toast(removing ? 'Removed from your shortlist' : accountUser ? 'Saved to your account shortlist' : persistent ? 'Saved to your shortlist on this device' : 'Saved for this visit; device storage is unavailable');
     if (state.saved) render();
   }
   function openDialog(id) {
@@ -53,11 +61,7 @@
     setTimeout(() => $('#register-email').focus(), 50);
   }
   function detail(id) {
-    const property = byId[id];
-    if (!property) return;
-    select(id, false);
-    $('#detail-content').innerHTML = `<img class="detail-image" src="/static/discovery/${property.image}" alt="${property.imageAlt}" width="800" height="600"><div class="detail-inner"><p class="eyebrow">${property.city.toUpperCase()} · ${property.country.toUpperCase()}</p><h2 id="detail-title">${property.title}</h2><div class="detail-facts"><span>${property.type}</span><span>${property.beds} bedrooms</span><span>${property.area} m²</span></div><div class="detail-price">${money(property.price)}<span>Illustrative price<br>Not an active listing</span></div><p>${property.description}</p><p class="detail-disclosure">Sample property · Illustrative photograph · City-level map location. No availability, ownership rights or investment return has been verified.</p><div class="detail-actions"><button type="button" class="button button-outline detail-save" data-save="${property.id}">${icon('heart')}Save example</button><button type="button" class="button button-dark" data-register-property="${property.id}">Continue to property${icon('arrow')}</button></div></div>`;
-    syncSaved(); openDialog('detail-dialog');
+    if (byId[id]) location.assign('/properties/'+encodeURIComponent(id));
   }
   function select(id, pan = true) {
     selectedId = id;
@@ -75,7 +79,7 @@
     if ($('#map-auto-search').checked) searchMapArea();
     else {
       $('#search-map-area').hidden = false;
-      $('#map-area-status').textContent = 'Globe moved. Search this area to update the examples.';
+      $('#map-area-status').textContent = 'Globe moved. Search this area to update the properties.';
     }
   }
   function fitMap() {
@@ -98,16 +102,16 @@
     current.forEach(p => $('#property-grid').append(cards[p.id]));
     $('#empty-state').hidden = current.length > 0;
     $('#results-heading').firstChild.textContent = state.saved ? 'Your saved places' : 'Places worth exploring';
-    $('#results-count').textContent = `${current.length} ${current.length === 1 ? 'example' : 'examples'}`;
+    $('#results-count').textContent = `${current.length} ${current.length === 1 ? 'property' : 'properties'}`;
     const filters = [state.bounds ? 'this map area' : '', state.query, state.market, state.budget ? `up to ${money(state.budget)}` : '', state.type].filter(Boolean);
-    $('#results-context').textContent = state.saved ? 'Your shortlist, saved only on this device.' : filters.length ? `Showing examples for ${filters.join(' · ')}` : 'Illustrative properties and prices, not active listings.';
+    $('#results-context').textContent = state.saved ? (accountUser ? 'Your shortlist, saved to your account.' : 'Your shortlist, saved on this device.') : filters.length ? `Showing properties for ${filters.join(' · ')}` : 'Source advertisements and seller listings. Confirm availability before committing.';
     const area = state.market || (state.bounds ? 'this map area' : 'this search');
-    $('#empty-state h3').textContent = state.saved ? 'No saved examples match.' : `No examples in ${area} yet.`;
-    $('#empty-state p').textContent = state.saved ? 'Widen the map or filters to find your saved examples.' : 'Live listings are not connected. This preview has eight examples; an empty area does not mean there are no properties for sale.';
+    $('#empty-state h3').textContent = state.saved ? 'No saved properties match.' : `No properties in ${area} yet.`;
+    $('#empty-state p').textContent = state.saved ? 'Widen the map or filters to find your saved properties.' : 'Our collection is growing country by country; an empty area does not mean there are no properties for sale. You can submit a property through Sell your property.';
     $$('.market-chip').forEach(button => { const active = !state.bounds && !state.query && button.dataset.market === state.market; button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active)); });
     $('#mobile-saved').setAttribute('aria-pressed', String(state.saved)); $('#saved-view').classList.toggle('is-active', state.saved); $('#discover-view').classList.toggle('is-active', !state.saved);
-    const count = `${current.length} ${current.length === 1 ? 'example' : 'examples'}`;
-    $('#map-area-status').textContent = `${count}${state.bounds ? ' in this area' : state.market ? ' in ' + state.market : ''} · Live listings not connected`;
+    const count = `${current.length} ${current.length === 1 ? 'property' : 'properties'}`;
+    $('#map-area-status').textContent = `${count}${state.bounds ? ' in this area' : state.market ? ' in ' + state.market : ''} · Confirm with the advertiser`;
     if (fit) fitMap(); else syncMap();
   }
   function reset() { Object.assign(state, { query: '', budget: 0, type: '', market: '', saved: false, bounds: null }); $('#search-input').value = ''; $('#budget-filter').value = '0'; $('#type-filter').value = ''; $('#search-map-area').hidden = true; render({ fit: true }); }
@@ -156,13 +160,14 @@
     if (mapVisible && !map) initializeMap();
     if (mapVisible) setTimeout(() => { if (map) { if (mapNeedsFit) fitMap(); else map.resize(); } $('#discovery-split').scrollIntoView({block: 'start', behavior: 'smooth'}); }, 50);
   });
-  fetch('/static/discovery/photo-credits.json').then(response => response.json()).then(credits => {
-    credits.forEach(credit => {
-      const p = document.createElement('p'), link = document.createElement('a');
-      link.href = credit.source; link.target = '_blank'; link.rel = 'noopener'; link.textContent = credit.photographer;
-      p.append(link, document.createTextNode(` · ${credit.subject} · ${credit.license}`)); $('#photo-credits').append(p);
-    });
-  }).catch(() => { $('#photo-credits').textContent = 'Photo attribution is temporarily unavailable.'; });
+  let accountUser = null;
+  if (window.ZorbeckAccount) ZorbeckAccount.me().then(async account => {
+    accountUser = account.user;
+    if (!accountUser) return;
+    const stored = await ZorbeckAccount.saved();
+    saved = stored.ids.filter(id => Object.hasOwn(byId,id));
+    syncSaved(); if (state.saved) render();
+  }).catch(() => { /* Device-local saving remains available while account services recover. */ });
   syncSaved();
   const hasInitialSearch = Boolean(state.query || state.budget);
   if (hasInitialSearch) render();

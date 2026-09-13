@@ -11,25 +11,25 @@ test('world map follows the chosen area and keeps price/type filters', async ({ 
   await page.setViewportSize({ width: 1440, height: 1000 });
   const errors = await openDiscovery(page);
   const cards = page.locator('.property-card:visible');
-  await expect(cards).toHaveCount(8);
+  await expect(cards).toHaveCount(4);
   await expect(page.locator('#property-map')).toHaveAttribute('data-globe-ready', 'true');
   await expect(page.locator('#property-map canvas')).toHaveCount(1);
   await expect(page.locator('.leaflet-container')).toHaveCount(0);
   await page.locator('[data-market="China"]').click();
   await expect(cards).toHaveCount(0);
-  await expect(page.locator('#empty-state')).toContainText('No examples in China yet.');
-  await expect(page.locator('#map-area-status')).toContainText('Live listings not connected');
+  await expect(page.locator('#empty-state')).toContainText('No properties in China yet.');
+  await expect(page.locator('#map-area-status')).toContainText('Confirm with the advertiser');
   await page.locator('[data-market="Thailand"]').click();
   await expect(cards).toHaveCount(0);
-  await expect(page.locator('#empty-state')).toContainText('No examples in Thailand yet.');
-  await page.locator('[data-market="United States"]').click();
-  await expect(cards).toHaveCount(1);
-  await expect(cards.first()).toContainText('Miami');
+  await expect(page.locator('#empty-state')).toContainText('No properties in Thailand yet.');
+  await page.locator('[data-market="Japan"]').click();
+  await expect(cards).toHaveCount(2);
+  await expect(cards.first()).toContainText('Naka');
 
   await page.locator('#property-map').focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#results-context')).toContainText('this map area');
-  await expect(page.locator('[data-market="United States"]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-market="Japan"]')).toHaveAttribute('aria-pressed', 'false');
 
   await page.locator('#map-auto-search').uncheck();
   await page.locator('#property-map').focus();
@@ -38,25 +38,27 @@ test('world map follows the chosen area and keeps price/type filters', async ({ 
   await page.locator('#search-map-area').click();
   await expect(page.locator('#search-map-area')).toBeHidden();
   await expect(page.locator('#map-area-status')).toContainText('in this area');
-  await page.locator('#type-filter').selectOption('Apartment');
-  // The globe's visible Atlantic edge includes Lisbon and London.
-  await expect(cards).toHaveCount(2);
-  await expect(cards.filter({ hasText: 'Miami' })).toHaveCount(0);
   await page.locator('#reset-map').click();
-  await expect(cards).toHaveCount(4);
-  await expect(page.locator('#type-filter')).toHaveValue('Apartment');
-  await page.locator('#budget-filter').selectOption('600000');
+  await page.locator('#type-filter').selectOption('House');
   await expect(cards).toHaveCount(3);
+  await page.locator('#budget-filter').selectOption('1000');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.filter({ hasText: 'Mussomeli' })).toHaveCount(0);
+  await page.locator('[data-market="Italy"]').click();
+  await expect(cards).toHaveCount(0);
+  await page.locator('#type-filter').selectOption('Apartment');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText('€1');
   expect(errors).toEqual([]);
 });
 
 test('mobile map and list retain the chosen area and show missing coverage honestly', async ({ page }) => {
   const errors = await openDiscovery(page);
   await page.locator('[data-market="Thailand"]').click();
-  await expect(page.locator('#empty-state')).toContainText('No examples in Thailand yet.');
+  await expect(page.locator('#empty-state')).toContainText('No properties in Thailand yet.');
   await page.locator('#mobile-map-toggle').click();
   await expect(page.locator('#property-map')).toBeVisible();
-  await expect(page.locator('#map-area-status')).toContainText('0 examples in Thailand');
+  await expect(page.locator('#map-area-status')).toContainText('0 properties in Thailand');
   await page.locator('#property-map').focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#map-area-status')).toContainText('in this area');
@@ -66,10 +68,10 @@ test('mobile map and list retain the chosen area and show missing coverage hones
   await page.locator('#mobile-map-toggle').click();
   await expect(page.locator('#map-area-status')).toHaveText(areaStatus!);
   await page.locator('#mobile-map-toggle').click();
-  await page.locator('[data-market="United States"]').click();
+  await page.locator('[data-market="Japan"]').click();
   await page.locator('#mobile-map-toggle').click();
-  await expect(page.locator('#map-area-status')).toContainText('1 example in United States');
-  await expect(page.locator('.map-price-pin:visible')).toHaveCount(1);
+  await expect(page.locator('#map-area-status')).toContainText('2 properties in Japan');
+  await expect(page.locator('.map-price-pin:visible')).toHaveCount(2);
   expect(errors).toEqual([]);
 });
 
@@ -91,9 +93,9 @@ test('one globe rotates by dragging and themes persist into property details', a
     await expect(page.locator('html')).toHaveAttribute('data-appearance', appearance);
   }
   await page.locator('#theme-select').selectOption('midnight');
-  await page.goto('/properties/lisbon-01');
+  await page.goto('/properties/jp-naka-1-33');
   await expect(page.locator('html')).toHaveAttribute('data-appearance', 'midnight');
   await expect(page.locator('#theme-select')).toHaveValue('midnight');
-  await expect(page.locator('body')).toContainText('Not an active listing');
+  await expect(page.locator('body')).toContainText('Confirm with original advertiser');
   expect(errors).toEqual([]);
 });

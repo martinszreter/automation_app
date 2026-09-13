@@ -154,4 +154,7 @@ def test_no_endpoint_or_key_is_baked_into_the_code() -> None:
         assert "n8n.cloud" not in text, path
         assert "sk_live" not in text and "sk_test_" not in text.replace("sk_test_stub", ""), path
         assert "whsec_" not in text, path
-        assert "buy.stripe.com" not in text, path
+        # A provider hostname in an allowlist/CSP is appropriate; a committed
+        # actual Payment Link URL is not.
+        import re
+        assert not re.search(r"https://buy\.stripe\.com/[A-Za-z0-9]{8,}", text), path

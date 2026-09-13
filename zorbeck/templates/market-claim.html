@@ -1,0 +1,5 @@
+{% extends 'market-base.html' %}
+{% block title %}Owner setup — Zorbeck{% endblock %}
+{% block content %}
+<section class="market-panel owner-claim"><p class="eyebrow">OWNER SETUP</p><h1>Make this your dashboard.</h1><p>This assigns owner access to <strong>{{ user.email }}</strong>. It can be completed once, using the private setup key supplied to the platform owner.</p><form data-market-form action="/api/admin/claim" method="post" class="market-form"><input type="hidden" name="csrf" value="{{ csrf }}"><label>Private owner setup key<input type="password" name="token" required autocomplete="off" maxlength="100" id="owner-setup-key"></label><button type="submit" class="button button-dark">Claim owner access</button><p class="market-status" role="status"></p></form></section>
+{% endblock %}

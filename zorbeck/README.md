@@ -1,3 +1,13 @@
+# Zorbeck marketplace — 13 September 2026
+
+The approved globe and luxury appearances now support accounts, real source advertisements, direct seller submissions, moderation, enquiries and optional paid featured placement. The dated sections below describe earlier releases and the separate legacy Deal-Alarm; use `docs/MARKETPLACE.md` for the current product, configuration and release checklist.
+
+Buyers can browse four factual source summaries from Japan and Italy, create a free account, open original advertisements and keep a shortlist. Availability must be confirmed with the advertiser. The collection is curated, not a live worldwide feed. No external source photographs are reused. Owners and authorised agents worldwide can submit photographs and property facts for review, then optionally purchase a CHF 49 featured placement for 30 days. Community distribution is optional permission for future consideration, not a claimed audience or automatic campaign.
+
+Accounts, uploaded photos, enquiries, moderation and payment records require a persistent `/data` volume. Payments use dedicated Stripe Payment Links and a signed webhook; a return URL never grants a benefit. See the operations document before enabling checkout. No production test charge is made by the automated tests.
+
+---
+
 # Global discovery preview — 9 September 2026
 
 The root page now presents the Zorbeck global investment discovery preview: local sample catalog, interactive world map, filters, property details, device-local shortlist and early-access registration. All properties, photos and prices are illustrative. There is no live AI search, active property feed, account authentication or return calculation in this version.

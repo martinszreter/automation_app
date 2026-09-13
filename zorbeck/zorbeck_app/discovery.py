@@ -39,18 +39,20 @@ def normalized(value: str) -> str:
 
 
 def discovery_context(location: str = "", budget: str = "") -> dict:
-    """Render the same bounded sample search on the server and in the browser."""
+    """Render the same sourced collection on the server and in the browser."""
+    from zorbeck_app.catalog import public_properties
+    properties = public_properties()
     query = " ".join(location.split())[:80]
     ceiling = int(budget) if budget.isascii() and budget.isdigit() and len(budget) <= 10 else 0
     ceiling = ceiling if 0 < ceiling <= 1_000_000_000 else 0
     words = normalized(query).split()
     matches = [
-        property for property in PROPERTIES
-        if (not ceiling or property["price"] <= ceiling)
+        property for property in properties
+        if (not ceiling or (property["price"] is not None and property["price"] <= ceiling))
         and all(word in normalized(" ".join(str(property[key]) for key in ("city", "country", "type", "region", "tag"))) for word in words)
     ]
     return {
-        "properties": PROPERTIES,
+        "properties": properties,
         "initial_filters": {"query": query, "budget": ceiling},
         "matching_ids": [property["id"] for property in matches],
         "result_count": len(matches),
@@ -88,7 +90,9 @@ async def early_access(request: Request) -> JSONResponse:
     except IntakeError:
         return JSONResponse({"ok": False, "error": "Enter a valid email, location and budget."}, status_code=400)
     property_id = data.get("property_id", "")
-    if not isinstance(property_id, str) or (property_id and property_id not in PROPERTY_BY_ID):
+    from zorbeck_app.catalog import find_public
+    selected = find_public(property_id) if isinstance(property_id, str) and property_id else None
+    if not isinstance(property_id, str) or (property_id and property_id not in PROPERTY_BY_ID and not selected):
         return JSONResponse({"ok": False, "error": "Choose a property from the preview and try again."}, status_code=400)
     if not settings.signup_webhook_url:
         return JSONResponse({"ok": False, "error": "Registration is temporarily unavailable. Please try again later."}, status_code=503)
@@ -111,7 +115,7 @@ async def early_access(request: Request) -> JSONResponse:
         consent_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
     if property_id:
-        payload.update(property_id=property_id, property_kind="illustrative", property_path=f"/properties/{property_id}")
+        payload.update(property_id=property_id, property_kind=selected["kind"] if selected else "illustrative", property_path=f"/properties/{property_id}")
     try:
         async with httpx.AsyncClient(timeout=12.0) as client:
             response = await client.post(settings.signup_webhook_url, json=payload)

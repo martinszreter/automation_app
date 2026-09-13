@@ -95,7 +95,7 @@ async def test_every_page_carries_imprint_and_legal_links(path: str) -> None:
         assert fragment in response.text, f"{path} lacks {fragment}"
     for link in LEGAL_LINKS:
         assert link in response.text, f"{path} lacks {link}"
-    assert "Keine Cookies" in response.text
+    assert "Notwendige Konto-Cookies" in response.text
 
 
 @pytest.mark.asyncio
@@ -108,7 +108,7 @@ async def test_legal_pages_have_their_own_headline() -> None:
     assert "Allgemeine Geschäftsbedingungen" in agb
     assert "Rückerstattung" in agb
     assert "<h1>Datenschutz</h1>" in datenschutz
-    assert "keine Cookies" in datenschutz
+    assert "Notwendige Cookies" in datenschutz
 
 
 @pytest.mark.parametrize("path", PAGES)

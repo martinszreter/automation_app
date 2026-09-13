@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#131719">
+  <title>{% block title %}Zorbeck — A wider perspective{% endblock %}</title>
+  <meta name="description" content="Explore sourced property advertisements worldwide. List your own property on Zorbeck.">
+  <script src="/static/theme.js?v=20260912-globe"></script>
+  <link rel="icon" href="/static/discovery/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/discovery.css?v=20260913-marketplace">
+  <link rel="stylesheet" href="/static/marketplace.css?v=20260913-marketplace">
+  <script src="/static/marketplace.js?v=20260913-marketplace" defer></script>
+  <meta name="csrf-token" content="{{ csrf|default('') }}">
+</head>
+<body data-zorbeck-theme="charcoal-champagne" data-zorbeck-marketplace="2026-09-13">
+  <a class="skip-link" href="#market-content">Skip to content</a>
+  {% include 'partials/discovery-icons.html' %}
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Zorbeck home"><span class="brand-mark">z<span></span></span>zorbeck<span class="brand-period">.</span></a>
+    <nav class="main-nav" aria-label="Main navigation"><a href="/">Discover</a><a href="/sell">Sell your property</a></nav>
+    <div class="header-actions">{% include 'partials/discovery-themes.html' %}<a class="market-login" href="{{ '/account' if user else '/login' }}">{{ 'My account' if user else 'Log in' }}</a><a class="market-mobile-sell" href="/sell">Sell</a><a class="button button-dark seller-nav" href="/sell/new">List a property<svg class="icon"><use href="#i-arrow"/></svg></a></div>
+  </header>
+  <main class="market-workspace" id="market-content">{% block content %}{% endblock %}</main>
+  <footer class="discovery-footer market-footer"><div><a href="/" class="footer-brand">zorbeck.</a><span>A STARTEND GmbH platform · Cham, Switzerland</span></div><nav aria-label="Legal"><a href="/impressum">Impressum</a><a href="/datenschutz">Privacy</a><a href="/terms/marketplace">Marketplace terms</a><a href="mailto:{{ legal.email }}">Contact</a></nav><p>{{ legal.company }} · UID {{ legal.uid }} · {{ legal.street }} · {{ legal.city }}</p></footer>
+</body>
+</html>

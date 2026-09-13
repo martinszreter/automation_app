@@ -1,32 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Datenschutz – Zorbeck{% endblock %}
-{% block description %}Datenschutzerklärung für Zorbeck: welche Daten wir wofür verwenden. Keine Cookies, kein Tracking.{% endblock %}
+{% block description %}Datenschutzerklärung für Zorbeck: welche Daten wir wofür verwenden. Notwendige Konto-Cookies, keine Werbe-Tracker.{% endblock %}
 {% block content %}
   <section class="legal">
     <h1>Datenschutz</h1>
-    <p class="muted">Stand: 10. September 2026</p>
+    <p class="muted">Stand: 13. September 2026</p>
 
     <h2>Verantwortliche Stelle</h2>
     <p>{{ legal.company }}, {{ legal.street }}, {{ legal.city }}, Schweiz. Kontakt: <a href="mailto:{{ legal.email }}">{{ legal.email }}</a>.</p>
 
-    <h2>Keine Cookies, kein Tracking</h2>
-    <p>Diese Website setzt keine Cookies und verwendet keine Analyse- oder Werbedienste. Für die freiwillige Early-Access-Registrierung bestätigen Sie die Datenschutzhinweise im Formular.</p>
+    <h2>Notwendige Cookies, kein Werbe-Tracking</h2>
+    <p>Für die Anmeldung und den Schutz von Formularen verwenden wir technisch notwendige Cookies. Sie laufen nach spätestens sieben Tagen ab. Wir verwenden keine Analyse- oder Werbedienste. Für die freiwillige Early-Access-Registrierung bestätigen Sie die Datenschutzhinweise im Formular.</p>
 
     <h2>Welche Daten wir verarbeiten</h2>
     <p>Wenn Sie den Deal-Alarm bestellen: Ihre E-Mail-Adresse, die gewünschte Stadt und Ihr Budget. Diese Angaben brauchen wir, um den Report zu erstellen und Ihnen die Meldungen zu senden. Sie werden 30 Tage nach Ende des Alarms gelöscht, soweit keine gesetzliche Aufbewahrungspflicht besteht.</p>
     <p>Beim Aufruf der Website speichert unser Hosting-Anbieter technische Zugriffsdaten (IP-Adresse, Zeitpunkt, aufgerufene Seite) für die Betriebssicherheit, in der Regel für höchstens 30 Tage.</p>
 
     <h2>Entdecken, Merkliste und Early Access</h2>
-    <p>Die Merkliste im Entdecken-Bereich speichert ausschliesslich Beispiel-IDs lokal in Ihrem Browser (localStorage). Sie ist an dieses Gerät gebunden und wird nicht mit einem Konto synchronisiert. Sie können sie durch Entfernen der gespeicherten Beispiele oder über die Browser-Einstellungen löschen.</p>
+    <p>Ohne Anmeldung speichert die Merkliste Immobilien-IDs auf Ihrem Gerät. Mit Anmeldung wird Ihre Merkliste im Konto gespeichert und ist auf anderen Geräten nach der Anmeldung verfügbar. Die Darstellungseinstellung bleibt lokal in Ihrem Browser.</p>
     <p>Der interaktive Globus verwendet lokal ausgelieferte Geodaten von Natural Earth. Es werden keine Kartenkacheln von einem externen Kartenanbieter geladen. Ihre gewählte Darstellung (Ivory, Dusk oder Midnight) wird als Einstellung lokal in Ihrem Browser gespeichert und kann über die Browser-Einstellungen gelöscht werden.</p>
-    <p>Bei der Early-Access-Registrierung verarbeiten wir Ihre E-Mail-Adresse, den Suchort, Ihr optionales Budget, den Zustimmungszeitpunkt und gegebenenfalls die ID des ausgewählten Immobilienbeispiels über unseren bestehenden n8n-Dienst, um Ihre Anfrage aufzunehmen und Sie zum Early Access zu kontaktieren. Diese Registrierung erstellt kein Nutzerkonto. Eine Löschung können Sie jederzeit über die unten genannte Kontaktadresse verlangen.</p>
-    <p>Nach erfolgreicher Registrierung öffnet sich die ausgewählte Beispielseite oder eine Suchergebnisseite. Für eine einmalige Bestätigung speichern wir den Zielpfad und einen Zeitstempel vorübergehend im sessionStorage dieses Browser-Tabs. Der Pfad kann Ihren Suchort und Ihr Budget enthalten, aber keine E-Mail-Adresse. Der Eintrag wird beim nächsten Seitenaufruf entfernt; eine Bestätigung wird nur innerhalb von fünf Minuten angezeigt. Suchort und Budget stehen bei einer Suchergebnisseite auch in deren URL.</p>
+    <p>Bei der Early-Access-Registrierung verarbeiten wir Ihre E-Mail-Adresse, den Suchort, Ihr optionales Budget, den Zustimmungszeitpunkt und gegebenenfalls die ID der ausgewählten Immobilie über unseren bestehenden n8n-Dienst, um Ihre Anfrage aufzunehmen und Sie zum Early Access zu kontaktieren. Diese Registrierung erstellt kein Nutzerkonto. Eine Löschung können Sie jederzeit über die unten genannte Kontaktadresse verlangen.</p>
+    <p>Nach erfolgreicher Registrierung öffnet sich die ausgewählte Immobilienseite oder eine Suchergebnisseite. Für eine einmalige Bestätigung speichern wir den Zielpfad und einen Zeitstempel vorübergehend im sessionStorage dieses Browser-Tabs. Der Pfad kann Ihren Suchort und Ihr Budget enthalten, aber keine E-Mail-Adresse. Der Eintrag wird beim nächsten Seitenaufruf entfernt; eine Bestätigung wird nur innerhalb von fünf Minuten angezeigt. Suchort und Budget stehen bei einer Suchergebnisseite auch in deren URL.</p>
+
+    <h2>Nutzerkonten, Inserate und Anfragen</h2>
+    <p>Für ein Konto speichern wir E-Mail-Adresse, einen geschützten Passwort-Hash, einen Hash des Wiederherstellungsschlüssels, Ihre Kommunikationspräferenz und technische Sitzungsdaten. Die Registrierung bestätigt nicht, dass Sie die E-Mail-Adresse kontrollieren. Passwort und Wiederherstellungsschlüssel werden nicht an unsere Lead-Verarbeitung weitergegeben.</p>
+    <p>Eigene Inserate umfassen die eingereichten Angaben, Fotografien, Berechtigungserklärungen und den Prüfstatus. Entwürfe sind nur für das zugehörige Konto und die Administration zugänglich. Nach Freigabe sind die dafür vorgesehenen Immobilienangaben und Fotos öffentlich. Wir entfernen Standort-Metadaten aus hochgeladenen Fotos.</p>
+    <p>Eine Käuferanfrage wird mit ausdrücklicher Bestätigung zusammen mit der Kontakt-E-Mail im Zorbeck-Postfach des Inserenten gespeichert. Es werden derzeit keine automatischen Benachrichtigungs-E-Mails versendet. Registrierungs-, Such-, Inserats- und Zahlungsdaten werden in unseren STARTEND-Systemen und über den bestehenden n8n-Kanal verarbeitet. Eine Marketingpräferenz wird separat erfasst; Kontodaten sind keine pauschale Zustimmung zur Werbung Dritter.</p>
+    <p>Kontodaten bleiben für die Kontoführung gespeichert; Sie können ihre Löschung verlangen. Zahlungsbelege können gesetzlichen Aufbewahrungspflichten unterliegen. Alte Sitzungen laufen ab. Nicht zugeordnete Foto-Uploads werden nach 24 Stunden bei der nächsten Upload-Verarbeitung entfernt.</p>
 
     <h2>Zahlung</h2>
     <p>Die Zahlung wickelt Stripe Payments Europe, Ltd., Dublin, ab. Ihre Kartendaten sehen wir nicht. Stripe teilt uns mit, ob die Zahlung erfolgt ist, und den Betrag. Es gilt zusätzlich die Datenschutzerklärung von Stripe.</p>
 
     <h2>Dienstleister</h2>
-    <p>Hosting: Railway (USA). E-Mail-Versand und Verarbeitung der Bestellung: eigene Systeme der {{ legal.company }} sowie n8n Cloud (EU). Mit allen Dienstleistern bestehen Vereinbarungen zum Datenschutz.</p>
+    <p>Hosting: Railway (USA). E-Mail-Versand und Verarbeitung der Bestellung: eigene Systeme der {{ legal.company }} sowie n8n Cloud (EU). Für die jeweiligen Dienste gelten auch deren Datenschutzhinweise.</p>
 
     <h2>Ihre Rechte</h2>
     <p>Sie können jederzeit Auskunft, Berichtigung oder Löschung Ihrer Daten verlangen. Schreiben Sie an <a href="mailto:{{ legal.email }}">{{ legal.email }}</a>.</p>
