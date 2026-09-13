@@ -1,0 +1,50 @@
+[
+  {
+    "id": "jp-naka-1-33", "city": "Naka", "country": "Japan", "region": "Asia Pacific",
+    "lat": 33.857, "lng": 134.497, "title": "A renovation project in Washiki",
+    "neighborhood": "Washiki, Tokushima", "type": "House", "asking_price": 100000,
+    "currency": "JPY", "beds": null, "area": 64.14, "land_area": 140.92,
+    "tag": "Japanese akiya", "reference": "Washiki 1-33",
+    "description": "Naka Town advertises this two-storey wooden house at ¥100,000. The municipal record identifies major repairs, with the work paid for by the buyer. Its well has not been confirmed usable and no drainage is recorded.",
+    "considerations": ["Major repairs required; obtain an independent inspection and quote.", "Confirm water, drainage, title, access and all purchase costs with the town and a local professional.", "The town handles viewing and negotiation enquiries. An online advertisement does not confirm that a sale can still be agreed."],
+    "source_name": "Naka Town — official akiya bank",
+    "source_url": "https://www.town.tokushima-naka.lg.jp/iju/iinaka-kurashi/sumai/akiya/3320227.html",
+    "source_updated": "2026-08-20", "source_checked": "2026-09-13", "kind": "sourced"
+  },
+  {
+    "id": "it-mussomeli-v004360", "city": "Mussomeli", "country": "Italy", "region": "Europe",
+    "lat": 37.579, "lng": 13.752, "title": "A €1 apartment on Via Trieste",
+    "neighborhood": "Via Trieste, Sicily", "type": "Apartment", "asking_price": 1,
+    "currency": "EUR", "beds": 1, "area": 40, "land_area": null,
+    "tag": "Renovation opportunity", "reference": "V004360",
+    "description": "Vero Affare advertises a first-floor apartment of approximately 40 m² for a symbolic €1. The sale concerns the apartment rather than the whole building. Renovation and a bathroom installation are described in the advertisement.",
+    "considerations": ["A private agency advertisement, distinct from a municipal €1 application programme.", "Ask the agency to confirm availability, title documents and the full costs of transfer and works.", "Read the original conditions and arrange an inspection before committing. Zorbeck has no agency or referral agreement with this advertiser."],
+    "source_name": "Vero Affare — agency advertisement",
+    "source_url": "https://veroaffare.eu/it/vendite/mussomeli/appartamento/v004360/11151/",
+    "source_updated": null, "source_checked": "2026-09-13", "kind": "sourced"
+  },
+  {
+    "id": "jp-ikata-s038", "city": "Ikata", "country": "Japan", "region": "Asia Pacific",
+    "lat": 33.488, "lng": 132.355, "title": "A rural home on the Sadamisaki peninsula",
+    "neighborhood": "Seto district, Ehime", "type": "House", "asking_price": 100000,
+    "currency": "JPY", "beds": null, "area": null, "land_area": 322.8,
+    "tag": "Japanese akiya", "reference": "S-038",
+    "description": "Ikata Town lists this home for ¥100,000, with 322.8 m² of land. The municipal page describes a building more than 60 years old and a non-flush toilet. Floor area and a bedroom count are not supplied.",
+    "considerations": ["The stated 322.8 m² is land area, not floor area.", "Confirm condition, utilities, road access, eligibility and availability directly with the municipal office.", "The advertised price excludes any unreported transaction costs, repairs and ongoing ownership costs."],
+    "source_name": "Ikata Town — official akiya bank",
+    "source_url": "https://www.town.ikata.ehime.jp/akiya/iju-teiju/26598.html",
+    "source_updated": "2026-06-08", "source_checked": "2026-09-13", "kind": "sourced"
+  },
+  {
+    "id": "it-mussomeli-v000401", "city": "Mussomeli", "country": "Italy", "region": "Europe",
+    "lat": 37.58, "lng": 13.752, "title": "A 70 m² home on Via Pola",
+    "neighborhood": "Via Pola, Sicily", "type": "House", "asking_price": 16000,
+    "currency": "EUR", "beds": null, "area": 70, "land_area": null,
+    "tag": "Historic town", "reference": "V000401",
+    "description": "Immobiliare Spiaggia advertises a 70 m² house on Via Pola for €16,000, with two bathrooms and two balconies. The agency describes the condition as excellent and gives energy class F; Zorbeck has not independently inspected it.",
+    "considerations": ["The agency lists 2.5 rooms; that is not a verified bedroom count.", "Confirm the current asking price and availability with the agency.", "Commission independent checks of structure, title, services and full purchase costs. No investment return has been assessed."],
+    "source_name": "Immobiliare Spiaggia — agency advertisement",
+    "source_url": "https://immobiliarespiaggia.com/it/vendite/v000401-casa-singola-in-vendita-a-mussomeli-cl-via-pola-20-6525-411",
+    "source_updated": null, "source_checked": "2026-09-13", "kind": "sourced"
+  }
+]

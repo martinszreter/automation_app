@@ -52,6 +52,16 @@ class Settings:
     # Lead row sink (n8n) — every intake, paid or not, as one JSON row.
     signup_webhook_url: str = ""
 
+    # Persistent marketplace state. Never silently use an ephemeral production DB.
+    marketplace_db_path: str = ""
+    cookie_secure: bool = True
+    admin_bootstrap_hash: str = ""
+    promotion_link: str = ""
+    promotion_link_id: str = ""
+    smoke_link: str = ""
+    smoke_link_id: str = ""
+    marketplace_webhook_secret: str = ""
+
     # CI only: mounts the in-process Stripe/mail/alert stub under /_stub.
     # Never set this on the Railway service.
     stub: bool = False
@@ -68,6 +78,14 @@ class Settings:
             hq_mail_webhook_url=_env("HQ_MAIL_WEBHOOK_URL"),
             alert_webhook_url=_env("ALERT_WEBHOOK_URL"),
             signup_webhook_url=_env("SIGNUP_WEBHOOK_URL"),
+            marketplace_db_path=_env("ZORBECK_DATABASE_PATH"),
+            cookie_secure=_env("ZORBECK_COOKIE_SECURE", "true") != "false",
+            admin_bootstrap_hash=_env("ZORBECK_ADMIN_BOOTSTRAP_HASH"),
+            promotion_link=_env("ZORBECK_PROMOTION_LINK"),
+            promotion_link_id=_env("ZORBECK_PROMOTION_LINK_ID"),
+            smoke_link=_env("ZORBECK_SMOKE_LINK"),
+            smoke_link_id=_env("ZORBECK_SMOKE_LINK_ID"),
+            marketplace_webhook_secret=_env("ZORBECK_MARKETPLACE_WEBHOOK_SECRET"),
             stub=_env("ZORBECK_STUB") in {"1", "true", "yes"},
         )
 

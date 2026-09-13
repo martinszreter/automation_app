@@ -1,0 +1,26 @@
+{% extends 'market-base.html' %}
+{% block title %}{{ 'Create your account' if mode == 'register' else 'Recover your account' if mode == 'recover' else 'Welcome back' }} — Zorbeck{% endblock %}
+{% block content %}
+<div class="auth-layout">
+  <div class="auth-story"><p class="eyebrow">YOUR WORLD OF POSSIBILITY</p><h1>A place for<br>your next chapter.</h1><p>Keep your shortlist close. Explore real source advertisements. Bring your own property to the world.</p><a href="/" class="back-to-map">Explore the collection <svg class="icon"><use href="#i-arrow"/></svg></a></div>
+  <section class="market-panel auth-panel">
+    <p class="eyebrow">{{ 'JOIN ZORBECK' if mode == 'register' else 'ACCOUNT RECOVERY' if mode == 'recover' else 'WELCOME BACK' }}</p>
+    <h2>{{ 'Create your free account.' if mode == 'register' else 'Make a fresh start.' if mode == 'recover' else 'Your world, saved.' }}</h2>
+    <form data-market-form action="/api/account/{{ mode }}" method="post" class="market-form" id="auth-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next_path }}">
+      <label>Email address<input type="email" name="email" required autocomplete="email" maxlength="254" placeholder="you@example.com"></label>
+      {% if mode == 'recover' %}<label>Recovery key<input type="text" name="recovery_key" required autocomplete="off" maxlength="100" placeholder="The key saved when you created your account"></label>{% endif %}
+      <label>{{ 'New password' if mode == 'recover' else 'Password' }}<input type="password" name="password" required minlength="{{ 1 if mode == 'login' else 12 }}" maxlength="128" autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}" placeholder="{{ 'Your password' if mode == 'login' else 'At least 12 characters' }}"></label>
+      {% if mode == 'register' %}
+      <label class="market-check"><input type="checkbox" name="terms" required><span>I accept the <a href="/terms/marketplace" target="_blank" rel="noopener">account terms</a> and <a href="/datenschutz" target="_blank" rel="noopener">privacy notice</a>.</span></label>
+      <label class="market-check"><input type="checkbox" name="marketing"><span>Keep me informed about Zorbeck property discoveries and product updates. Optional; I can change this in my account.</span></label>
+      {% endif %}
+      <div class="form-honeypot" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+      <button class="button button-dark" type="submit">{{ 'Create account' if mode == 'register' else 'Reset password' if mode == 'recover' else 'Log in' }}<svg class="icon"><use href="#i-arrow"/></svg></button>
+      <p class="market-status" role="status" aria-live="polite"></p>
+    </form>
+    <div id="recovery-result" class="recovery-result" hidden><h3>Save your recovery key.</h3><p>This key can reset your password. Store it privately in your password manager; we only show it once. Account recovery currently uses this key, rather than an email reset link.</p><code id="recovery-key"></code><button class="button button-outline" type="button" id="copy-recovery">Copy recovery key</button><a class="button button-dark" id="account-continue" href="/account">I saved it — continue<svg class="icon"><use href="#i-arrow"/></svg></a></div>
+    <div class="auth-alternatives">{% if mode == 'login' %}<p>New here? <a href="/register?next={{ next_path|urlencode }}">Create a free account</a></p><a href="/recover">Forgot your password?</a>{% else %}<p>Already have an account? <a href="/login?next={{ next_path|urlencode }}">Log in</a></p>{% endif %}</div>
+  </section>
+</div>
+{% endblock %}

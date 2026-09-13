@@ -39,15 +39,17 @@ async def test_homepage_is_honest_global_discovery_and_offer_remains_available()
     assert 'data-zorbeck-discovery="2026-09-09"' in home.text
     assert 'id="property-map"' in home.text
     assert 'id="register-form"' in home.text
-    assert "Illustrative properties and prices, not active listings" in home.text
+    assert "Source advertisements and seller listings" in home.text
     assert "do not run a live AI search" in home.text
     assert "STARTEND GmbH" in home.text
     assert 'action="/checkout"' in offer.text
     assert 'action="/checkout"' not in home.text
     data = json.loads(home.text.split('id="property-data">')[1].split('</script>')[0])
-    assert len(data) == 8
+    assert len(data) == 4
     for record in data:
-        assert (BASE / 'static' / 'discovery' / record['image']).is_file()
+        assert record['source_url'].startswith('https://')
+        assert record['source_checked'] and record['kind'] == 'sourced'
+        assert record['image_url'] == ''
         assert -90 <= record['lat'] <= 90 and -180 <= record['lng'] <= 180
 
 
@@ -192,8 +194,8 @@ async def test_unknown_property_is_not_substituted_with_an_offer():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('location,budget,expected', [
-    ('  LÍSBON portugal ', '400000', ['lisbon-01']),
-    ('Spain', '600000', ['marbella-01', 'barcelona-01']),
+    ('  NÁKA japan ', '1000', ['jp-naka-1-33']),
+    ('Italy', '1000', ['it-mussomeli-v004360']),
     ('Lisbon', '300000', []),
     ('Tokyo', '', []),
 ])

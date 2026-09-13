@@ -22,8 +22,8 @@
     status.textContent = ''; status.className = 'form-status'; button.disabled = false;
     label.textContent = options.propertyId ? 'Continue to property' : 'Save search and continue';
     document.getElementById('register-intro').textContent = options.propertyId
-      ? 'Register your interest, then continue to this property’s dedicated example page. It is free to explore.'
-      : 'Join Zorbeck early access, then continue to property examples for your location and budget.';
+      ? 'Register your interest, then continue to this property’s dedicated property page. It is free to explore.'
+      : 'Register your search, then continue to properties for your location and budget.';
   }
   root.ZorbeckRegistration = { prepare, destination };
   try {
@@ -46,7 +46,7 @@
       if (!response.ok || result?.ok !== true) throw new Error(result?.error || 'We could not save your search. Please try again.');
       const next = destination(result.next_url, location.origin);
       try { sessionStorage.setItem(receiptKey, JSON.stringify({ path: next.pathname + next.search, createdAt: Date.now() })); } catch (_) { /* Confirmation storage is optional and never contains the email. */ }
-      status.className = 'form-status success'; status.textContent = data.property_id ? 'Saved. Opening your property details…' : 'Saved. Opening your matching examples…';
+      status.className = 'form-status success'; status.textContent = data.property_id ? 'Saved. Opening your property details…' : 'Saved. Opening your matching properties…';
       label.textContent = 'Opening…';
       location.assign(next.href);
     } catch (error) {

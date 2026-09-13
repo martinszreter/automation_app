@@ -1,0 +1,5 @@
+{% extends 'market-base.html' %}
+{% block title %}Payment status — Zorbeck{% endblock %}
+{% block content %}
+<section class="market-panel payment-result" data-payment-session="{{ session_id }}"><p class="eyebrow">YOUR PAYMENT</p><h1 id="payment-heading">{{ 'Checking your payment.' if signed_in and session_id else 'Continue to your account.' }}</h1><p id="payment-message" role="status">{% if not signed_in %}Sign in to the account that started the purchase to see its confirmed status.{% elif not session_id %}Your account lists payments and property promotion status.{% else %}We’re waiting for Stripe’s payment confirmation. Please keep this page open for a moment.{% endif %}</p><a class="button button-dark" href="{{ '/account' if signed_in else '/login' }}">{{ 'My account' if signed_in else 'Log in' }}<svg class="icon"><use href="#i-arrow"/></svg></a><p class="market-small">A return to this page does not itself confirm a payment. For help, contact <a href="mailto:info@startend.ch">info@startend.ch</a>.</p></section>
+{% endblock %}

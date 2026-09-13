@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import asyncio
 import logging
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from zorbeck_app import stub
+from zorbeck_app.accounts import router as accounts_router, flush_leads
+from zorbeck_app.marketplace import router as marketplace_router
+from zorbeck_app.market_payments import router as market_payments_router, configured as payments_configured
+from zorbeck_app.market_security import user_for
+from zorbeck_app.market_store import available as accounts_available, initialize as initialize_database
+from zorbeck_app.catalog import find_public
 from zorbeck_app.discovery import PROPERTY_BY_ID, discovery_context, router as discovery_router
 from zorbeck_app.alerts import send_alert
 from zorbeck_app.config import settings
@@ -47,9 +55,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("zorbeck")
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="Zorbeck", docs_url=None, redoc_url=None, openapi_url=None)
+@asynccontextmanager
+async def lifespan(app):
+    if accounts_available():
+        initialize_database(settings.marketplace_db_path)
+    async def deliver_pending():
+        while True:
+            try:
+                await flush_leads()
+            except Exception:
+                logger.warning("Marketplace lead sync deferred; pending rows remain stored")
+            await asyncio.sleep(60)
+    worker = asyncio.create_task(deliver_pending())
+    yield
+    worker.cancel()
+    with suppress(asyncio.CancelledError):
+        await worker
+
+
+app = FastAPI(title="Zorbeck", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=800, compresslevel=5)
 app.include_router(discovery_router)
+app.include_router(accounts_router)
+app.include_router(marketplace_router)
+app.include_router(market_payments_router)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # The stylesheet is small and inlined into every page (read once at start).
@@ -93,7 +122,30 @@ def render(request: Request, name: str, status_code: int = 200, **context: Any) 
     context.setdefault("css", CSS)
     context.setdefault("price_label", chf(settings.price_cents))
     context.setdefault("de", de)
+    context.setdefault("user", user_for(request))
     return templates.TemplateResponse(request, name, context, status_code=status_code)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; connect-src 'self'; frame-src https://*.stripe.com https://*.link.com; "
+        "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; "
+        "form-action 'self' https://checkout.stripe.com https://buy.stripe.com"
+    )
+    if request.url.path.startswith(("/api/", "/account", "/admin", "/sell/", "/seller/", "/login", "/register", "/recover", "/payments/", "/promote/")):
+        response.headers["Cache-Control"] = "no-store"
+    vary = response.headers.get("Vary", "")
+    if "cookie" not in vary.lower():
+        response.headers["Vary"] = (vary+", " if vary else "")+"Cookie"
+    if "text/html" in response.headers.get("content-type", ""):
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 async def form_data(request: Request) -> dict[str, Any]:
@@ -154,6 +206,14 @@ async def search_results(request: Request) -> HTMLResponse:
 
 @app.api_route("/properties/{property_id}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def property_details(request: Request, property_id: str) -> HTMLResponse:
+    sourced = find_public(property_id)
+    if sourced:
+        from zorbeck_app.market_security import csrf_for, set_csrf
+        csrf = csrf_for(request)
+        response = render(request, "market-property.html", property=sourced, csrf=csrf, draft_preview=False)
+        set_csrf(response, csrf)
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
     property = PROPERTY_BY_ID.get(property_id)
     if property is None:
         raise HTTPException(status_code=404, detail="This example is not in the preview catalog.")
@@ -185,7 +245,7 @@ async def datenschutz(request: Request) -> HTMLResponse:
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots() -> PlainTextResponse:
-    return PlainTextResponse("User-agent: *\nAllow: /\nDisallow: /danke\nDisallow: /_stub/\n")
+    return PlainTextResponse("User-agent: *\nAllow: /\nDisallow: /danke\nDisallow: /_stub/\nDisallow: /account\nDisallow: /admin\nDisallow: /seller/\nDisallow: /api/\nDisallow: /payments/\nDisallow: /promote/\nDisallow: /sell/\n")
 
 
 # --- health -------------------------------------------------------------------
@@ -200,6 +260,8 @@ def health_payload() -> dict[str, Any]:
         "mail": bool(settings.hq_mail_webhook_url),
         "alerts": bool(settings.alert_webhook_url),
         "stub": settings.stub,
+        "accounts": accounts_available(),
+        "marketplace_payments": payments_configured(),
     }
 
 

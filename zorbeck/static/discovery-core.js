@@ -29,12 +29,13 @@
     const output = properties.filter(p => {
       const text = normalize([p.city, p.country, p.type, p.region, p.tag].join(' '));
       return (!state.saved || saved.includes(p.id)) && (!state.market || p.country === state.market)
-        && (!state.budget || p.price <= Number(state.budget)) && (!state.type || p.type === state.type)
+        && (!state.budget || (p.price !== null && p.price <= Number(state.budget))) && (!state.type || p.type === state.type)
         && inBounds(p, state.bounds)
         && words.every(word => text.includes(word));
     });
-    if (state.sort === 'price-asc') output.sort((a, b) => a.price - b.price);
-    if (state.sort === 'price-desc') output.sort((a, b) => b.price - a.price);
+    if (state.sort === 'price-asc') output.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+    if (state.sort === 'price-desc') output.sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
+    if (state.sort === 'featured') output.sort((a,b) => Number(Boolean(b.featured))-Number(Boolean(a.featured)));
     return output;
   }
   root.ZorbeckDiscovery = { filterProperties, normalize, inBounds, longitudeNear, projectOnGlobe };

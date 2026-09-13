@@ -93,8 +93,8 @@
         node.type = 'button'; node.className = 'map-price-pin globe-pin';
         node.dataset.globeProperty = property.id;
         node.classList.toggle('selected', property.id === selectedId);
-        node.setAttribute('aria-label', `${property.city}, ${format(property.price)}, illustrative example. Open details.`);
-        node.textContent = format(property.price);
+        node.setAttribute('aria-label', `${property.city}, ${format(property.price, property)}, property advertisement. Open details.`);
+        node.textContent = format(property.price, property);
         node.addEventListener('click', () => onSelect(property.id));
         markers.append(node);
         return { property, node };
