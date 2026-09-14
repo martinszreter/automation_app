@@ -81,6 +81,16 @@ from app.services.xautopilot_judge import (
     pick_best,
     record_vetoes,
 )
+from app.services.xautopilot_reply import (
+    REPLY_ENGINE_ID,
+    REPLY_SLOTS,
+    ExistingReply,
+    Root,
+    active_origins,
+    coverage,
+    pick_best_reply,
+    veto_reports,
+)
 from app.services.xautopilot_tiers import (
     TierPriceNotConfigured,
     UnknownTier,
@@ -630,6 +640,105 @@ async def compose_post(payload: ComposeRequest) -> JSONResponse:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     result = await _judge_candidates(payload.profile, candidates, payload.recent_posts)
     return JSONResponse(result)
+
+
+# --- Reply Engine (n8n HNUpMDQaYREs3HOl) -------------------------------------
+
+
+class RootIn(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    author: str = ""
+    origin: str = ""
+    text: str = ""
+    posted_at: str | None = None
+
+    def to_root(self) -> Root:
+        return Root(
+            id=self.id.strip(),
+            author=self.author,
+            origin=self.origin,
+            text=self.text,
+            posted_at=parse_posted_at(self.posted_at),
+        )
+
+
+class ExistingReplyIn(BaseModel):
+    id: str = ""
+    root_id: str = ""
+    slot: str = ""
+    posted_at: str | None = None
+
+    def to_reply(self, *, root_id: str = "") -> ExistingReply:
+        return ExistingReply(
+            id=self.id.strip(),
+            root_id=(self.root_id or root_id).strip(),
+            slot=self.slot,
+            posted_at=parse_posted_at(self.posted_at),
+        )
+
+
+class MediaIn(BaseModel):
+    source: str = ""
+
+
+class ReplyPlanRequest(BaseModel):
+    roots: list[RootIn] = Field(default_factory=list, max_length=200)
+    replies: list[ExistingReplyIn] = Field(default_factory=list, max_length=1000)
+
+
+class ReplyJudgeRequest(BaseModel):
+    root: RootIn
+    profile: ToneProfileIn = Field(default_factory=ToneProfileIn)
+    candidates: list[str] = Field(default_factory=list, max_length=10)
+    recent_posts: list[RecentPostIn] = Field(default_factory=list, max_length=500)
+    existing_replies: list[ExistingReplyIn] = Field(default_factory=list, max_length=10)
+    media: list[MediaIn] = Field(default_factory=list, max_length=4)
+
+
+@router.post("/replies/plan", dependencies=[Depends(_require_judge_key)], include_in_schema=False)
+async def reply_plan(payload: ReplyPlanRequest) -> JSONResponse:
+    """Which of R1-R3 each flagship root still owes, and which roots are blocked."""
+    roots = [root.to_root() for root in payload.roots]
+    replies = [reply.to_reply() for reply in payload.replies]
+    return JSONResponse(coverage(roots, replies))
+
+
+@router.post("/replies/judge", dependencies=[Depends(_require_judge_key)], include_in_schema=False)
+async def reply_judge(payload: ReplyJudgeRequest) -> JSONResponse:
+    """Pick the reply to post under one root, or say why every candidate is out."""
+    root = payload.root.to_root()
+    profile = payload.profile.to_profile()
+    best, reports = pick_best_reply(
+        payload.candidates,
+        root,
+        profile,
+        recent=[RecentPost(p.text, parse_posted_at(p.posted_at)) for p in payload.recent_posts],
+        existing=[r.to_reply(root_id=root.id) for r in payload.existing_replies],
+        media=[m.model_dump() for m in payload.media],
+    )
+    recorded = await record_vetoes(profile, veto_reports(reports))
+    return JSONResponse(
+        {
+            "engine": REPLY_ENGINE_ID,
+            "slots": list(REPLY_SLOTS),
+            "best": best.to_dict() if best else None,
+            "reports": [report.to_dict() for report in reports],
+            "vetoes_recorded": recorded,
+        }
+    )
+
+
+@router.get("/replies/origins", dependencies=[Depends(_require_judge_key)], include_in_schema=False)
+async def reply_origins() -> JSONResponse:
+    """The flagship origins that are drafting right now."""
+    return JSONResponse(
+        {
+            "engine": REPLY_ENGINE_ID,
+            "origins": [
+                {"key": origin.key, "label": origin.label, "kind": origin.kind} for origin in active_origins()
+            ],
+        }
+    )
 
 
 @router.post("/digest/run", dependencies=[Depends(_require_judge_key)], include_in_schema=False)
