@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-"""Add STARTEND GTM execution columns + operating strategy to BOARD_HTML.
+"""Add STARTEND GTM execution columns + strategy to canon BOARD_HTML.
 
-This is an idempotent canon migration. It preserves existing portfolio rows and
-unknown metrics stay as em dashes until measured. No sales/traction is invented.
-
-Run with CANON_RW_URL set. After the canon write it asks the existing portfolio
-redeploy webhook to republish the board.
+Idempotent by marker. Existing rows are preserved and unknown funnel values stay
+unknown; this migration never invents traction. Requires CANON_RW_URL to publish.
 """
 from __future__ import annotations
 
@@ -16,10 +13,18 @@ import urllib.request as u
 
 WHO = "HQ_GPT"
 MARK = "GTM OPERATING SYSTEM 2026-09-16"
-REDEPLOY = os.environ.get("PORTFOLIO_REDEPLOY_URL", "https://startend.app.n8n.cloud/webhook/redeploy-portfolio-7k4q9x")
-BOARD = os.environ.get("PORTFOLIO_BOARD_URL", "https://portfolio-production-f01d.up.railway.app/ptf-k4x9m2.html")
+REDEPLOY = os.environ.get(
+    "PORTFOLIO_REDEPLOY_URL",
+    "https://startend.app.n8n.cloud/webhook/redeploy-portfolio-7k4q9x",
+)
+BOARD = os.environ.get(
+    "PORTFOLIO_BOARD_URL",
+    "https://portfolio-production-f01d.up.railway.app/ptf-k4x9m2.html",
+)
 CANON = os.environ.get("CANON_RW_URL", "").strip()
 
+# Priority + proposed channel operating model. Funnel facts remain unmeasured
+# until LeadMine records them.
 PRIORITY = {
     "chamdigital": (1, "Owner-led 10/day high-fit local SME", "Google Search + local SEO + referrals", "55%", "45%", "Prepare 10 high-fit local SMEs/day; prove paid website #1"),
     "leadmine": (2, "Selective agency/recruiter/consultancy outreach", "High-intent SEO/Search + product-led email capture", "70%", "65%", "Use LeadMine GTM queue; convert first external CHF 490 pilot"),
@@ -40,17 +45,33 @@ PRIORITY = {
 }
 
 ALIASES = {
-    "swiss website": "chamdigital", "chamdigital": "chamdigital",
-    "leadmine": "leadmine", "smartlead": "leadmine",
-    "x autopilot": "x-autopilot", "grokywood": "grokywood",
-    "ai kompetenz": "ai-kompetenz", "aikompetenz": "ai-kompetenz",
-    "ai exposure": "ai-exposure-check", "restaurant": "restaurant-app", "booking": "restaurant-app",
-    "hoppado": "hoppado", "optimizeyourkid": "optimizeyourkid", "unfairstart": "unfairstart",
-    "wordblast": "wordblast", "liesnicht": "liesnicht", "nieczytaj": "nieczytaj",
-    "39th floor": "39thfloor", "39thfloor": "39thfloor", "zorbeck": "zorbeck", "tradersland": "tradersland",
+    "swiss website": "chamdigital",
+    "chamdigital": "chamdigital",
+    "leadmine": "leadmine",
+    "smartlead": "leadmine",
+    "x autopilot": "x-autopilot",
+    "grokywood": "grokywood",
+    "ai kompetenz": "ai-kompetenz",
+    "aikompetenz": "ai-kompetenz",
+    "ai exposure": "ai-exposure-check",
+    "restaurant": "restaurant-app",
+    "booking": "restaurant-app",
+    "hoppado": "hoppado",
+    "optimizeyourkid": "optimizeyourkid",
+    "unfairstart": "unfairstart",
+    "wordblast": "wordblast",
+    "liesnicht": "liesnicht",
+    "nieczytaj": "nieczytaj",
+    "39th floor": "39thfloor",
+    "39thfloor": "39thfloor",
+    "zorbeck": "zorbeck",
+    "tradersland": "tradersland",
 }
 
-HEADERS = ["GTM<br>PRIORITY", "PUSH", "PULL", "DIST<br>READY", "GTM<br>AUTO", "READY<br>LEADS", "CONTACTED", "REPLIES", "SALES", "NEXT GTM ACTION"]
+HEADERS = [
+    "GTM<br>PRIORITY", "PUSH", "PULL", "DIST<br>READY", "GTM<br>AUTO",
+    "READY<br>LEADS", "CONTACTED", "REPLIES", "SALES", "NEXT GTM ACTION",
+]
 
 STRATEGY_HTML = f'''<!-- {MARK} -->
 <section id="go-to-market-strategy" style="margin-top:36px">
@@ -76,9 +97,13 @@ STRATEGY_HTML = f'''<!-- {MARK} -->
 
 
 def _post(url: str, payload: dict):
-    req = u.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-    with u.urlopen(req, timeout=60) as r:
-        raw = r.read().decode()
+    request = u.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    with u.urlopen(request, timeout=60) as response:
+        raw = response.read().decode()
     return json.loads(raw) if raw.strip() else None
 
 
@@ -88,7 +113,7 @@ def _rows(key: str):
         raise RuntimeError(f"EMPTY {key}")
     if isinstance(rows, dict):
         rows = [rows]
-    return sorted(rows, key=lambda x: int(x.get("version", 0)), reverse=True)
+    return sorted(rows, key=lambda row: int(row.get("version", 0)), reverse=True)
 
 
 def _text(html: str) -> str:
@@ -96,9 +121,9 @@ def _text(html: str) -> str:
 
 
 def _key(iid: str, name: str) -> str | None:
-    n = f"{iid} {name}".lower()
+    haystack = f"{iid} {name}".lower()
     for needle, key in ALIASES.items():
-        if needle in n:
+        if needle in haystack:
             return key
     return None
 
@@ -112,19 +137,23 @@ def _gtm_cells(iid: str, name: str) -> str:
     key = _key(iid, name)
     if not key or key not in PRIORITY:
         return "".join([
-            _cell("—", "rank when buyer/channel is defined"), _cell("TBD"), _cell("TBD"), _cell("—"), _cell("—"),
-            _cell("—", "not measured"), _cell("—"), _cell("—"), _cell("—"), _cell("Define buyer + first proof")
+            _cell("—", "rank when buyer/channel is defined"),
+            _cell("TBD"), _cell("TBD"), _cell("—"), _cell("—"),
+            _cell("—", "not measured"), _cell("—"), _cell("—"), _cell("—"),
+            _cell("Define buyer + first proof"),
         ])
-    p, push, pull, ready, auto, next_action = PRIORITY[key]
+    priority, push, pull, readiness, automation, next_action = PRIORITY[key]
     return "".join([
-        _cell(str(p)), _cell(push), _cell(pull), _cell(ready), _cell(auto),
-        _cell("—", "measure in LeadMine"), _cell("—"), _cell("—"), _cell("—"), _cell(next_action)
+        _cell(str(priority)), _cell(push), _cell(pull), _cell(readiness), _cell(automation),
+        _cell("—", "measure in LeadMine"), _cell("—"), _cell("—"), _cell("—"),
+        _cell(next_action),
     ])
 
 
 def transform(content: str) -> str:
     if MARK in content and "GTM<br>PRIORITY" in content:
         return content
+
     marker = '<h2><span class="k">Sorted by how big this can get, not by pillar &middot; column titles repeat in every tier</span>The portfolio</h2>'
     start = content.find(marker)
     if start < 0:
@@ -138,9 +167,7 @@ def transform(content: str) -> str:
 
     def header_repl(match):
         row = match.group(0)
-        if "GTM<br>PRIORITY" in row:
-            return row
-        return row[:-5] + "".join(f"<th>{h}</th>" for h in HEADERS) + "</tr>"
+        return row if "GTM<br>PRIORITY" in row else row[:-5] + "".join(f"<th>{h}</th>" for h in HEADERS) + "</tr>"
 
     section = re.sub(r"<tr><th>#</th>.*?</tr>", header_repl, section, flags=re.S)
 
@@ -151,15 +178,19 @@ def transform(content: str) -> str:
         cells = re.findall(r"<td(?:\s[^>]*)?>.*?</td>", row, flags=re.S)
         if len(cells) < 2:
             return row
-        iid = _text(cells[0])
-        name = _text(cells[1])
-        return row[:-5] + _gtm_cells(iid, name) + "</tr>"
+        return row[:-5] + _gtm_cells(_text(cells[0]), _text(cells[1])) + "</tr>"
 
-    section = re.sub(r"<tr><td class="id">.*?</tr>", row_repl, section, flags=re.S)
+    section = re.sub(r'<tr><td class="id">.*?</tr>', row_repl, section, flags=re.S)
 
-    def colspan_repl(m):
-        return f'colspan="{int(m.group(1)) + len(HEADERS)}"'
-    section = re.sub(r'colspan="(\d+)"', colspan_repl, section)
+    # Only widen full-tier rows, not arbitrary nested colspans in the board.
+    def tier_colspan_repl(match):
+        return f'{match.group(1)}{int(match.group(2)) + len(HEADERS)}{match.group(3)}'
+
+    section = re.sub(
+        r'(<td class="tier"[^>]*?colspan=")(\d+)(")',
+        tier_colspan_repl,
+        section,
+    )
 
     out = content[:start] + section + content[end:]
     if MARK not in out:
@@ -181,9 +212,13 @@ def write_canon():
     if new == base["content"]:
         print("NO_CHANGE BOARD_HTML already contains GTM operating system")
         return int(base["version"])
+
     version = int(base["version"]) + 1
     _post(CANON, {
-        "action": "insert", "file": "BOARD_HTML", "version": version, "content": new,
+        "action": "insert",
+        "file": "BOARD_HTML",
+        "version": version,
+        "content": new,
         "note": "Add GTM priority/PUSH/PULL/readiness/automation/funnel columns + bottom GTM operating system",
         "updated_by": WHO,
     })
@@ -196,13 +231,12 @@ def write_canon():
 
 def redeploy():
     try:
-        result = _post(REDEPLOY, {"who": WHO, "why": MARK})
-        print("REDEPLOY", result)
+        print("REDEPLOY", _post(REDEPLOY, {"who": WHO, "why": MARK}))
     except Exception as exc:
         print("REDEPLOY_WARN", exc)
 
 
 if __name__ == "__main__":
-    v = write_canon()
+    version = write_canon()
     redeploy()
-    print("READY_FOR_LIVE_VERIFY", BOARD, "canon_version", v)
+    print("READY_FOR_LIVE_VERIFY", BOARD, "canon_version", version)
