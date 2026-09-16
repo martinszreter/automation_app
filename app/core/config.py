@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     # Panel lane (n8n webhook): profile / recent_posts / set_status on the
     # agents, post_log and post_metrics tables. Env-only, like every lane.
     n8n_xa_panel_url: str = ""
+    # Reply Engine (n8n HNUpMDQaYREs3HOl) — our own X handles, comma-separated.
+    # The stranger-reply ban fails closed: with this unset no root can be proven
+    # ours, so every reply is vetoed.
+    xa_flagship_handles: str = ""
+    # Flagship origins to hold back, comma-separated (alex, filip, nyc).
+    # Empty = all three draft, which is the ratified 14 Sep 2026 state.
+    xa_paused_origins: str = ""
     # CI only: /x-autopilot/e2e/login?key=…&email=… signs a test buyer in with an
     # active plan so Playwright can drive the panel. Unset = route is 404.
     xa_e2e_key: str = ""

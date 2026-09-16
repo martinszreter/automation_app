@@ -85,6 +85,42 @@ cures, get-rich promises, the customer's own terms), `wrong_language`,
 posted to that webhook. Among the survivors the pick is a soft score (length
 near 200, a concrete number, structure, few hashtags) — never a veto.
 
+## X.com Reply Engine (flagship roots, R1-R3)
+
+The Reply Engine — n8n workflow `HNUpMDQaYREs3HOl` — posts **exactly three
+replies, R1 R2 R3, under every flagship root**. The policy it runs first lives
+in `app/services/xautopilot_reply.py` and is deterministic, so it can run on
+every root and every candidate. Ratified by Marcin on 14 Sep 2026; the decision
+pack is [`artifacts/GROK_XCOM_RESUME_ALL_2026-09-14.md`](artifacts/GROK_XCOM_RESUME_ALL_2026-09-14.md).
+
+| Endpoint (header `X-Judge-Key`) | Body | Answer |
+| --- | --- | --- |
+| `POST /x-autopilot/replies/plan` | `{roots[], replies[]}` | Which of R1-R3 each root still owes, under what id, and which roots are blocked |
+| `POST /x-autopilot/replies/judge` | `{root, profile, candidates[], recent_posts[], existing_replies[], media[]}` | `{best: {text, slot, in_reply_to}, reports[], vetoes_recorded}` |
+| `GET /x-autopilot/replies/origins` | — | The flagship origins drafting right now |
+
+Reply vetoes use the same shape and the same ledger as the post judge, and the
+post judge's codes still apply to replies. On top of them:
+
+* `stranger_reply` — the root's author is not one of ours. The ban **fails
+  closed**: with `XA_FLAGSHIP_HANDLES` unset, nothing is provably ours and every
+  reply is vetoed.
+* `origin_paused` — the root's origin is held back. ALEX, FILIP and NYC are all
+  resumed by default; `XA_PAUSED_ORIGINS=filip` is the operator lever.
+* `experiment_footer` — the killed footer. It is stripped from `best.text` *and*
+  vetoed, so the ledger records which engine still appends it.
+* `media_source` — attached media that did not come from **Grokywood Imagine**.
+* `pack_complete` — R1-R3 already sit under this root; a fourth reply is refused.
+
+| Variable | Purpose |
+| --- | --- |
+| `XA_FLAGSHIP_HANDLES` | Our own X handles, comma-separated. Unset = the engine replies to nobody |
+| `XA_PAUSED_ORIGINS` | Origins to hold back (`alex`, `filip`, `nyc`). Empty = all three draft |
+
+The pack reads as one thread — R1 answers the root, R2 answers R1, R3 answers
+R2 — so the engine re-plans between replies to pick up the previous reply's id.
+An interrupted pack resumes at the right slot instead of restarting at R1.
+
 ## X Autopilot panel
 
 `/x-autopilot/panel` (Google Sign-In, German) shows the paid customer their
