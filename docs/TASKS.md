@@ -298,6 +298,8 @@ Existing reservation #428. Dependency: C26.
 
 ## ZV — Visual luxury seller page (2026-09-14)
 - [x] ZV-01 Build visual seller page and readable discovery refinements. Acceptance: existing pytest passes; desktop/mobile seller globe renders without JS errors or horizontal overflow; free/CHF49 pricing and signup links preserved.
-- [ ] ZV-02 Publish through PR and green checks; verify /sell live marker and assets.
+- [x] ZV-02 Publish through PR and green checks; verify /sell live marker and assets.
 
 ZV-01: 2026-09-18 hosted run 35405481408 passed lint, pytest, discovery checks and browser journeys. Seller globe tested at 1440/390/844px: geographic data ready, canvas matches container after resize, rotation works, no overflow or JavaScript errors. Screenshots captured in test artifacts. Corrected stale headline assertion and implemented ResizeObserver after review. ZV-02 deployment verification remains pending.
+
+ZV-02 verified 2026-09-18: PR77 merged as 86f667b2fd33e5364b5ef8d4a233c305a7826828 after ci and zorbeck workflows passed. Railway deployment 6eb10a76-1046-429a-98e6-7ff34f357f63 SUCCESS. Public /sell HTTP200 contains visual-seller marker, globe canvas and CHF49; seller-globe.js HTTP200 includes ResizeObserver; /healthz HTTP200 accounts and marketplace payments enabled, stub false. User review: https://automationapp-production.up.railway.app/sell
