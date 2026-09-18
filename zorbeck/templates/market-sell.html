@@ -1,7 +1,39 @@
 {% extends 'market-base.html' %}
 {% block title %}Sell your property with Zorbeck{% endblock %}
+{% block extra_head %}
+<script src="/static/vendor/d3/d3-array.min.js" defer></script>
+<script src="/static/vendor/d3/d3-geo.min.js" defer></script>
+<script src="/static/discovery-core.js?v=20260913-marketplace" defer></script>
+<script src="/static/globe.js?v=20260913-marketplace" defer></script>
+<script src="/static/seller-globe.js?v=20260914" defer></script>
+{% endblock %}
 {% block content %}
-<section class="sell-intro"><div><p class="eyebrow">SELL YOUR PROPERTY WITH ZORBECK</p><h1>Your property.<br>A wider perspective.</h1><p>Put your home on the globe. Create a clear property page and welcome enquiries from people exploring beyond their borders.</p><a class="button button-dark" href="{{ '/sell/new' if user else '/register?next=/sell/new' }}">List your property for free<svg class="icon"><use href="#i-arrow"/></svg></a><p class="market-small">Owners and authorised agents welcome. Submissions are reviewed before publication.</p></div><aside class="market-panel sell-value"><span class="market-large-mark">z.</span><p class="eyebrow">A COMMUNITY TAKING SHAPE</p><h2>Found by curiosity.<br>Chosen with care.</h2><p>Join Zorbeck’s growing property discovery platform. Optional permission lets us consider your listing for future community and social features as those channels develop.</p><p class="market-small">There is no guaranteed audience size, number of enquiries or sale.</p></aside></section>
-<div class="market-three"><section class="market-panel"><span class="step-number">01</span><h3>Tell the story</h3><p>Add the location, asking price, property facts and your own photographs. Save a draft and preview your page.</p></section><section class="market-panel"><span class="step-number">02</span><h3>Publish with care</h3><p>Submit it for review. After approval, your property appears in the collection and on the globe. Enquiries arrive in your account.</p></section><section class="market-panel"><span class="step-number">03</span><h3>Choose more visibility</h3><p>After publication, optionally feature your property for <strong>CHF 49 for 30 days</strong>. One payment. No automatic renewal.</p></section></div>
-<div class="market-notice"><svg class="icon"><use href="#i-info"/></svg><p>We provide advertising and discovery. The property sale, ownership checks, viewing and purchase contract are handled directly with the seller and their local professionals. <a href="/terms/marketplace">See how publication and promotion work.</a></p></div>
+<section class="sell-intro visual-sell" data-visual-seller="20260914">
+<div class="seller-story"><p class="eyebrow">PROPERTY. WITHOUT BORDERS.</p><h1>Your property.<br>A world of<br><em>possibility.</em></h1><p>Put your home on the globe.<br>Let the right buyer discover it.</p>
+<div class="seller-price-preview"><span><strong>Free</strong> to list</span><span><strong>CHF 49</strong> to feature</span></div>
+<a class="button button-dark" href="{{ '/sell/new' if user else '/register?next=/sell/new' }}">List your property for free<svg class="icon"><use href="#i-arrow"/></svg></a>
+<a class="seller-explore-link" href="/">Looking to buy? Explore the globe →</a>
+<p class="market-small">For property owners and authorised agents.</p></div>
+          <div class="map-panel globe-panel seller-globe">
+            <div class="globe-heading"><div><span class="globe-kicker">ONE WORLD. MORE POSSIBILITIES.</span><h2>Your next chapter.</h2></div><span class="globe-coordinate" id="globe-coordinate">26° N / 18° E</span></div>
+            <div id="property-map" tabindex="0" role="region" aria-label="Interactive globe. Drag to rotate, use arrow keys to turn, plus and minus to zoom." aria-describedby="globe-help"><canvas id="globe-canvas" aria-hidden="true"></canvas><div id="globe-markers"></div></div>
+            <span class="globe-place" id="globe-place">Worldwide</span>
+            <div class="globe-controls" role="group" aria-label="Globe controls"><button id="globe-left" type="button" aria-label="Rotate globe west">←</button><button id="globe-right" type="button" aria-label="Rotate globe east">→</button><span></span><button id="globe-zoom-in" type="button" aria-label="Zoom in">+</button><button id="globe-zoom-out" type="button" aria-label="Zoom out">−</button></div>
+            <p class="globe-help" id="globe-help">Drag to turn the world · Scroll to get closer</p>
+            <div class="map-bottom-note"><span class="legend-pin"></span>Explore the world</div>
+            <a class="globe-credit" href="https://www.naturalearthdata.com/about/terms-of-use/" target="_blank" rel="noopener">Made with Natural Earth</a>
+            <div class="map-unavailable" id="map-unavailable" hidden>The globe is temporarily unavailable. You can still list your property below.</div>
+          </div>
+</section>
+<div class="seller-section-title"><p class="eyebrow">FROM YOUR HOME TO THEIR SHORTLIST</p><h2>Three simple steps.</h2></div>
+<div class="market-three seller-steps">
+<section class="market-panel"><div class="visual-step-icon"><svg class="icon"><use href="#i-home"/></svg><span>01</span></div><h3>Add your property</h3><p>Your photos. Your price. Your location.</p></section>
+<section class="market-panel"><div class="visual-step-icon"><svg class="icon"><use href="#i-globe"/></svg><span>02</span></div><h3>Appear on the globe</h3><p>After review, buyers can find your home.</p></section>
+<section class="market-panel"><div class="visual-step-icon"><svg class="icon"><use href="#i-heart"/></svg><span>03</span></div><h3>Connect with buyers</h3><p>Read enquiries in your private account.</p></section>
+</div>
+<section class="seller-offers" aria-label="Listing prices">
+<div class="seller-section-title"><p class="eyebrow">SIMPLE PRICING</p><h2>A clear choice. No subscription.</h2></div>
+<div class="seller-price-grid"><section class="market-panel"><p class="eyebrow">YOUR PROPERTY PAGE</p><h2 class="seller-amount">Free</h2><p>Photos, globe placement and buyer enquiries.</p><a class="button button-dark" href="/sell/new">Create your listing <svg class="icon"><use href="#i-arrow"/></svg></a></section>
+<section class="market-panel seller-featured"><p class="eyebrow">OPTIONAL FEATURED PLACEMENT</p><h2 class="seller-amount">CHF 49 <span>/ 30 days</span></h2><p>Stand out with labelled featured placement on Zorbeck.</p><p class="market-small">Available after your listing is approved. One payment. No automatic renewal. No guaranteed enquiries or sale.</p></section></div></section>
+<details class="seller-details"><summary>How review and community promotion work</summary><p>We review submissions before publication. You can opt in to future community and social features; external distribution is not included in the featured placement price.</p><p>Zorbeck provides advertising and discovery. Viewings, ownership checks and the sale are handled with the seller and local professionals. <a href="/terms/marketplace">Marketplace terms</a></p></details>
 {% endblock %}
