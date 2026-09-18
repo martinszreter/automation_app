@@ -7,7 +7,7 @@ test('a seller signs in, publishes after review and receives confirmed featured 
   page.on('pageerror', error => errors.push(String(error)));
   const email = `marketplace-${Date.now()}@example.com`;
   await page.goto('/sell');
-  await expect(page.getByRole('heading', {name:'Your property. A wider perspective.'})).toBeVisible();
+  await expect(page.getByRole('heading', {name:'Your property. A world of possibility.'})).toBeVisible();
   await page.getByRole('link', {name:'List your property for free'}).click();
   await page.getByLabel('Email address', {exact:true}).fill(email);
   await page.getByLabel('Password', {exact:true}).fill('a-long-e2e-property-password');
@@ -78,5 +78,26 @@ test('a seller signs in, publishes after review and receives confirmed featured 
   await expect(page.locator('.account-listing .status-pill')).toHaveText('withdrawn');
   await page.getByRole('button',{name:'Log out',exact:true}).click();
   await expect(page).toHaveURL(/\/$/);
+  expect(errors).toEqual([]);
+});
+
+test('seller globe stays sharp and usable on desktop and mobile', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(String(error)));
+  await page.goto('/sell');
+  await expect(page.locator('#property-map')).toHaveAttribute('data-globe-ready', 'true');
+  for (const width of [1440, 390, 844]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect.poll(() => page.evaluate(() => {
+      const canvas = document.querySelector('#globe-canvas') as HTMLCanvasElement;
+      const box = canvas.getBoundingClientRect();
+      return Math.abs(canvas.width / Math.min(window.devicePixelRatio || 1, 2) - box.width);
+    })).toBeLessThan(2);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    const before = await page.locator('#globe-coordinate').textContent();
+    await page.getByRole('button', { name: 'Rotate globe east' }).click();
+    await expect(page.locator('#globe-coordinate')).not.toHaveText(before || '');
+    await page.screenshot({path: testInfo.outputPath('seller-' + width + '.png'), fullPage: true});
+  }
   expect(errors).toEqual([]);
 });
